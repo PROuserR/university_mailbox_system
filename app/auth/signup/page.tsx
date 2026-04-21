@@ -34,7 +34,7 @@ export default function RegisterPage() {
     return (
         <div
             dir="rtl"
-            className="min-h-screen min-w-screen absolute left-0 top-0 flex items-center justify-center font-sans text-right overflow-y-hidden  z-10"
+            className="h-full w-full absolute left-0 top-0 flex items-center justify-center font-sans text-right overflow-y-hidden  z-10"
             style={{
                 background: "linear-gradient(135deg, #f0f2f5 0%, #dbeafe 50%, #eff6ff 100%)"
             }}

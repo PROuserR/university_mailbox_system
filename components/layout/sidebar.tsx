@@ -16,7 +16,7 @@ import {
 export default function Sidebar() {
     return (
         <aside
-            className="w-64 h-[90vh] bg-white border-l p-4 flex flex-col justify-between"
+            className="w-64 h-[90vh] bg-white border-l p-4 flex flex-col justify-between "
             dir="rtl"
         >
             {/* TOP SECTION */}

@@ -36,7 +36,7 @@ export default function RootLayout({
           <Navbar />
         </header>
 
-        <main className="flex my-4 w-full">
+        <main className="flex flex-row-reverse my-4 w-full">
           <Sidebar />
           {children}
         </main>

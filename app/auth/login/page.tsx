@@ -8,6 +8,7 @@ import {
     faEnvelope,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -31,7 +32,7 @@ export default function LoginPage() {
     return (
         <div
             dir="rtl"
-            className="min-h-screen min-w-screen absolute left-0 top-0 flex items-center justify-center font-sans text-right overflow-y-hidden  z-10"
+            className="h-full w-full absolute left-0 top-0 flex items-center justify-center font-sans text-right overflow-y-hidden z-10"
         >
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900" />
@@ -126,15 +127,17 @@ export default function LoginPage() {
                 <div className="w-full mt-auto pt-6 border-t border-gray-100 flex items-center justify-center gap-4 text-sm">
 
                     {/* Forgot Password Link */}
-                    <a href="#" className="ml-auto text-blue-600 hover:text-blue-800 hover:underline decoration-dotted decoration-blue-300 underline-offset-4 transition-all duration-300 font-medium flex items-center gap-1 group">
+                    <Link href="/auth/forget-password" className="ml-auto text-blue-600 hover:text-blue-800 hover:underline decoration-dotted decoration-blue-300 underline-offset-4 transition-all duration-300 font-medium flex items-center gap-1 group">
                         استعادة كلمة المرور
                         <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    </a>
+
+                    </Link>
+
 
                     {/* Help/Link */}
-                    <a href="#" className="text-slate-500 hover:text-blue-600 transition-colors duration-300 flex items-center gap-1">
+                    <Link href="/support" className="text-slate-500 hover:text-blue-600 transition-colors duration-300 flex items-center gap-1">
                         مساعدة؟
-                    </a>
+                    </Link>
                 </div>
 
             </div>
