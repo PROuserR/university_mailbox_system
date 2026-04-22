@@ -1,5 +1,6 @@
 "use client";
 
+import MailCompose from "@/components/overlays/mailCompose";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faHouse,
@@ -12,8 +13,12 @@ import {
     faFolder,
     faPlus,
 } from "@fortawesome/free-solid-svg-icons";
+import useMailComposeStore from "@/store/mailComposeStore";
 
 export default function Sidebar() {
+    const { isMailComposeShown, tiggerMailCompose } = useMailComposeStore()
+
+
     return (
         <aside
             className="w-64 h-[90vh] bg-white border-l p-4 flex flex-col justify-between "
@@ -22,7 +27,7 @@ export default function Sidebar() {
             {/* TOP SECTION */}
             <div>
                 {/* Compose Button */}
-                <button className="w-full bg-blue-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 mb-6 hover:bg-blue-700 transition">
+                <button className="w-full bg-blue-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 mb-6 hover:bg-blue-700 transition" onClick={tiggerMailCompose}>
                     <FontAwesomeIcon icon={faPlus} />
                     انشاء بريد
                 </button>
@@ -65,6 +70,12 @@ export default function Sidebar() {
                 </div>
                 <p className="text-xs text-gray-400 mt-1">2.4GB من 10GB</p>
             </div>
+
+            {/* MailCompose: overlay */}
+            {isMailComposeShown ?
+                <MailCompose />
+                : null}
+
         </aside>
     );
 }

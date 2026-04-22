@@ -97,16 +97,16 @@ const MessageEditor: React.FC = () => {
             <input
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                placeholder="To..."
-                className="w-full border-b p-2 outline-none focus:border-blue-500"
+                placeholder="الى"
+                className="w-full border-b p-2 outline-none focus:border-blue-500 text-right"
             />
 
             {/* Subject */}
             <input
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="Subject..."
-                className="w-full border-b p-2 outline-none focus:border-blue-500"
+                placeholder="الموضوع"
+                className="w-full border-b p-2 outline-none focus:border-blue-500 text-right"
             />
 
             {/* Toolbar */}
@@ -206,8 +206,8 @@ const MessageEditor: React.FC = () => {
             )}
 
             {/* Editor */}
-            <div className="border rounded-xl min-h-[250px] p-3">
-                <EditorContent editor={editor} />
+            <div className="border rounded-xl" dir="rtl">
+                <EditorContent editor={editor} className="h-full min-h-64"  />
             </div>
 
             {/* Send */}
@@ -217,7 +217,7 @@ const MessageEditor: React.FC = () => {
                     className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
                 >
                     <FontAwesomeIcon icon={faPaperPlane} />
-                    Send
+                    ارسال
                 </button>
             </div>
         </div>

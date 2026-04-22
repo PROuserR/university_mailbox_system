@@ -2,7 +2,7 @@
 import MailList from "./components/MailList";
 import MailViewer from "./components/MailViewer";
 import RightPanel from "./components/RightPanel";
-import MailCompose from "@/components/overlays/mailCompose";
+
 
 export default function DashboardPage() {
     return (
@@ -23,10 +23,6 @@ export default function DashboardPage() {
                     <RightPanel />
                 </div>
             </div>
-            <div className="flex w-full">
-                <MailCompose />
-            </div>
-
         </main>
     );
 }

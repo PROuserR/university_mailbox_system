@@ -1,21 +1,13 @@
 import { create } from 'zustand'
 
-type Store = {
-    count: number
-    inc: () => void
+type MailComposeStore = {
+    isMailComposeShown: boolean
+    tiggerMailCompose: () => void
 }
 
-const useStore = create<Store>()((set) => ({
-    count: 1,
-    inc: () => set((state) => ({ count: state.count + 1 })),
+const useMailComposeStore = create<MailComposeStore>()((set) => ({
+    isMailComposeShown: false,
+    tiggerMailCompose: () => set((state) => ({ isMailComposeShown: !state.isMailComposeShown })),
 }))
 
-function Counter() {
-    const { count, inc } = useStore()
-    return (
-        <div>
-            <span>{count}</span>
-            <button onClick={inc}>one up</button>
-        </div>
-    )
-}
+export default useMailComposeStore;
