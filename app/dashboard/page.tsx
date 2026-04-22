@@ -18,10 +18,6 @@ export default function DashboardPage() {
                     <MailViewer />
                 </div>
 
-                {/* Right Panel */}
-                <div className="w-[25%] bg-white rounded-xl border">
-                    <RightPanel />
-                </div>
             </div>
         </main>
     );

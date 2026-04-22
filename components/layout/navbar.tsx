@@ -2,7 +2,6 @@
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faBell,
     faCircleQuestion,
     faGear,
     faSearch,
@@ -19,7 +18,7 @@ export default function Navbar() {
             </div>
 
             {/* CENTER: Search */}
-            <div className="flex-1 max-w-xl mx-6">
+            <div className="flex-1 max-w-xl ml-[40%]">
                 <div className="flex items-center bg-gray-100 rounded-lg px-3 py-2">
                     <input
                         type="text"
@@ -32,14 +31,6 @@ export default function Navbar() {
 
             {/* LEFT (in RTL): Actions */}
             <div className="flex items-center gap-5">
-
-                {/* Notifications */}
-                <div className="relative cursor-pointer">
-                    <FontAwesomeIcon icon={faBell} className="text-gray-600 text-lg" />
-                    <span className="absolute -top-2 -left-2 bg-red-500 text-white text-xs px-1.5 rounded-full">
-                        3
-                    </span>
-                </div>
 
                 {/* Help */}
                 <FontAwesomeIcon
