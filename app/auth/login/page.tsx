@@ -9,25 +9,26 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
+import axios from 'axios';
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
+    const loginUser = async () => {
+        const userData = { "email": email, "password": password };
+        const res = await axios.post("http://universitymailbox.runasp.net/api/auth/login", userData)
+        console.log(res)
+    }
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!email || !password) return;
-
+        loginUser();
         setIsLoading(true);
-
-        // Simulate login process
-        setTimeout(() => {
-            console.log("Logging in with:", email, password);
-            alert(`Login attempted for: ${email}`);
-            setIsLoading(false);
-        }, 1500);
     };
+
 
     return (
         <div
@@ -62,12 +63,13 @@ export default function LoginPage() {
                 {/* --- LOGIN FORM SECTION --- */}
                 <form onSubmit={handleSubmit} className="w-full space-y-6 mb-8">
 
+
                     {/* Email Input Group */}
                     <div className="relative group transition-all duration-300">
                         <input
                             id="email"
-                            type="text"
-                            placeholder="البريد الإلكتروني / اسم المستخدم"
+                            type="email"
+                            placeholder="البريد الإلكتروني"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 pr-12 text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 placeholder:text-gray-400"
@@ -76,7 +78,7 @@ export default function LoginPage() {
 
                         {/* FontAwesome Icon - User */}
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors duration-300">
-                            <FontAwesomeIcon icon={faUser} className="w-5 h-5" />
+                            <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5" />
                         </div>
                     </div>
 

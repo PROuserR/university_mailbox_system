@@ -7,10 +7,11 @@ import {
     faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Navbar() {
     return (
-        <nav className="w-full h-16 bg-white border-b flex items-center justify-between px-6" dir="rtl">
+        <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center justify-between px-6" dir="rtl">
 
             {/* RIGHT (in RTL): Logo */}
             <div className="flex items-center gap-2">
@@ -25,7 +26,7 @@ export default function Navbar() {
                         placeholder="ابحث في البريد، الأشخاص، المجموعات..."
                         className="bg-transparent outline-none w-full text-sm text-right"
                     />
-                    <FontAwesomeIcon icon={faSearch} className="text-gray-400 ml-2" />
+                    <FontAwesomeIcon icon={faSearch} className="text-black ml-2" />
                 </div>
             </div>
 
@@ -33,25 +34,25 @@ export default function Navbar() {
             <div className="flex items-center gap-5">
 
                 {/* Help */}
-                <FontAwesomeIcon
-                    icon={faCircleQuestion}
-                    className="text-gray-600 text-lg cursor-pointer"
-                />
+                <Link href="/support">
+                    <FontAwesomeIcon
+                        icon={faCircleQuestion}
+                        className="text-lg cursor-pointer"
+                    />
+                </Link>
 
                 {/* Settings */}
+                <Link href="/settings">
                 <FontAwesomeIcon
                     icon={faGear}
-                    className="text-gray-600 text-lg cursor-pointer"
+                    className="text-lg cursor-pointer"
                 />
+                </Link>
 
                 {/* Profile */}
                 <div className="flex items-center gap-2 cursor-pointer">
-                    <div className="hidden md:block text-sm text-right">
-                        <p className="text-gray-700 font-medium">د. سارة جونسون</p>
-                        <p className="text-gray-400 text-xs">أستاذة</p>
-                    </div>
                     <img
-                        src="/avatar.png"
+                        src="https://images.pexels.com/photos/32356013/pexels-photo-32356013.jpeg"
                         alt="profile"
                         className="w-8 h-8 rounded-full object-cover"
                     />

@@ -5,19 +5,30 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faUser,
     faLock,
-    faCheckCircle,
-    faChevronRight
+    faChevronRight,
+    faEnvelope,
+    faUserTie
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
+import axios from 'axios';
+import Link from "next/link";
 
-export default function RegisterPage() {
+export default function SignupPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [agreeToTerms, setAgreeToTerms] = useState(false);
-    const [userType, setUserType] = useState("normal"); // New state for user type
+    const [firstname, setFirstname] = useState("");
+    const [lastname, setLastname] = useState("");
+    const [userType, setUserType] = useState("employee"); // New state for user type
 
-    const handleRegister = (e: FormEvent<HTMLFormElement>) => {
+    const signupUser = async () => {
+        const userData = { "firstName": firstname, "lastName": lastname, "email": email, "password": password, "role": userType };
+        const res = await axios.post("http://universitymailbox.runasp.net/api/users", userData)
+        console.log(res)
+    }
+
+    const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (password !== confirmPassword) {
             alert("كلمة المرور والتأكيد غير متطابقين");
@@ -27,6 +38,7 @@ export default function RegisterPage() {
             alert("يرجى الموافقة على الشروط والأحكام");
             return;
         }
+        signupUser()
         console.log("User registered:", { email, userType });
         alert("تم إنشاء الحساب بنجاح!");
     };
@@ -65,40 +77,79 @@ export default function RegisterPage() {
                 {/* Form */}
                 <form onSubmit={handleRegister} className="p-8 space-y-6">
 
-                    {/* Input Group 1: Email/Username */}
-                    <div className="relative group">
+
+                    {/* Firstname Input Group */}
+                    <div className="relative group transition-all duration-300">
                         <input
+                            id="firstname"
                             type="text"
-                            id="username"
-                            placeholder="البريد الإلكتروني / اسم المستخدم"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-5 py-4 pl-12 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all duration-300 placeholder:text-slate-400"
+                            placeholder="الاسم"
+                            value={firstname}
+                            onChange={(e) => setFirstname(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 pr-12 text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 placeholder:text-gray-400"
                             required
                         />
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+
+                        {/* FontAwesome Icon - User */}
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors duration-300">
                             <FontAwesomeIcon icon={faUser} className="w-5 h-5" />
                         </div>
                     </div>
 
-                    {/* Input Group 1.5: User Type */}
+                    {/* Lastname Input Group */}
+                    <div className="relative group transition-all duration-300">
+                        <input
+                            id="lastname"
+                            type="text"
+                            placeholder="الكنية"
+                            value={lastname}
+                            onChange={(e) => setLastname(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 pr-12 text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 placeholder:text-gray-400"
+                            required
+                        />
+
+                        {/* FontAwesome Icon - User */}
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors duration-300">
+                            <FontAwesomeIcon icon={faUser} className="w-5 h-5" />
+                        </div>
+                    </div>
+
+
+
+                    {/* Input Group: Email */}
+                    <div className="relative group">
+                        <input
+                            type="email"
+                            id="email"
+                            placeholder="البريد الالكتروني"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-5 py-4 pr-12 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all duration-300 placeholder:text-slate-400"
+                            required
+                        />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                            <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5" />
+                        </div>
+                    </div>
+
+                    {/* Input Group: User Type */}
                     <div className="relative group">
                         <select
                             id="userType"
                             value={userType}
                             onChange={(e) => setUserType(e.target.value)}
-                            className="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-5 py-4 pl-12 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all duration-300 placeholder:text-slate-400 appearance-none"
+                            className="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-5 py-4 pr-12 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all duration-300 placeholder:text-slate-400 appearance-none"
                             required
                         >
-                            <option value="normal">مستخدم عادي</option>
-                            <option value="admin">مسؤول</option>
+                            <option value="employee">موظف</option>
+                            <option value="dean">مسؤول</option>
                         </select>
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                            <FontAwesomeIcon icon={faUser} className="w-5 h-5" />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                            <FontAwesomeIcon icon={faUserTie} className="w-5 h-5" />
                         </div>
                     </div>
 
-                    {/* Input Group 2: Password */}
+                    {/* Input Group: Password */}
                     <div className="relative group">
                         <input
                             type="password"
@@ -106,15 +157,15 @@ export default function RegisterPage() {
                             placeholder="كلمة المرور"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-5 py-4 pl-12 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all duration-300 placeholder:text-slate-400"
+                            className="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-5 py-4 pr-12 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all duration-300 placeholder:text-slate-400"
                             required
                         />
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
                             <FontAwesomeIcon icon={faLock} className="w-5 h-5" />
                         </div>
                     </div>
 
-                    {/* Input Group 3: Confirm Password */}
+                    {/* Input Group: Confirm Password */}
                     <div className="relative group">
                         <input
                             type="password"
@@ -122,16 +173,16 @@ export default function RegisterPage() {
                             placeholder="تأكيد كلمة المرور"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-5 py-4 pl-12 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all duration-300 placeholder:text-slate-400"
+                            className="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-5 py-4 pr-12 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all duration-300 placeholder:text-slate-400"
                             required
                         />
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
                             <FontAwesomeIcon icon={faLock} className="w-5 h-5" />
                         </div>
                     </div>
 
                     {/* Checkbox Terms */}
-                    <div className="flex items-start gap-3 pt-1">
+                    {/* <div className="flex items-start gap-3 pt-1">
                         <div className="flex-1">
                             <label className="flex items-center gap-2 cursor-pointer group">
                                 <input
@@ -148,7 +199,7 @@ export default function RegisterPage() {
                         <div className="text-xs text-slate-400">
                             <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4 opacity-50" />
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Submit Button */}
                     <button
@@ -163,13 +214,13 @@ export default function RegisterPage() {
 
                 {/* Footer Links */}
                 <div className="bg-slate-50 px-8 py-6 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <a href="#" className="text-blue-600 hover:text-blue-700 hover:underline decoration-blue-300 underline-offset-4 transition-all">
+                    <Link href="/auth/forget-password" className="text-blue-600 hover:text-blue-700 hover:underline decoration-blue-300 underline-offset-4 transition-all">
                         استعادة كلمة المرور
-                    </a>
+                    </Link>
 
-                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors">
+                    <Link href="/support" className="text-slate-400 hover:text-blue-600 transition-colors">
                         مساعدة؟
-                    </a>
+                    </Link>
                 </div>
             </div>
         </div>

@@ -17,7 +17,6 @@ export default function DashboardPage() {
                 <div className="flex-1 bg-white rounded-xl border">
                     <MailViewer />
                 </div>
-
             </div>
         </main>
     );

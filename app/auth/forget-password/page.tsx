@@ -1,31 +1,37 @@
 'use client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faLock, faArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faArrowRight } from '@fortawesome/free-solid-svg-icons';
+import axios from 'axios';
+import { useState } from 'react';
 
-// --- Mock Component for demonstration ---
-// Replace this with your actual Logo component/image
-const MailLogo = () => (
-    <div className="relative w-24 h-24">
-        {/* Placeholder for the actual circular logo image */}
-        <div className="bg-blue-100 rounded-full flex items-center justify-center text-xl font-bold text-blue-600">
-            MAIL
-        </div>
-    </div>
-);
+export default function ForgotPasswordPage() {
+    const [email, setEmail] = useState("");
 
-const ForgotPasswordPage = () => {
-    const handleSubmit = (e) => {
+
+    const forgetPassword = async () => {
+        const userData = { "email": email };
+        const res = await axios.post("http://universitymailbox.runasp.net/api/auth/forget-password", userData)
+        console.log(res)
+    }
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         // Handle form submission logic (e.g., calling an API to send reset link)
+        forgetPassword();
         console.log("Password reset requested.");
     };
 
     return (
         // Main Container: Centers content on the screen
-        <div className="flex w-full h-full items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div
+            className="h-full w-full absolute left-0 top-0 flex items-center justify-center font-sans text-right overflow-y-hidden z-10">
+
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900" />
+
 
             {/* Card Wrapper: Defines the visible, contained element */}
-            <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-xl shadow-2xl transition-all duration-300">
+            <div className="relative z-20 w-full max-w-md px-4 py-6 bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col items-center">
 
                 {/* Header Section (Logo and Title) */}
                 <div className="text-center mb-16">
@@ -38,13 +44,9 @@ const ForgotPasswordPage = () => {
                 </div>
 
                 {/* The Form */}
-                <form onSubmit={handleSubmit} className="space-y-12">
-
+                <form onSubmit={handleSubmit} className="space-y-8 w-full">
                     {/* Input Field: Email/Username */}
                     <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1" dir='rtl'>
-                            البريد الإلكتروني أو اسم المستخدم *
-                        </label>
                         <div className="relative flex flex-row-reverse items-center">
                             {/* Icon Placement */}
                             <div className="absolute inset-y-0 right-4 pl-3 flex items-center pointer-events-none">
@@ -56,7 +58,8 @@ const ForgotPasswordPage = () => {
                                 id="email"
                                 name="email"
                                 type="email"
-                                placeholder="البريد الإلكتروني أو اسم المستخدم"
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="البريد الإلكتروني"
                                 required
                                 className="block w-full pr-12 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 text-right"
                             />
@@ -91,5 +94,3 @@ const ForgotPasswordPage = () => {
         </div>
     );
 };
-
-export default ForgotPasswordPage;
