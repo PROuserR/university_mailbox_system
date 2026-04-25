@@ -3,30 +3,46 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faUser,
     faLock,
     faEnvelope,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
-import axios from 'axios';
+import { useRouter } from "next/navigation";
+import userInfoStore from "@/store/userInfoStore";
+import axios from "axios";
+
 
 export default function LoginPage() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [emailInput, setEmailInpt] = useState("");
+    const [passwordInpt, setPasswordInpt] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
+    const { setEmail, setFirstname, setLastname } = userInfoStore();
 
     const loginUser = async () => {
-        const userData = { "email": email, "password": password };
-        const res = await axios.post("http://universitymailbox.runasp.net/api/auth/login", userData)
-        console.log(res)
+        const res = await axios.post('/api/login', { "email": emailInput, "password": passwordInpt }, {
+            withCredentials: true
+        })
+
+        if (res.status === 200) {
+            const data = res.data.data.data
+            setIsLoading(false);
+            console.log(data);
+            setEmail(data.email);
+            setFirstname(data.firstName);
+            setLastname(data.lastName);
+
+            router.push("/dashboard");
+        }
+
     }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!email || !password) return;
-        loginUser();
+        if (!emailInput || !passwordInpt) return;
         setIsLoading(true);
+        loginUser();
     };
 
 
@@ -70,8 +86,8 @@ export default function LoginPage() {
                             id="email"
                             type="email"
                             placeholder="البريد الإلكتروني"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            value={emailInput}
+                            onChange={(e) => setEmailInpt(e.target.value)}
                             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 pr-12 text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 placeholder:text-gray-400"
                             required
                         />
@@ -88,8 +104,8 @@ export default function LoginPage() {
                             id="password"
                             type="password"
                             placeholder="كلمة المرور"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            value={passwordInpt}
+                            onChange={(e) => setPasswordInpt(e.target.value)}
                             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 pr-12 text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 placeholder:text-gray-400"
                             required
                         />
@@ -103,7 +119,7 @@ export default function LoginPage() {
                     {/* Submit Button */}
                     <button
                         type="submit"
-                        disabled={isLoading || (!email && !password)}
+                        disabled={isLoading || (!emailInput && !passwordInpt)}
                         className={`w-full bg-blue-900 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-2 ${isLoading ? "cursor-not-allowed opacity-90" : "hover:bg-blue-800 focus:ring-4 focus:ring-blue-300"
                             }`}
                     >

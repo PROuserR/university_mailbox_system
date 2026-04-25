@@ -1,6 +1,6 @@
 "use client";
 
-import MailCompose from "@/components/overlays/mailCompose";
+import MailCompose from "@/components/overlays/MailCompose";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faHouse,
@@ -17,7 +17,6 @@ import useMailComposeStore from "@/store/mailComposeStore";
 
 export default function Sidebar() {
     const { isMailComposeShown, tiggerMailCompose } = useMailComposeStore()
-
 
     return (
         <aside

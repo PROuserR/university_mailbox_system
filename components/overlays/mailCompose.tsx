@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -26,7 +26,7 @@ import {
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-const MessageEditor: React.FC = () => {
+export default function MailComposeOverlay() {
     const [to, setTo] = useState<string>("");
     const [subject, setSubject] = useState<string>("");
     const [attachments, setAttachments] = useState<File[]>([]);
@@ -207,7 +207,7 @@ const MessageEditor: React.FC = () => {
 
             {/* Editor */}
             <div className="border rounded-xl" dir="rtl">
-                <EditorContent editor={editor} className="h-full min-h-64"  />
+                <EditorContent editor={editor} className="h-full min-h-64" />
             </div>
 
             {/* Send */}
@@ -223,5 +223,3 @@ const MessageEditor: React.FC = () => {
         </div>
     );
 };
-
-export default MessageEditor;

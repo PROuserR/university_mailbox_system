@@ -5,11 +5,18 @@ import {
     faCircleQuestion,
     faGear,
     faSearch,
+    faUserCircle
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
+import UserSettingsOverlay from "../overlays/UserSettings";
+import useUserSettingsStore from "@/store/userSettingsStore";
+import userInfoStore from "@/store/userInfoStore";
 
 export default function Navbar() {
+    const { isUserSettingsShown, triggerUserSettings } = useUserSettingsStore();
+    const { email, firstname, lastname } = userInfoStore();
+
     return (
         <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center justify-between px-6" dir="rtl">
 
@@ -43,21 +50,26 @@ export default function Navbar() {
 
                 {/* Settings */}
                 <Link href="/settings">
-                <FontAwesomeIcon
-                    icon={faGear}
-                    className="text-lg cursor-pointer"
-                />
+                    <FontAwesomeIcon
+                        icon={faGear}
+                        className="text-lg cursor-pointer"
+                    />
                 </Link>
 
                 {/* Profile */}
-                <div className="flex items-center gap-2 cursor-pointer">
-                    <img
-                        src="https://images.pexels.com/photos/32356013/pexels-photo-32356013.jpeg"
-                        alt="profile"
-                        className="w-8 h-8 rounded-full object-cover"
-                    />
+                <div className="flex items-center gap-2 cursor-pointer" onClick={triggerUserSettings}>
+                    <FontAwesomeIcon icon={faUserCircle} className="text-lg cursor-pointer" />
                 </div>
             </div>
+
+            {isUserSettingsShown ? <UserSettingsOverlay
+                user={{
+                    name: `${firstname} ${lastname}`,
+                    email: email
+                }}
+            /> : null}
+
+
         </nav>
     );
 }
