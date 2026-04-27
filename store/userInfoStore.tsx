@@ -1,21 +1,30 @@
 import { create } from 'zustand'
+import { persist } from "zustand/middleware";
 
 type UserInfoStore = {
     firstname: string
-    setFirstname: (firstname:string) => void
+    setFirstname: (firstname: string) => void
     lastname: string
-    setLastname: (lastname:string) => void
+    setLastname: (lastname: string) => void
     email: string
-    setEmail: (email:string) => void
+    setEmail: (email: string) => void
 }
 
-const userInfoStore = create<UserInfoStore>()((set) => ({
-    firstname: "",
-    lastname: "",
-    email: "",
-    setFirstname: (value) => set((state) => ({ firstname: value })),
-    setLastname: (value) => set((state) => ({ lastname: value })),
-    setEmail: (value) => set((state) => ({ email: value }))
-}))
+
+const userInfoStore = create<UserInfoStore>()(
+    persist(
+        (set) => ({
+            firstname: "",
+            lastname: "",
+            email: "",
+            setFirstname: (firstname) => set({ firstname }),
+            setLastname: (lastname) => set({ lastname }),
+            setEmail: (email) => set({ email }),
+        }),
+        {
+            name: "auth-storage", // key in localStorage
+        }
+    )
+);
 
 export default userInfoStore;

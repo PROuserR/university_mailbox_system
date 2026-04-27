@@ -1,24 +1,33 @@
 'use client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faArrowRight } from '@fortawesome/free-solid-svg-icons';
-import axios from 'axios';
 import { useState } from 'react';
+import toast, { Toaster } from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import myAPI from '@/utils/myAPI';
+
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState("");
-
+    const router = useRouter();
 
     const forgetPassword = async () => {
         const userData = { "email": email };
-        const res = await axios.post("http://universitymailbox.runasp.net/api/auth/forget-password", userData)
-        console.log(res)
+        const res = await myAPI.post("/auth/forgot-password", userData)
+        if (res.status === 200) {
+            toast.success("تم ارسال الكود بنجاح");
+            router.push("/");
+        }
+        else{
+            toast.error("هناك خطأ, لم يتم ارسال الكود");
+        }
     }
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         // Handle form submission logic (e.g., calling an API to send reset link)
         forgetPassword();
-        console.log("Password reset requested.");
+
     };
 
     return (
@@ -29,6 +38,7 @@ export default function ForgotPasswordPage() {
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900" />
 
+            <Toaster />
 
             {/* Card Wrapper: Defines the visible, contained element */}
             <div className="relative z-20 w-full max-w-md px-4 py-6 bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col items-center">

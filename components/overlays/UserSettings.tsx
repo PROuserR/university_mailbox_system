@@ -1,13 +1,13 @@
-'use client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faSignOutAlt,
     faUser,
-    faTimes
+    faTimes,
+    faLock
 } from '@fortawesome/free-solid-svg-icons'
 import useUserSettingsStore from '@/store/userSettingsStore'
 import { useRouter } from "next/navigation";
-import axios from 'axios';
+import myAPI from '@/utils/myAPI';
 
 
 export default function UserSettingsOverlay({
@@ -19,18 +19,22 @@ export default function UserSettingsOverlay({
     const router = useRouter();
 
     const handleSignout = async () => {
-        const res = await axios.post('/api/logout', {
-            credentials: 'include'
-        })
+        const res = await myAPI.post('/auth/logout')
         triggerUserSettings();
+        localStorage.clear();
         router.push("/auth/login");
     }
 
+    const handleChangePassword = async () => {
+        triggerUserSettings();
+        router.push("/auth/change-password");
+    }
+
     return (
-        <div className="fixed top-16 left-4 w-full z-50 flex items-center justify-end">
+        <div className="fixed top-16 left-4 w-96 z-50 flex items-center justify-end">
             {/* modal */}
             <div
-                className="relative w-[90%] max-w-md rounded-2xl shadow-xl p-6 bg-blue-600 text-white">
+                className="relative w-full max-w-md rounded-2xl shadow-xl p-6 bg-blue-600 text-white">
                 {/* close button */}
                 <button
                     onClick={triggerUserSettings}
@@ -64,16 +68,22 @@ export default function UserSettingsOverlay({
                 </div>
 
                 {/* actions */}
-                <div className="flex flex-col gap-3 w-full">
-
+                <div className="flex gap-x-4  w-full">
                     <button
                         onClick={handleSignout}
-                        className="flex items-center justify-center gap-x-4 px-4 py-3 rounded-lg transition bg-red-500 hover:bg-red-600 text-white"
+                        className="flex w-1/2 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-red-500 hover:bg-red-600 text-white"
                     >
                         <FontAwesomeIcon icon={faSignOutAlt} />
                         <span>تسجيل الخروج</span>
                     </button>
 
+                    <button
+                        onClick={handleChangePassword}
+                        className="flex w-1/2 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-red-500 hover:bg-red-600 text-white"
+                    >
+                        <FontAwesomeIcon icon={faLock} />
+                        <span>تغير كلمة السر </span>
+                    </button>
                 </div>
             </div>
         </div >

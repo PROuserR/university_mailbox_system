@@ -1,16 +1,16 @@
 "use client";
-
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faLock,
     faEnvelope,
+    faPlusCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import userInfoStore from "@/store/userInfoStore";
-import axios from "axios";
+import myAPI from "@/utils/myAPI";
 
 
 export default function LoginPage() {
@@ -21,19 +21,15 @@ export default function LoginPage() {
     const { setEmail, setFirstname, setLastname } = userInfoStore();
 
     const loginUser = async () => {
-        const res = await axios.post('/api/login', { "email": emailInput, "password": passwordInpt }, {
-            withCredentials: true
-        })
+        const res = await myAPI.post('/auth/login', { "email": emailInput, "password": passwordInpt })
 
         if (res.status === 200) {
-            const data = res.data.data.data
+            const data = res.data.data
             setIsLoading(false);
-            console.log(data);
             setEmail(data.email);
             setFirstname(data.firstName);
             setLastname(data.lastName);
-
-            router.push("/dashboard");
+            router.push("/");
         }
 
     }
@@ -78,8 +74,6 @@ export default function LoginPage() {
 
                 {/* --- LOGIN FORM SECTION --- */}
                 <form onSubmit={handleSubmit} className="w-full space-y-6 mb-8">
-
-
                     {/* Email Input Group */}
                     <div className="relative group transition-all duration-300">
                         <input
@@ -142,21 +136,31 @@ export default function LoginPage() {
                 </form>
 
                 {/* --- FOOTER LINKS SECTION --- */}
-                <div className="w-full mt-auto pt-6 border-t border-gray-100 flex items-center justify-center gap-4 text-sm">
 
-                    {/* Forgot Password Link */}
-                    <Link href="/auth/forget-password" className="ml-auto text-blue-600 hover:text-blue-800 hover:underline decoration-dotted decoration-blue-300 underline-offset-4 transition-all duration-300 font-medium flex items-center gap-1 group">
-                        استعادة كلمة المرور
-                        <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <footer className="flex flex-col w-full text-sm">
+                    <div className="w-full mt-auto pt-6 border-t border-gray-100 flex items-center justify-center gap-4">
+
+                        {/* Forgot Password Link */}
+                        <Link href="/auth/forget-password" className="ml-auto text-blue-600 hover:text-blue-800 hover:underline decoration-dotted decoration-blue-300 underline-offset-4 transition-all duration-300 font-medium flex items-center gap-1 group">
+                            استعادة كلمة المرور
+                            <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                        </Link>
+
+
+                        {/* Help/Link */}
+                        <Link href="/support" className="text-slate-500 hover:text-blue-600 transition-colors duration-300 flex items-center gap-1">
+                            مساعدة؟
+                        </Link>
+                    </div>
+
+                    {/* Signup Password Link */}
+                    <Link href="/auth/signup" className="mx-auto text-blue-600 hover:text-blue-800 hover:underline decoration-dotted decoration-blue-300 underline-offset-4 transition-all duration-300 font-medium flex items-center gap-1 group">
+                        ليس لديك حساب؟
+                        <FontAwesomeIcon icon={faPlusCircle} className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                     </Link>
-
-
-                    {/* Help/Link */}
-                    <Link href="/support" className="text-slate-500 hover:text-blue-600 transition-colors duration-300 flex items-center gap-1">
-                        مساعدة؟
-                    </Link>
-                </div>
+                </footer>
 
             </div>
         </div>

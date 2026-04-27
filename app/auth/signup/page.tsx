@@ -10,8 +10,8 @@ import {
     faUserTie
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
-import axios from 'axios';
 import Link from "next/link";
+import myAPI from "@/utils/myAPI";
 
 export default function SignupPage() {
     const [email, setEmail] = useState("");
@@ -24,8 +24,7 @@ export default function SignupPage() {
 
     const signupUser = async () => {
         const userData = { "firstName": firstname, "lastName": lastname, "email": email, "password": password, "role": userType };
-        const res = await axios.post("http://universitymailbox.runasp.net/api/users", userData)
-        console.log(res)
+        const res = await myAPI.post("/users", userData)
     }
 
     const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
@@ -39,7 +38,6 @@ export default function SignupPage() {
             return;
         }
         signupUser()
-        console.log("User registered:", { email, userType });
         alert("تم إنشاء الحساب بنجاح!");
     };
 

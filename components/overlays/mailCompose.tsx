@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -81,8 +80,6 @@ export default function MailComposeOverlay() {
             content,
             attachments,
         };
-
-        console.log("Sending:", payload);
 
         // reset
         setTo("");
