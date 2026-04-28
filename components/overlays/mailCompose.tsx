@@ -86,8 +86,8 @@ export default function MailComposeOverlay() {
         try {
             // Use FormData to handle file uploads
             const formData = new FormData();
-            formData.append("senderEntityId", 2);
-            formData.append("DocumentTypeID", 1);
+            formData.append("senderEntityId", String(2));
+            formData.append("DocumentTypeID", String(1));
             formData.append("Number", "2");
             formData.append("Title", subject);
             formData.append("Content", content);

@@ -13,6 +13,8 @@ import UserSettingsOverlay from "../overlays/UserSettings";
 import useUserSettingsStore from "@/store/userSettingsStore";
 import userInfoStore from "@/store/userInfoStore";
 
+
+
 export default function Navbar() {
     const { isUserSettingsShown, triggerUserSettings } = useUserSettingsStore();
     const { email, firstname, lastname } = userInfoStore();

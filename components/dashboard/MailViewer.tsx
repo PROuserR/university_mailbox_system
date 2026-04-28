@@ -2,7 +2,7 @@ import useShowMailDetailsStore from "@/store/showMailDetails";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faXmark } from "@fortawesome/free-solid-svg-icons";
 
-export default function MailViewer(props) {
+export default function MailViewer() {
     const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } = useShowMailDetailsStore()
 
     if (isMailDetailsStoreShown)

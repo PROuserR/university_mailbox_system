@@ -3,18 +3,23 @@ import MailViewer from "./MailViewer";
 import myAPI from "@/utils/myAPI";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import axios from "axios";
 
 export default function MailList() {
     const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } = useShowMailDetailsStore()
-    const [mailList, setMailList] = useState([])
+    const [mailList, setMailList] = useState<any[]>([])
 
     const getMailInbox = async () => {
         try {
             const res = await myAPI.get("/Correspondence");
             setMailList(res.data.data)
             console.log(res)
-        } catch (errorMessage) {
-            toast.error(errorMessage)
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                toast.error(error.response?.data?.message || "حدث خطأ");
+            } else {
+                toast.error("خطأ غير متوقع");
+            }
         }
     }
 

@@ -9,9 +9,17 @@ import useUserSettingsStore from '@/store/userSettingsStore'
 import { useRouter } from "next/navigation";
 import myAPI from '@/utils/myAPI';
 
-export default function UserSettingsOverlay({
-    user,
-}: Props) {
+type User = {
+    name: string;
+    email: string;
+};
+
+
+type Props = {
+    user: User;
+};
+
+export default function UserSettingsOverlay({ user }: Props) {
 
     const { triggerUserSettings } = useUserSettingsStore()
     const router = useRouter();
@@ -42,7 +50,7 @@ export default function UserSettingsOverlay({
 
                 {/* user info */}
                 <div className="flex flex-col items-center justify-center text-center gap-4 mb-6">
-                    <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200">
+                    {/* <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200">
                         {user.avatar ? (
                             <img
                                 src={user.avatar}
@@ -54,7 +62,7 @@ export default function UserSettingsOverlay({
                                 <FontAwesomeIcon icon={faUser} />
                             </div>
                         )}
-                    </div>
+                    </div> */}
 
                     <div>
                         <p className="font-semibold text-lg">{user.name}</p>
