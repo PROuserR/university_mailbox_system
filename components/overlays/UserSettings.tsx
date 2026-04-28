@@ -9,11 +9,9 @@ import useUserSettingsStore from '@/store/userSettingsStore'
 import { useRouter } from "next/navigation";
 import myAPI from '@/utils/myAPI';
 
-
 export default function UserSettingsOverlay({
     user,
 }: Props) {
-
 
     const { triggerUserSettings } = useUserSettingsStore()
     const router = useRouter();

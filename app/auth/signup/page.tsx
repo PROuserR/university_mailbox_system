@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import myAPI from "@/utils/myAPI";
+import toast from "react-hot-toast";
 
 export default function SignupPage() {
     const [email, setEmail] = useState("");
@@ -25,6 +26,9 @@ export default function SignupPage() {
     const signupUser = async () => {
         const userData = { "firstName": firstname, "lastName": lastname, "email": email, "password": password, "role": userType };
         const res = await myAPI.post("/users", userData)
+        if(res.status === 200){
+            toast.success("تم انشاء مستخدم جديد")
+        }
     }
 
     const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {

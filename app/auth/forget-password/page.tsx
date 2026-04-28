@@ -18,9 +18,6 @@ export default function ForgotPasswordPage() {
             toast.success("تم ارسال الكود بنجاح");
             router.push("/");
         }
-        else{
-            toast.error("هناك خطأ, لم يتم ارسال الكود");
-        }
     }
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {

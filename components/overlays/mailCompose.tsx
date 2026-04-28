@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -24,11 +25,17 @@ import {
     faPaperclip,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import myAPI from "@/utils/myAPI";
 
 export default function MailComposeOverlay() {
     const [to, setTo] = useState<string>("");
     const [subject, setSubject] = useState<string>("");
     const [attachments, setAttachments] = useState<File[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+
+    // ✅ NEW STATE
+    const [mailType, setMailType] = useState<string>("incoming");
+    const [isProfessional, setIsProfessional] = useState<boolean>(true);
 
     const editor = useEditor({
         extensions: [
@@ -49,14 +56,12 @@ export default function MailComposeOverlay() {
 
     if (!editor) return null;
 
-    // 🎯 Toolbar button style
     const btn = (active: boolean) =>
         `w-9 h-9 flex items-center justify-center rounded-lg transition ${active
             ? "bg-blue-500 text-white"
             : "bg-gray-100 hover:bg-gray-200 text-gray-700"
         }`;
 
-    // 📎 Handle attachments
     const handleFiles = (files: FileList | null) => {
         if (!files) return;
         setAttachments((prev) => [...prev, ...Array.from(files)]);
@@ -66,30 +71,65 @@ export default function MailComposeOverlay() {
         setAttachments((prev) => prev.filter((_, i) => i !== index));
     };
 
-    // 📤 Send handler
-    const handleSend = () => {
+    const handleSend = async () => {
         const content = editor.getHTML();
 
-        if (!to.trim()) return alert("Recipient required");
-        if (!subject.trim()) return alert("Subject required");
-        if (!content || content === "<p></p>") return alert("Message empty");
+        // Validation with toast
+        if (!to.trim()) return toast.error("Recipient required");
+        if (!subject.trim()) return toast.error("Subject required");
+        if (!content || content === "<p></p>") return toast.error("Message empty");
 
-        const payload = {
-            to,
-            subject,
-            content,
-            attachments,
-        };
+        setLoading(true);
+        const loadingToast = toast.loading("Sending message...");
+        const now = new Date()
 
-        // reset
-        setTo("");
-        setSubject("");
-        setAttachments([]);
-        editor.commands.clearContent();
+        try {
+            // Use FormData to handle file uploads
+            const formData = new FormData();
+            formData.append("senderEntityId", 2);
+            formData.append("DocumentTypeID", 1);
+            formData.append("Number", "2");
+            formData.append("Title", subject);
+            formData.append("Content", content);
+            formData.append("MainType", mailType);
+            formData.append("IsProfessional", String(isProfessional));
+            formData.append("IssuedDate", now.toISOString());
+            formData.append("ReceivedDate", now.toISOString());
+            formData.append("Notes", "23");
+
+            attachments.forEach((file) => {
+                formData.append("AdditionalFiles", file);
+            });
+
+            // Replace '/api/send-mail' with your actual endpoint
+            const response = await myAPI.post("/Correspondence", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            console.log("Success:", response);
+            toast.success("Message sent successfully!", { id: loadingToast });
+
+            // Reset form on success
+            setTo("");
+            setSubject("");
+            setAttachments([]);
+            setMailType("incoming");
+            setIsProfessional(true);
+            editor.commands.clearContent();
+        } catch (error: any) {
+            console.error("Error sending mail:", error);
+            const errorMessage = error.response?.data?.message || "Failed to send message. Please try again.";
+            toast.error(errorMessage, { id: loadingToast });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <div className="absolute left-4 bottom-4 max-w-5xl mx-auto bg-white border rounded-2xl shadow p-4 space-y-4">
+
             {/* To */}
             <input
                 value={to}
@@ -106,9 +146,48 @@ export default function MailComposeOverlay() {
                 className="w-full border-b p-2 outline-none focus:border-blue-500 text-right"
             />
 
+            {/* ✅ NEW: Mail Type + Professional */}
+            <div className="flex flex-wrap gap-4 items-center">
+
+                {/* Mail Type Select */}
+                <select
+                    value={mailType}
+                    onChange={(e) => setMailType(e.target.value)}
+                    className="border rounded-lg p-2 text-sm bg-white"
+                >
+                    <option value="incoming">وارد</option>
+                    <option value="outgoing">صادر</option>
+                    <option value="internal">داخلي</option>
+                </select>
+
+                {/* Professional Radio */}
+                <div className="flex items-center gap-3 text-sm">
+                    <span>مهني:</span>
+
+                    <label className="flex items-center gap-1">
+                        <input
+                            type="radio"
+                            name="professional"
+                            checked={isProfessional === true}
+                            onChange={() => setIsProfessional(true)}
+                        />
+                        نعم
+                    </label>
+
+                    <label className="flex items-center gap-1">
+                        <input
+                            type="radio"
+                            name="professional"
+                            checked={isProfessional === false}
+                            onChange={() => setIsProfessional(false)}
+                        />
+                        لا
+                    </label>
+                </div>
+            </div>
+
             {/* Toolbar */}
             <div className="flex flex-wrap gap-2 border rounded-xl p-2 bg-gray-50">
-
                 <button onClick={() => editor.chain().focus().toggleBold().run()} className={btn(editor.isActive("bold"))}>
                     <FontAwesomeIcon icon={faBold} />
                 </button>
@@ -173,7 +252,6 @@ export default function MailComposeOverlay() {
                     <FontAwesomeIcon icon={faRedo} />
                 </button>
 
-                {/* 📎 Attach */}
                 <label className={btn(false) + " cursor-pointer"}>
                     <FontAwesomeIcon icon={faPaperclip} />
                     <input
@@ -185,7 +263,6 @@ export default function MailComposeOverlay() {
                 </label>
             </div>
 
-            {/* Attachments Preview */}
             {attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                     {attachments.map((file, i) => (
@@ -202,19 +279,18 @@ export default function MailComposeOverlay() {
                 </div>
             )}
 
-            {/* Editor */}
             <div className="border rounded-xl" dir="rtl">
                 <EditorContent editor={editor} className="h-full min-h-64" />
             </div>
 
-            {/* Send */}
             <div className="flex justify-end">
                 <button
                     onClick={handleSend}
-                    className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+                    disabled={loading}
+                    className={`flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                     <FontAwesomeIcon icon={faPaperPlane} />
-                    ارسال
+                    {loading ? "جاري الارسال..." : "ارسال"}
                 </button>
             </div>
         </div>

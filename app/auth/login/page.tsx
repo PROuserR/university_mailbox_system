@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -11,17 +12,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import userInfoStore from "@/store/userInfoStore";
 import myAPI from "@/utils/myAPI";
-
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
     const [emailInput, setEmailInpt] = useState("");
-    const [passwordInpt, setPasswordInpt] = useState("");
+    const [passwordInput, setPasswordInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
     const { setEmail, setFirstname, setLastname } = userInfoStore();
 
     const loginUser = async () => {
-        const res = await myAPI.post('/auth/login', { "email": emailInput, "password": passwordInpt })
+        const res = await myAPI.post('/auth/login', { email: emailInput, password: passwordInput })
 
         if (res.status === 200) {
             const data = res.data.data
@@ -29,6 +30,7 @@ export default function LoginPage() {
             setEmail(data.email);
             setFirstname(data.firstName);
             setLastname(data.lastName);
+            toast.success("تم تسجيل الدخول بنجاح");
             router.push("/");
         }
 
@@ -36,7 +38,7 @@ export default function LoginPage() {
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!emailInput || !passwordInpt) return;
+        if (!emailInput || !passwordInput) return;
         setIsLoading(true);
         loginUser();
     };
@@ -98,8 +100,8 @@ export default function LoginPage() {
                             id="password"
                             type="password"
                             placeholder="كلمة المرور"
-                            value={passwordInpt}
-                            onChange={(e) => setPasswordInpt(e.target.value)}
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
                             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 pr-12 text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 placeholder:text-gray-400"
                             required
                         />
@@ -113,7 +115,7 @@ export default function LoginPage() {
                     {/* Submit Button */}
                     <button
                         type="submit"
-                        disabled={isLoading || (!emailInput && !passwordInpt)}
+                        disabled={isLoading || (!emailInput && !passwordInput)}
                         className={`w-full bg-blue-900 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-2 ${isLoading ? "cursor-not-allowed opacity-90" : "hover:bg-blue-800 focus:ring-4 focus:ring-blue-300"
                             }`}
                     >

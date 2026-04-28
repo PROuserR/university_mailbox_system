@@ -24,13 +24,9 @@ export default function ChangePasswordPage() {
         if (res.status === 200) {
             setNewPasswordInput("");
             setConfirmNewPasswordInput("");
-
+            toast.success("تم تغير كلمة المرور بنجاح");
             // redirect after success
             router.push("/");
-        }
-        else {
-
-            toast.error("فشل في العملية");
         }
         setLoading(false);
     }
