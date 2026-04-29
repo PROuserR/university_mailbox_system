@@ -14,11 +14,6 @@ export default function DashboardPage() {
         <div className="w-full  mx-auto">
           <MailList />
         </div>
-
-        {/* Mail Viewer */}
-        {/* <div className="flex-1 bg-white rounded-xl border">
-            <MailViewer />
-          </div> */}
       </div>
     </main>
   );

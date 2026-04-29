@@ -1,34 +1,77 @@
 import useShowMailDetailsStore from "@/store/showMailDetails";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import MailFile from "./MailFile";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import { useEffect } from "react";
+import formatDate from "@/utils/formatDate";
 
-export default function MailViewer() {
+type Attachment = {
+    id: number;
+    filePath: string;
+    mimeType: string;
+    fileName: string;
+};
+
+type Mail = {
+    title: string;
+    content: string;
+    issuedDate?: string | undefined;
+    attachments?: Attachment[];
+};
+
+type Props = {
+    data: Mail;
+};
+
+export default function MailViewer({ data } : Props) {
     const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } = useShowMailDetailsStore()
+
+    const editor = useEditor({
+        extensions: [StarterKit],
+        content: "",
+        editable: false, // important for email view
+        immediatelyRender: false
+    });
+
+    useEffect(() => {
+        if (editor && data?.content) {
+            editor.commands.setContent(data.content);
+        }
+    }, [editor, data]);
 
     if (isMailDetailsStoreShown)
         return (
             <div className="p-6">
-                <header className="cursor-pointer">
+                <header className="w-fit ml-auto cursor-pointer">
                     <FontAwesomeIcon icon={faArrowRight} className="ml-auto" onClick={triggerMailDetailsStoreShown} />
                 </header>
 
                 <div className="pr-8">
-                    <h1 className="flex flex-col w-fit items-center justify-center gap-4 ml-auto text-lg font-semibold mb-2">
+                    <h1 className="flex w-full items-center justify-center gap-4 ml-auto text-lg font-semibold mb-2">
+                        <span className="mr-auto text-gray-600">
+                            {data?.issuedDate && formatDate(data?.issuedDate)}
+                        </span>
                         <span>
-                            تحديث الجدول الدراسي
-
+                            {data?.title}
                         </span>
 
                     </h1>
 
-                    <p className="text-sm text-gray-500 mb-4">
-                        من: إدارة الجامعة
-                    </p>
+                    <div>
+                        {data?.attachments?.map(attachment => (
+                            <div key={attachment?.id}>
+                                {attachment?.mimeType.startsWith("image/") ? <MailFile key={attachment.id} filePath={attachment.filePath} /> : null}
+                            </div>
+                        ))}
+                    </div>
 
-                    <p className="text-sm leading-relaxed text-gray-700">
-                        نود إعلامكم بأنه تم تحديث الجدول الدراسي للفصل القادم...
-                    </p>
+                    <div>
+                        <EditorContent editor={editor} />
+                    </div>
                 </div>
+
 
             </div>
         );
