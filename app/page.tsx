@@ -1,11 +1,9 @@
 'use client';
 import MailList from "@/components/dashboard/MailList";
-import MailViewer from "@/components/dashboard/MailViewer";
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 
 export default function DashboardPage() {
   useAuthGuard();
-
 
   return (
     <main className="flex flex-col h-fit w-screen overflow-hidden gap-12 p-4">

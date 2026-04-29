@@ -6,20 +6,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect } from "react";
 import formatDate from "@/utils/formatDate";
-
-type Attachment = {
-    id: number;
-    filePath: string;
-    mimeType: string;
-    fileName: string;
-};
-
-type Mail = {
-    title: string;
-    content: string;
-    issuedDate?: string | undefined;
-    attachments?: Attachment[];
-};
+import { Mail } from "@/types/api/Mail";
 
 type Props = {
     data: Mail;
@@ -56,7 +43,6 @@ export default function MailViewer({ data } : Props) {
                         <span>
                             {data?.title}
                         </span>
-
                     </h1>
 
                     <div>
@@ -71,8 +57,6 @@ export default function MailViewer({ data } : Props) {
                         <EditorContent editor={editor} />
                     </div>
                 </div>
-
-
             </div>
         );
 }

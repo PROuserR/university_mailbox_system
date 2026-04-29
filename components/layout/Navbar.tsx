@@ -12,16 +12,17 @@ import Link from "next/link";
 import UserSettingsOverlay from "../overlays/UserSettings";
 import useUserSettingsStore from "@/store/userSettingsStore";
 import userInfoStore from "@/store/userInfoStore";
+import useSearchInputStore from "@/store/searchInputStore";
 
 
 
 export default function Navbar() {
     const { isUserSettingsShown, triggerUserSettings } = useUserSettingsStore();
     const { email, firstname, lastname } = userInfoStore();
+    const { setSearchInput } = useSearchInputStore()
 
     return (
         <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center justify-between px-6" dir="rtl">
-
             {/* RIGHT (in RTL): Logo */}
             <div className="flex items-center gap-2">
                 <Image width="48" height="48" src="/aleppo_university_logo.svg" alt="Aleppo university logo" />
@@ -32,7 +33,8 @@ export default function Navbar() {
                 <div className="flex items-center bg-gray-100 rounded-lg px-3 py-2">
                     <input
                         type="text"
-                        placeholder="ابحث في البريد، الأشخاص، المجموعات..."
+                        placeholder="ابحث في البريد..."
+                        onChange={(e) => setSearchInput(e.target.value)}
                         className="bg-transparent outline-none w-full text-sm text-right"
                     />
                     <FontAwesomeIcon icon={faSearch} className="text-black ml-2" />
@@ -41,7 +43,6 @@ export default function Navbar() {
 
             {/* LEFT (in RTL): Actions */}
             <div className="flex items-center gap-5">
-
                 {/* Help */}
                 <Link href="/support">
                     <FontAwesomeIcon

@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import userInfoStore from "@/store/userInfoStore";
-import myAPI from "@/utils/myAPI";
+import { apiWrapper } from "@/utils/apiClient";
 
 export default function ResetPasswordPage() {
     const router = useRouter();
@@ -20,7 +20,7 @@ export default function ResetPasswordPage() {
 
     const resetPassword = async () => {
         const data = { "email": email, "newPassword": passwordInpt, "code": codeInput };
-        const res = await myAPI.post("/auth/reset-password", data);
+        const res = await apiWrapper.post("/auth/reset-password", data);
         if (res.status === 200) {
             setPasswordInpt("");
             setConfirmPasswordInput("");

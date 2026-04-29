@@ -11,8 +11,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import userInfoStore from "@/store/userInfoStore";
-import myAPI from "@/utils/myAPI";
 import toast from "react-hot-toast";
+import { apiWrapper } from "@/utils/apiClient";
+import { AxiosResponse } from "axios";
+import { UserLoginData } from "@/types/api/UserLoginData";
 
 export default function LoginPage() {
     const [emailInput, setEmailInpt] = useState("");
@@ -22,9 +24,9 @@ export default function LoginPage() {
     const { setEmail, setFirstname, setLastname } = userInfoStore();
 
     const loginUser = async () => {
-        const res = await myAPI.post('/auth/login', { email: emailInput, password: passwordInput })
-
-        if (res.status === 200) {
+        const res = await apiWrapper.post<AxiosResponse<UserLoginData>>('/auth/login', { email: emailInput, password: passwordInput })
+        console.log(res)
+        if (res.status === 200 && res.data) {
             const data = res.data.data
             setIsLoading(false);
             setEmail(data.email);

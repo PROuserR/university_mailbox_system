@@ -6,7 +6,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
-import myAPI from "@/utils/myAPI";
+import { apiWrapper } from "@/utils/apiClient";
 
 export default function ChangePasswordPage() {
     const router = useRouter();
@@ -18,9 +18,8 @@ export default function ChangePasswordPage() {
 
     const changePassword = async () => {
         const data = { "currentPassword": currentPasswordInput, "newPassword": newPasswordInput };
-        const res = await myAPI.post("/auth/change-password", data);
+        const res = await apiWrapper.post("/auth/change-password", data);
         console.log("change-password")
-        console.log(res)
         if (res.status === 200) {
             setNewPasswordInput("");
             setConfirmNewPasswordInput("");

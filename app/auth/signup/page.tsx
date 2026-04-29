@@ -11,8 +11,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
-import myAPI from "@/utils/myAPI";
 import toast from "react-hot-toast";
+import { apiWrapper } from "@/utils/apiClient";
 
 export default function SignupPage() {
     const [email, setEmail] = useState("");
@@ -25,8 +25,8 @@ export default function SignupPage() {
 
     const signupUser = async () => {
         const userData = { "firstName": firstname, "lastName": lastname, "email": email, "password": password, "role": userType };
-        const res = await myAPI.post("/users", userData)
-        if(res.status === 200){
+        const res = await apiWrapper.post("/users", userData)
+        if (res.status === 200) {
             toast.success("تم انشاء مستخدم جديد")
         }
     }
@@ -182,26 +182,6 @@ export default function SignupPage() {
                             <FontAwesomeIcon icon={faLock} className="w-5 h-5" />
                         </div>
                     </div>
-
-                    {/* Checkbox Terms */}
-                    {/* <div className="flex items-start gap-3 pt-1">
-                        <div className="flex-1">
-                            <label className="flex items-center gap-2 cursor-pointer group">
-                                <input
-                                    type="checkbox"
-                                    checked={agreeToTerms}
-                                    onChange={(e) => setAgreeToTerms(e.target.checked)}
-                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-100 cursor-pointer"
-                                />
-                                <span className="text-sm text-slate-500 leading-none group-hover:text-slate-700 transition-colors">
-                                    أوافق على <span className="text-slate-700 font-semibold">الشروط والأحكام</span> والسياسة الخاصة
-                                </span>
-                            </label>
-                        </div>
-                        <div className="text-xs text-slate-400">
-                            <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4 opacity-50" />
-                        </div>
-                    </div> */}
 
                     {/* Submit Button */}
                     <button
