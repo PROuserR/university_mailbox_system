@@ -1,5 +1,7 @@
+// components/layout/Sidebar.tsx
 "use client";
 
+import { useState, useEffect } from "react";
 import MailCompose from "@/components/overlays/MailCompose";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -12,15 +14,51 @@ import {
     faTriangleExclamation,
     faFolder,
     faPlus,
+    faBars,
+    faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailComposeStore from "@/store/mailComposeStore";
 
 export default function Sidebar() {
-    const { isMailComposeShown, tiggerMailCompose } = useMailComposeStore()
+    const { isMailComposeShown, tiggerMailCompose } = useMailComposeStore();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
-    return (
+    // كشف حجم الشاشة
+    useEffect(() => {
+        const checkScreenSize = () => {
+            setIsMobile(window.innerWidth <= 768);
+            if (window.innerWidth >= 768) {
+                setIsMobileMenuOpen(false);
+            }
+        };
+        
+        checkScreenSize();
+        window.addEventListener("resize", checkScreenSize);
+        return () => window.removeEventListener("resize", checkScreenSize);
+    }, []);
+
+    // منع التمرير خلف القائمة على الموبايل
+    useEffect(() => {
+        if (isMobileMenuOpen && isMobile) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "unset";
+        }
+        return () => {
+            document.body.style.overflow = "unset";
+        };
+    }, [isMobileMenuOpen, isMobile]);
+
+    // المحتوى الأصلي للـ Sidebar (لم يتغير)
+    const sidebarContent = (
         <aside
-            className="w-64 h-[calc(100vh-64px)] bg-gray-50 p-4 flex flex-col justify-between "
+            className={`
+                w-64 h-[calc(100vh-64px)] bg-gray-50 p-4 flex flex-col justify-between
+                transition-all duration-300 ease-in-out
+                ${isMobile ? "fixed top-16 right-0 z-40 shadow-xl" : "relative"}
+                ${isMobile && !isMobileMenuOpen ? "translate-x-full" : "translate-x-0"}
+            `}
             dir="rtl"
         >
             {/* TOP SECTION */}
@@ -71,15 +109,37 @@ export default function Sidebar() {
             </div>
 
             {/* MailCompose: overlay */}
-            {isMailComposeShown ?
-                <MailCompose />
-                : null}
-
+            {isMailComposeShown ? <MailCompose /> : null}
         </aside>
+    );
+
+    return (
+        <>
+            {/* زر القائمة - يظهر فقط على الموبايل */}
+            {isMobile && (
+                <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="fixed top-20 right-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg md:hidden"
+                >
+                    <FontAwesomeIcon icon={isMobileMenuOpen ? faTimes : faBars} className="h-5 w-5" />
+                </button>
+            )}
+
+            {/* الطبقة الخلفية الداكنة (Overlay) - فقط على الموبايل */}
+            {isMobile && isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
+            {/* الـ Sidebar نفسه */}
+            {sidebarContent}
+        </>
     );
 }
 
-/* 🔹 Reusable Sidebar Item */
+/* 🔹 Reusable Sidebar Item  */
 function SidebarItem({
     icon,
     label,
@@ -94,8 +154,8 @@ function SidebarItem({
     return (
         <div
             className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition
-        ${active ? "bg-blue-100 text-blue-600" : "text-gray-600 hover:bg-gray-100"}
-      `}
+                ${active ? "bg-blue-100 text-blue-600" : "text-gray-600 hover:bg-gray-100"}
+            `}
         >
             <div className="flex items-center gap-3">
                 <FontAwesomeIcon icon={icon} />
