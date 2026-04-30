@@ -8,37 +8,90 @@ import { apiWrapper } from "@/utils/apiClient";
 import useSearchInputStore from "@/store/searchInputStore";
 import { Mail } from "@/types/api/Mail";
 import { AxiosResponse } from "axios";
-
+import useInfiniteScroll from "@/hooks/useInfiniteScroll";
+import useMailFilterStore from "@/store/mailFilterStore";
+import { MailPageResponse } from "@/types/api/MailPageResponse";
 
 export default function MailList() {
     const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } = useShowMailDetailsStore()
-    const [mailList, setMailList] = useState<any[]>([])
-    const [selectedMailData, setSelectedMailData] = useState();
-    const { seachInput } = useSearchInputStore()
+    const [mailList, setMailList] = useState<Array<Mail>>([]);
+    const [selectedMailData, setSelectedMailData] = useState<Mail | undefined>(undefined);
+    const [page, setPage] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const { seachInput } = useSearchInputStore();
+    const { filter } = useMailFilterStore();
+
+    const fetchNextPage = () => {
+        setPage(page + 1)
+        fetchMoreMail(page + 1)
+    };
+
+    const bottomRef = useInfiniteScroll({
+        onBottom: fetchNextPage,
+        isLoading,
+        hasMore,
+        dataLength: mailList.length,
+    });
+
+    useEffect(() => {
+        getMailInbox()
+
+    }, [filter])
+
+    const fetchMoreMail = async (atPage: number) => {
+        setIsLoading(true);
+        const res = await apiWrapper.get<MailPageResponse>("/Correspondence/paged", {
+            "PageSize": 12,
+            "Page": atPage,
+            "SortBy": "createdAt",
+            "SortOrderDESC": true,
+            "MainType": filter
+        });
+
+        if (res.data) {
+            setMailList([...mailList, ...res.data?.data.items])
+            setHasMore(res.data?.data.totalCount > [...mailList, ...res.data?.data.items].length)
+            if (!res.success) {
+                toast.error("حدث خطأ في جلب البيانات")
+            }
+        }
+        setIsLoading(false)
+    }
 
     const getMailInbox = async () => {
-        const res = await apiWrapper.get<AxiosResponse<Mail[]>>("/Correspondence");
+        const res = await apiWrapper.get<MailPageResponse>("/Correspondence/paged", {
+            "PageSize": 12,
+            "Page": 1,
+            "SortBy": "createdAt",
+            "SortOrderDESC": true,
+            "MainType": filter
+        });
+        console.log(res)
         if (res.data) {
-            setMailList(res.data.data)
-
+            setMailList(res.data?.data.items)
+            setHasMore(res.data?.data.totalCount > mailList.length)
             if (!res.success) {
                 toast.error("حدث خطأ في جلب البيانات")
             }
         }
     }
 
-    const filterData = () => {
-        if (seachInput) {
-            console.log(mailList)
-            const filteredData = mailList.filter((mail: Mail) => mail.title.includes(seachInput) || mail.content.includes(seachInput));
-            setMailList(filteredData);
+    const filterData = async () => {
+        if (seachInput.length > 0) {
+            const filteredData = await apiWrapper.get<MailPageResponse>("/Correspondence/paged", {
+                "Search": seachInput
+            })
+            if (filteredData?.data) {
+                setMailList(filteredData.data?.data.items)
+            }
         }
         else {
             getMailInbox()
         }
     }
 
-    const showMailDetails = (mailData: SetStateAction<undefined>) => {
+    const showMailDetails = (mailData: Mail) => {
         setSelectedMailData(mailData);
         triggerMailDetailsStoreShown();
     }
@@ -53,8 +106,8 @@ export default function MailList() {
 
     if (!isMailDetailsStoreShown)
         return (
-            <div className="flex flex-col  gap-y-1 p-4 w-full">
-                <h1 className="font-semibold mb-4">البريد الوارد</h1>
+            <div className="flex flex-col gap-y-1 p-4 h-full w-full" >
+                <h1 className="font-semibold mb-4">ديوان جامعة حلب </h1>
                 {mailList.map((mail => (
                     <div className="w-full" key={mail.id}>
                         <div className="space-y-4" onClick={() => showMailDetails(mail)}>
@@ -70,8 +123,8 @@ export default function MailList() {
                         </div>
                     </div>
                 )))}
+                <div ref={bottomRef} />
             </div>
-
         );
     else
         return (

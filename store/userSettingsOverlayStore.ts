@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 
-type UserSettingsStore = {
+type userSettingsOverlayStore = {
     isUserSettingsShown: boolean
     triggerUserSettings: () => void
 }
 
-const useUserSettingsStore = create<UserSettingsStore>()((set) => ({
+const userSettingsOverlayStore = create<userSettingsOverlayStore>()((set) => ({
     isUserSettingsShown: false,
     triggerUserSettings: () => set((state) => ({ isUserSettingsShown: !state.isUserSettingsShown })),
 }))
 
-export default useUserSettingsStore;
+export default userSettingsOverlayStore;

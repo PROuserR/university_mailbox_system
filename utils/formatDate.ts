@@ -1,4 +1,4 @@
-export default function formatDate(isoString: string): string | undefined {
+export default function formatDate(isoString: string | undefined) {
     if (isoString) {
         const date = new Date(isoString);
         const now = new Date();
@@ -11,8 +11,8 @@ export default function formatDate(isoString: string): string | undefined {
         const isThisYear = date.getFullYear() === now.getFullYear();
 
         if (isToday) {
-            // HH:mm
-            return date.toLocaleTimeString([], {
+            // HH:mm (Arabic numerals + format)
+            return date.toLocaleTimeString('ar', {
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false,
@@ -20,15 +20,15 @@ export default function formatDate(isoString: string): string | undefined {
         }
 
         if (isThisYear) {
-            // Month name + day (e.g., Apr 29)
-            return date.toLocaleDateString('en-US', {
-                month: 'short', // or 'long' → April
+            // Month name + day (Arabic)
+            return date.toLocaleDateString('ar', {
+                month: 'short', // or 'long'
                 day: '2-digit',
             });
         }
 
-        // Different year → YYYY Month Day (e.g., 2023 Apr 29)
-        return date.toLocaleDateString('en-US', {
+        // Different year → Year Month Day (Arabic)
+        return date.toLocaleDateString('ar', {
             year: 'numeric',
             month: 'short',
             day: '2-digit',

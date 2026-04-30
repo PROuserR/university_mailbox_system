@@ -10,14 +10,12 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import UserSettingsOverlay from "../overlays/UserSettings";
-import useUserSettingsStore from "@/store/userSettingsStore";
+import userSettingsOverlayStore from "@/store/userSettingsOverlayStore";
 import userInfoStore from "@/store/userInfoStore";
 import useSearchInputStore from "@/store/searchInputStore";
 
-
-
 export default function Navbar() {
-    const { isUserSettingsShown, triggerUserSettings } = useUserSettingsStore();
+    const { isUserSettingsShown, triggerUserSettings } = userSettingsOverlayStore();
     const { email, firstname, lastname } = userInfoStore();
     const { setSearchInput } = useSearchInputStore()
 
@@ -33,7 +31,7 @@ export default function Navbar() {
                 <div className="flex items-center bg-gray-100 rounded-lg px-3 py-2">
                     <input
                         type="text"
-                        placeholder="ابحث في البريد..."
+                        placeholder="بحث في البريد..."
                         onChange={(e) => setSearchInput(e.target.value)}
                         className="bg-transparent outline-none w-full text-sm text-right"
                     />

@@ -37,7 +37,7 @@ export default function MailComposeOverlay() {
     const [mailType, setMailType] = useState<string>("incoming");
     const [isProfessional, setIsProfessional] = useState<boolean>(true);
 
-    const { isMailComposeShown, tiggerMailCompose } = useMailComposeStore();
+    const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
 
     const editor = useEditor({
         extensions: [
@@ -119,6 +119,7 @@ export default function MailComposeOverlay() {
             setAttachments([]);
             setMailType("incoming");
             setIsProfessional(true);
+            triggerMailCompose();
             editor.commands.clearContent();
         } catch (error: any) {
             console.error("Error sending mail:", error);
@@ -184,10 +185,10 @@ export default function MailComposeOverlay() {
 
                         <label className="flex items-center gap-1">
                             الرقم:
-
                             <input
                                 type="text"
                                 name="number"
+                                value={number}
                                 onChange={(e) => setNumber(e.target.value)}
                                 className="border"
                             />
@@ -303,7 +304,7 @@ export default function MailComposeOverlay() {
                     </button>
 
                     <button
-                        onClick={tiggerMailCompose}
+                        onClick={triggerMailCompose}
                         className={`flex items-center gap-2 px-5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
                         <FontAwesomeIcon icon={faXmark} />

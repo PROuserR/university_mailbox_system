@@ -3,20 +3,22 @@
 import MailCompose from "@/components/overlays/MailCompose";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faHouse,
     faInbox,
     faPaperPlane,
     faFile,
     faStar,
-    faClock,
     faTriangleExclamation,
     faFolder,
     faPlus,
+    faDashboard,
+    faBriefcase,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailComposeStore from "@/store/mailComposeStore";
+import useMailFilterStore from "@/store/mailFilterStore";
 
 export default function Sidebar() {
-    const { isMailComposeShown, tiggerMailCompose } = useMailComposeStore()
+    const { isMailComposeShown, triggerMailCompose } = useMailComposeStore()
+    const { filter, setFilter } = useMailFilterStore()
 
     return (
         <aside
@@ -26,19 +28,19 @@ export default function Sidebar() {
             {/* TOP SECTION */}
             <div>
                 {/* Compose Button */}
-                <button className="w-full bg-blue-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 mb-6 hover:bg-blue-700 transition" onClick={tiggerMailCompose}>
+                <button className="w-full bg-blue-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 mb-6 hover:bg-blue-700 transition" onClick={triggerMailCompose}>
                     <FontAwesomeIcon icon={faPlus} />
                     انشاء بريد
                 </button>
 
                 {/* Main Navigation */}
                 <nav className="space-y-2">
-                    <SidebarItem icon={faHouse} label="لوحة التحكم" active />
-                    <SidebarItem icon={faInbox} label="الوارد" count={128} />
-                    <SidebarItem icon={faPaperPlane} label="المرسل" />
-                    <SidebarItem icon={faFile} label="المسودات" count={7} />
+                    <SidebarItem icon={faDashboard} label="لوحة التحكم" active />
+                    <SidebarItem icon={faInbox} label="الوارد" count={128} onClick={() => setFilter("Incoming")} />
+                    <SidebarItem icon={faPaperPlane} label="الصادر" onClick={() => setFilter("Outgoing")} />
+                    <SidebarItem icon={faFile} label="الداخلي" count={7} onClick={() => setFilter("Internal")} />
+                    <SidebarItem icon={faBriefcase} label="المهني" onClick={() => setFilter("Professional")} />
                     <SidebarItem icon={faStar} label="المميزة" />
-                    <SidebarItem icon={faClock} label="المؤجلة" />
                     <SidebarItem icon={faTriangleExclamation} label="المهم" />
                 </nav>
 
@@ -85,14 +87,17 @@ function SidebarItem({
     label,
     count,
     active,
+    onClick
 }: {
     icon: any;
     label: string;
     count?: number;
     active?: boolean;
+    onClick?: () => void;
 }) {
     return (
         <div
+            onClick={onClick} // 👈 IMPORTANT
             className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition
         ${active ? "bg-blue-100 text-blue-600" : "text-gray-600 hover:bg-gray-100"}
       `}

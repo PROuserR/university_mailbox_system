@@ -5,7 +5,7 @@ import {
     faTimes,
     faLock
 } from '@fortawesome/free-solid-svg-icons'
-import useUserSettingsStore from '@/store/userSettingsStore'
+import userSettingsOverlayStore from '@/store/userSettingsOverlayStore'
 import { useRouter } from "next/navigation";
 import { UserInfo } from '@/types/api/UserInfo';
 import { apiWrapper } from '@/utils/apiClient';
@@ -17,7 +17,7 @@ type Props = {
 
 export default function UserSettingsOverlay({ user }: Props) {
 
-    const { triggerUserSettings } = useUserSettingsStore()
+    const { triggerUserSettings } = userSettingsOverlayStore()
     const router = useRouter();
 
     const handleSignout = async () => {
