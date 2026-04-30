@@ -1,32 +1,44 @@
 import useShowMailDetailsStore from "@/store/showMailDetails";
 import MailViewer from "./MailViewer";
-import myAPI from "@/utils/myAPI";
 import { SetStateAction, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import axios from "axios";
 import formatDate from "@/utils/formatDate";
 import getEmailContentPreview from "@/utils/getEmailContentPreview";
+import { apiWrapper } from "@/utils/apiClient";
+import useSearchInputStore from "@/store/searchInputStore";
+import { Mail } from "@/types/api/Mail";
+import { AxiosResponse } from "axios";
 
 
 export default function MailList() {
     const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } = useShowMailDetailsStore()
     const [mailList, setMailList] = useState<any[]>([])
     const [selectedMailData, setSelectedMailData] = useState();
+    const { seachInput } = useSearchInputStore()
 
     const getMailInbox = async () => {
-        try {
-            const res = await myAPI.get("/Correspondence");
+        const res = await apiWrapper.get<AxiosResponse<Mail[]>>("/Correspondence");
+        if (res.data) {
             setMailList(res.data.data)
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                toast.error(error.response?.data?.message || "حدث خطأ");
-            } else {
-                toast.error("خطأ غير متوقع");
+
+            if (!res.success) {
+                toast.error("حدث خطأ في جلب البيانات")
             }
         }
     }
 
-    const showMailDetails =  (mailData: SetStateAction<undefined>) => {
+    const filterData = () => {
+        if (seachInput) {
+            console.log(mailList)
+            const filteredData = mailList.filter((mail: Mail) => mail.title.includes(seachInput) || mail.content.includes(seachInput));
+            setMailList(filteredData);
+        }
+        else {
+            getMailInbox()
+        }
+    }
+
+    const showMailDetails = (mailData: SetStateAction<undefined>) => {
         setSelectedMailData(mailData);
         triggerMailDetailsStoreShown();
     }
@@ -34,6 +46,10 @@ export default function MailList() {
     useEffect(() => {
         getMailInbox()
     }, [])
+
+    useEffect(() => {
+        filterData()
+    }, [seachInput])
 
     if (!isMailDetailsStoreShown)
         return (

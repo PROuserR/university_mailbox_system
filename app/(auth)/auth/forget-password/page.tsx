@@ -4,7 +4,7 @@ import { faEnvelope, faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
 import toast, { Toaster } from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import myAPI from '@/utils/myAPI';
+import { apiWrapper } from '@/utils/apiClient';
 
 
 export default function ForgotPasswordPage() {
@@ -13,7 +13,7 @@ export default function ForgotPasswordPage() {
 
     const forgetPassword = async () => {
         const userData = { "email": email };
-        const res = await myAPI.post("/auth/forgot-password", userData)
+        const res = await apiWrapper.post("/auth/forgot-password", userData)
         if (res.status === 200) {
             toast.success("تم ارسال الكود بنجاح");
             router.push("/");

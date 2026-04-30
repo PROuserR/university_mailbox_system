@@ -7,16 +7,12 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import useUserSettingsStore from '@/store/userSettingsStore'
 import { useRouter } from "next/navigation";
-import myAPI from '@/utils/myAPI';
-
-type User = {
-    name: string;
-    email: string;
-};
+import { UserInfo } from '@/types/api/UserInfo';
+import { apiWrapper } from '@/utils/apiClient';
 
 
 type Props = {
-    user: User;
+    user: UserInfo;
 };
 
 export default function UserSettingsOverlay({ user }: Props) {
@@ -25,7 +21,7 @@ export default function UserSettingsOverlay({ user }: Props) {
     const router = useRouter();
 
     const handleSignout = async () => {
-        const res = await myAPI.post('/auth/logout')
+        const res = await apiWrapper.post('/auth/logout')
         triggerUserSettings();
         localStorage.clear();
         router.push("/auth/login");

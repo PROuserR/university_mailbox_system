@@ -30,7 +30,6 @@ import useMailComposeStore from "@/store/mailComposeStore";
 
 
 export default function MailComposeOverlay() {
-    // const [to, setTo] = useState<string>("");
     const [subject, setSubject] = useState<string>("");
     const [number, setNumber] = useState<string>("");
     const [attachments, setAttachments] = useState<File[]>([]);
@@ -78,7 +77,6 @@ export default function MailComposeOverlay() {
         const content = editor.getHTML();
 
         // Validation with toast
-        // if (!to.trim()) return toast.error("Recipient required");
         if (!subject.trim()) return toast.error("Subject required");
         if (!content || content === "<p></p>") return toast.error("Message empty");
 
@@ -134,15 +132,6 @@ export default function MailComposeOverlay() {
     if (isMailComposeShown)
         return (
             <div className="absolute left-4 bottom-4 max-w-5xl mx-auto bg-white border rounded-2xl shadow p-4 space-y-4">
-
-                {/* To */}
-                {/* <input
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                placeholder="الى"
-                className="w-full border-b p-2 outline-none focus:border-blue-500 text-right"
-            /> */}
-
                 {/* Subject */}
                 <input
                     value={subject}

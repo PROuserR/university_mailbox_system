@@ -1,7 +1,7 @@
 "use client";
 
+import { apiWrapper } from "@/utils/apiClient";
 import blobToImageUrl from "@/utils/blobToImageUrl";
-import myAPI from "@/utils/myAPI";
 import { useEffect, useState } from "react";
 
 export default function MailFile({ filePath }: { filePath: string }) {
@@ -11,11 +11,12 @@ export default function MailFile({ filePath }: { filePath: string }) {
         let objectUrl: string;
 
         const load = async () => {
-            const res = await myAPI.get("/attachment/view", {
+            const res = await apiWrapper.get<ArrayBuffer>("/attachment/view", {
                 params: { filePath },
                 responseType: "arraybuffer",
             });
-            objectUrl = blobToImageUrl(res.data)
+            if (res.data)
+                objectUrl = blobToImageUrl(res.data)
 
             setUrl(objectUrl);
         };
