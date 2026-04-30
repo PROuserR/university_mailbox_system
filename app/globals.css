@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+/* منع ظهور الأيقونات بحجم كبير قبل التحميل */
+svg:not(:root) {
+    overflow: hidden;
+}
+
+.svg-inline--fa {
+    display: inline-block;
+    height: 1em;
+    overflow: visible;
+    vertical-align: -0.125em;
+}
+
+/* منع الـ FOUC */
+.fontawesome-i2svg-active,
+.fontawesome-i2svg-pending {
+    visibility: visible !important;
+}
+
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
