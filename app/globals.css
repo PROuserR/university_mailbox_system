@@ -1,1 +1,101 @@
 @import "tailwindcss";
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+/* مسار شريط التمرير */
+::-webkit-scrollbar-track {
+    background: #dbeafe;
+    border-radius: 10px;
+}
+
+/* المقبض (الجزء الذي تسحبه) */
+::-webkit-scrollbar-thumb {
+    background: #3b82f6;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+/* عند التحويم على المقبض */
+::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
+    cursor: pointer;
+}
+
+/* تخصيص شريط التمرير داخل الـ Sidebar فقط */
+aside::-webkit-scrollbar {
+    width: 4px;
+}
+
+aside::-webkit-scrollbar-track {
+    background: #dbeafe;
+    border-radius: 10px;
+}
+
+aside::-webkit-scrollbar-thumb {
+    background: #60a5fa;
+    border-radius: 10px;
+}
+
+aside::-webkit-scrollbar-thumb:hover {
+    background: #3b82f6;
+}
+/* شريط التمرير الأفقي (للجداول) */
+.overflow-x-auto::-webkit-scrollbar {
+    height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: #e0f2fe;
+    border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #3b82f6;
+    border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
+}
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 #e0f2fe;
+}
+
+/* تخصيص شريط التمرير في الوضع الداكن (اختياري) */
+@media (prefers-color-scheme: dark) {
+    ::-webkit-scrollbar-track {
+        background: #1f2937;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #4b5563;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #60a5fa;
+    }
+}
+
+/* إخفاء شريط التمرير ولكن مع الحفاظ على وظيفة التمرير (اختياري) */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* جعل شريط التمرير يظهر فقط عند التمرير */
+.auto-show-scrollbar {
+    scrollbar-width: thin;
+}
+.auto-show-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.auto-show-scrollbar:hover::-webkit-scrollbar {
+    opacity: 1;
+}

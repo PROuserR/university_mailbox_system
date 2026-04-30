@@ -24,7 +24,7 @@ export default function SenderEntityForm({
   const [name, setName] = useState(initialName);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!name.trim()) {

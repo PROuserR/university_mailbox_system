@@ -1,7 +1,7 @@
 // components/layout/Sidebar.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import MailCompose from "@/components/overlays/MailCompose";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -14,33 +14,33 @@ import {
     faTriangleExclamation,
     faFolder,
     faPlus,
-    faBars,
-    faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailComposeStore from "@/store/mailComposeStore";
-
-export default function Sidebar() {
+interface SidebarProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+}
+export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const { isMailComposeShown, tiggerMailCompose } = useMailComposeStore();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
-
     // كشف حجم الشاشة
     useEffect(() => {
         const checkScreenSize = () => {
-            setIsMobile(window.innerWidth <= 768);
-            if (window.innerWidth >= 768) {
-                setIsMobileMenuOpen(false);
+            const small = window.innerWidth < 1024;
+            setIsMobile(small);
+            if (!small) {
+                if (onClose) onClose();
             }
         };
         
         checkScreenSize();
         window.addEventListener("resize", checkScreenSize);
         return () => window.removeEventListener("resize", checkScreenSize);
-    }, []);
+    }, [onClose]);
 
     // منع التمرير خلف القائمة على الموبايل
     useEffect(() => {
-        if (isMobileMenuOpen && isMobile) {
+        if (isOpen && isMobile) {
             document.body.style.overflow = "hidden";
         } else {
             document.body.style.overflow = "unset";
@@ -48,16 +48,16 @@ export default function Sidebar() {
         return () => {
             document.body.style.overflow = "unset";
         };
-    }, [isMobileMenuOpen, isMobile]);
+    }, [isOpen, isMobile]);
 
     // المحتوى الأصلي للـ Sidebar (لم يتغير)
     const sidebarContent = (
         <aside
             className={`
                 w-64 h-[calc(100vh-64px)] bg-gray-50 p-4 flex flex-col justify-between
-                transition-all duration-300 ease-in-out
+                transition-transform duration-300 ease-in-out
                 ${isMobile ? "fixed top-16 right-0 z-40 shadow-xl" : "relative"}
-                ${isMobile && !isMobileMenuOpen ? "translate-x-full" : "translate-x-0"}
+                ${isMobile && !isOpen ? "translate-x-full" : "translate-x-0"}
             `}
             dir="rtl"
         >
@@ -115,24 +115,16 @@ export default function Sidebar() {
 
     return (
         <>
-            {/* زر القائمة - يظهر فقط على الموبايل */}
-            {isMobile && (
-                <button
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="fixed top-20 right-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg md:hidden"
-                >
-                    <FontAwesomeIcon icon={isMobileMenuOpen ? faTimes : faBars} className="h-5 w-5" />
-                </button>
-            )}
 
             {/* الطبقة الخلفية الداكنة (Overlay) - فقط على الموبايل */}
-            {isMobile && isMobileMenuOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                />
-            )}
-
+        {isMobile && isOpen && (
+        <div
+            className="fixed inset-0 bg-black/50 z-30"
+            onClick={() => {
+                if (onClose) onClose();  
+        }}
+        />
+    )}
             {/* الـ Sidebar نفسه */}
             {sidebarContent}
         </>
@@ -146,6 +138,7 @@ function SidebarItem({
     count,
     active,
 }: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any;
     label: string;
     count?: number;

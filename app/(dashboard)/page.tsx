@@ -1,17 +1,15 @@
+// app/(dashboard)/page.tsx
 'use client';
 import MailList from "@/components/dashboard/MailList";
-import MailViewer from "@/components/dashboard/MailViewer";
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 
 export default function DashboardPage() {
   useAuthGuard();
 
-
   return (
-    <main className="flex flex-col h-fit w-screen overflow-hidden gap-12 p-4">
+    <main className="flex flex-col h-full w-full p-4">
       <div className="flex flex-row-reverse text-right">
-        {/* Mail List */}
-        <div className="w-full  mx-auto">
+        <div className="w-full mx-auto">
           <MailList />
         </div>
       </div>

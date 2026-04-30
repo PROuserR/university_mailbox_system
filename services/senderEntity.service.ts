@@ -1,11 +1,11 @@
 // src/services/senderEntity.service.ts
 
 import myAPI from "@/utils/myAPI";
+import type {ApiResult} from "@/types/ApiResult";
 import type {
   SenderEntityResponse,
   CreateSenderEntityRequest,
   UpdateSenderEntityRequest,
-  ApiResult,
 } from "@/types/senderEntity";
 
 /**

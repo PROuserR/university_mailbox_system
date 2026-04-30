@@ -35,13 +35,3 @@ export interface UpdateSenderEntityRequest {
   /** New name (optional, if not provided, name stays same) */
   name?: string;
 }
-
-/**
- * API Response wrapper (matches your backend ApiResult<T>)
- */
-export interface ApiResult<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  errors?: string[];
-}

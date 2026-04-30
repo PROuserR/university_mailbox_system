@@ -1,6 +1,6 @@
 // components/sender-entity/SenderEntityTable.tsx
 "use client";
-
+import Pagination from "@/components/ui/Pagination";
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,7 +10,7 @@ import {
   faBan,
   faPlus,
   faChevronLeft,
-  faChevronRight,
+  faChevronRight
 } from "@fortawesome/free-solid-svg-icons";
 import type { SenderEntityResponse } from "@/types/senderEntity";
 import SenderEntityForm from "./SenderEntityForm";
@@ -39,9 +39,9 @@ export default function SenderEntityTable({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [selectedEntity, setSelectedEntity] = useState<SenderEntityResponse | null>(null);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -57,42 +57,46 @@ export default function SenderEntityTable({
       setEditingName("");
     }
   };
+  const totalPages = Math.ceil(entities.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentEntities = entities.slice(startIndex, endIndex);
 
-  // Mobile Card Component
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+
+ // ✅ Mobile Card Component مع Pagination
   const MobileCard = ({ entity, index }: { entity: SenderEntityResponse; index: number }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    
+    const isEditMode = editingId === entity.id;
+
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 mb-3 overflow-hidden">
-        {/* Card Header - Always visible */}
         <div 
           className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => {
+            if (isEditMode) return;
+            setIsExpanded(!isExpanded);
+          }}
         >
           <div className="flex items-center gap-3 flex-1">
             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
-              {index + 1}
+              {startIndex + index + 1}
             </div>
             <div>
-              <p className="font-medium text-gray-800  truncate max-w-[150px] line-clamp-2">{entity.name}</p>
+              <p className="font-medium text-gray-800 truncate max-w-[150px] line-clamp-2">
+                {entity.name}
+              </p>
               <div className="flex items-center gap-2 mt-1">
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                    entity.isActive
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-500"
-                  }`}
-                >
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                  entity.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                }`}>
                   {entity.isActive ? (
-                    <>
-                      <FontAwesomeIcon icon={faCheckCircle} className="h-2 w-2" />
-                      مفعل
-                    </>
+                    <><FontAwesomeIcon icon={faCheckCircle} className="h-2 w-2" /> مفعل</>
                   ) : (
-                    <>
-                      <FontAwesomeIcon icon={faBan} className="h-2 w-2" />
-                      غير مفعل
-                    </>
+                    <><FontAwesomeIcon icon={faBan} className="h-2 w-2" /> غير مفعل</>
                   )}
                 </span>
                 <span className="text-xs text-gray-400">
@@ -102,15 +106,14 @@ export default function SenderEntityTable({
             </div>
           </div>
           <FontAwesomeIcon 
-            icon={isExpanded ? faChevronLeft : faChevronRight} 
+            icon={isExpanded || isEditMode ? faChevronLeft : faChevronRight} 
             className="text-gray-400 text-sm"
           />
         </div>
 
-        {/* Card Body - Expanded */}
-        {isExpanded && (
+        {(isExpanded || isEditMode) && (
           <div className="p-4 border-t border-gray-100 bg-gray-50">
-            {editingId === entity.id ? (
+            {isEditMode ? (
               <div className="space-y-3">
                 <input
                   type="text"
@@ -121,14 +124,21 @@ export default function SenderEntityTable({
                 />
                 <div className="flex gap-2">
                   <button
-                    onClick={handleEditSubmit}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditSubmit();
+                    }}
                     disabled={isOperationsLoading}
                     className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
                   >
                     حفظ
                   </button>
                   <button
-                    onClick={() => setEditingId(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingId(null);
+                      setEditingName("");
+                    }}
                     className="flex-1 px-3 py-2 bg-gray-300 rounded-lg text-sm hover:bg-gray-400"
                   >
                     إلغاء
@@ -138,10 +148,10 @@ export default function SenderEntityTable({
             ) : (
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setEditingId(entity.id);
                     setEditingName(entity.name);
-                    setIsExpanded(false);
                   }}
                   disabled={isOperationsLoading}
                   className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm hover:bg-blue-100 transition"
@@ -152,7 +162,10 @@ export default function SenderEntityTable({
                 
                 {entity.isActive ? (
                   <button
-                    onClick={() => onDeactivate(entity.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeactivate(entity.id);
+                    }}
                     disabled={isOperationsLoading}
                     className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-600 rounded-lg text-sm hover:bg-orange-100 transition"
                   >
@@ -161,7 +174,10 @@ export default function SenderEntityTable({
                   </button>
                 ) : (
                   <button
-                    onClick={() => onActivate(entity.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onActivate(entity.id);
+                    }}
                     disabled={isOperationsLoading}
                     className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-600 rounded-lg text-sm hover:bg-green-100 transition"
                   >
@@ -171,7 +187,8 @@ export default function SenderEntityTable({
                 )}
                 
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (confirm(`هل أنت متأكد من حذف "${entity.name}"؟`)) {
                       onDelete(entity.id);
                     }
@@ -190,12 +207,112 @@ export default function SenderEntityTable({
     );
   };
 
+  // ✅ Component Pagination Controls
+  const PaginationControls = () => (
+    entities.length > 0 && (
+  <Pagination
+    currentPage={currentPage}
+    totalPages={totalPages}
+    totalItems={entities.length}
+    itemsPerPage={itemsPerPage}
+    onPageChange={goToPage}
+    showInfo={true}
+    visiblePages={5}
+  />
+)
+    // <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+    //   {/* معلومات الصفحات */}
+    //   <div className="text-sm text-gray-500 order-2 sm:order-1">
+    //     عرض {startIndex + 1} - {Math.min(endIndex, entities.length)} من {entities.length} جهة
+    //   </div>
+
+    //   {/* أزرار التنقل */}
+    //   <div className="flex items-center gap-1 order-1 sm:order-2 flex-wrap justify-center">
+    //     {/* السطر الأول */}
+    //     <button
+    //       onClick={() => goToPage(1)}
+    //       disabled={currentPage === 1}
+    //       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+    //     >
+    //       <FontAwesomeIcon icon={faAnglesRight} className="h-4 w-4" />
+    //     </button>
+        
+    //     <button
+    //       onClick={() => goToPage(currentPage - 1)}
+    //       disabled={currentPage === 1}
+    //       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+    //     >
+    //       <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
+    //     </button>
+
+    //     {/* أرقام الصفحات - تظهر بشكل مختلف حسب حجم الشاشة */}
+    //     <div className="flex gap-1">
+    //       {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+    //         let pageNum;
+    //         if (totalPages <= 5) {
+    //           pageNum = i + 1;
+    //         } else if (currentPage <= 3) {
+    //           pageNum = i + 1;
+    //         } else if (currentPage >= totalPages - 2) {
+    //           pageNum = totalPages - 4 + i;
+    //         } else {
+    //           pageNum = currentPage - 2 + i;
+    //         }
+            
+    //         return (
+    //           <button
+    //             key={pageNum}
+    //             onClick={() => goToPage(pageNum)}
+    //             className={`min-w-[36px] h-9 px-2 rounded-lg text-sm transition ${
+    //               currentPage === pageNum
+    //                 ? "bg-blue-600 text-white"
+    //                 : "text-gray-600 hover:bg-gray-100"
+    //             }`}
+    //           >
+    //             {pageNum}
+    //           </button>
+    //         );
+    //       })}
+    //     </div>
+
+    //     <button
+    //       onClick={() => goToPage(currentPage + 1)}
+    //       disabled={currentPage === totalPages}
+    //       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+    //     >
+    //       <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
+    //     </button>
+        
+    //     <button
+    //       onClick={() => goToPage(totalPages)}
+    //       disabled={currentPage === totalPages}
+    //       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+    //     >
+    //       <FontAwesomeIcon icon={faAnglesLeft} className="h-4 w-4" />
+    //     </button>
+
+    //     {/* اختيار عدد العناصر في الصفحة */}
+    //     <select
+    //       value={itemsPerPage}
+    //       onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+    //       className="mr-2 px-2 py-1 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-500"
+    //     >
+    //       <option value={3}>3</option>
+    //       <option value={5}>5</option>
+    //       <option value={10}>10</option>
+    //       <option value={20}>20</option>
+    //       <option value={50}>50</option>
+    //     </select>
+    //   </div>
+    // </div>
+  );
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Header with Create Button - Responsive */}
+      {/* Header */}
       <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="text-right">
-          <h2 className="md:text-lg font-semibold text-gray-800">
+          <h2 className="text-base md:text-lg font-semibold text-gray-800">
             قائمة الجهات المرسلة
           </h2>
           <p className="text-xs md:text-sm text-gray-500 mt-1">
@@ -211,7 +328,7 @@ export default function SenderEntityTable({
         </button>
       </div>
 
-      {/* Desktop Table View - Hidden on mobile */}
+      {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto" dir="rtl">
         <table className="w-full">
           <thead className="bg-gray-50">
@@ -224,9 +341,9 @@ export default function SenderEntityTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {entities.map((entity, index) => (
+            {currentEntities.map((entity, index) => (
               <tr key={entity.id} className="hover:bg-gray-50 transition">
-                <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
+                <td className="px-4 py-3 text-sm text-gray-500">{startIndex + index + 1}</td>
                 <td className="px-4 py-3">
                   {editingId === entity.id ? (
                     <div className="flex gap-2">
@@ -252,27 +369,19 @@ export default function SenderEntityTable({
                       </button>
                     </div>
                   ) : (
-                    <span className="text-gray-800 truncate max-w-[100px] lg:max-w-[200px] line-clamp-2">{entity.name}</span>
+                    <span className="text-gray-800 truncate max-w-[100px] lg:max-w-[200px] line-clamp-2">
+                      {entity.name}
+                    </span>
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                      entity.isActive
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                    entity.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                  }`}>
                     {entity.isActive ? (
-                      <>
-                        <FontAwesomeIcon icon={faCheckCircle} className="h-3 w-3" />
-                        مفعل
-                      </>
+                      <><FontAwesomeIcon icon={faCheckCircle} className="h-3 w-3" /> مفعل</>
                     ) : (
-                      <>
-                        <FontAwesomeIcon icon={faBan} className="h-3 w-3" />
-                        غير مفعل
-                      </>
+                      <><FontAwesomeIcon icon={faBan} className="h-3 w-3" /> غير مفعل</>
                     )}
                   </span>
                 </td>
@@ -286,27 +395,21 @@ export default function SenderEntityTable({
                         setEditingId(entity.id);
                         setEditingName(entity.name);
                       }}
-                      disabled={isOperationsLoading}
                       className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                      title="تعديل"
                     >
                       <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                     </button>
                     {entity.isActive ? (
                       <button
                         onClick={() => onDeactivate(entity.id)}
-                        disabled={isOperationsLoading}
                         className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition"
-                        title="إلغاء تفعيل"
                       >
                         <FontAwesomeIcon icon={faBan} className="h-4 w-4" />
                       </button>
                     ) : (
                       <button
                         onClick={() => onActivate(entity.id)}
-                        disabled={isOperationsLoading}
                         className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition"
-                        title="تفعيل"
                       >
                         <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4" />
                       </button>
@@ -317,38 +420,41 @@ export default function SenderEntityTable({
                           onDelete(entity.id);
                         }
                       }}
-                      disabled={isOperationsLoading}
                       className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title="حذف"
                     >
                       <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                     </button>
                   </div>
                 </td>
-               </tr>
+              </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Mobile Card View - Visible only on mobile */}
+      {/* Mobile Card View */}
       <div className="block md:hidden p-4">
-        {entities.length === 0 && !loading ? (
+        {entities.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             لا توجد جهات مرسلة. أضف جهة جديدة بالضغط على الزر أعلاه.
           </div>
         ) : (
-          entities.map((entity, index) => (
+          currentEntities.map((entity, index) => (
             <MobileCard key={entity.id} entity={entity} index={index} />
           ))
         )}
       </div>
 
-      {/* Create Form Modal - Responsive */}
+      {/* Pagination Controls */}
+      {entities.length > 0 && <PaginationControls />}
+
+      {/* Create Form Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-4 md:p-6 w-full max-w-md">
-            <h3 className="text-lg md:text-xl font-semibold mb-4">إضافة جهة مرسلة جديدة</h3>
+            <h3 className="text-lg md:text-xl font-semibold mb-4 text-right">
+              إضافة جهة مرسلة جديدة
+            </h3>
             <SenderEntityForm
               onSubmit={async (name) => {
                 await onCreate(name);
@@ -358,13 +464,6 @@ export default function SenderEntityTable({
               isLoading={isOperationsLoading}
             />
           </div>
-        </div>
-      )}
-
-      {/* Empty State for Desktop */}
-      {entities.length === 0 && !loading && (
-        <div className="hidden md:flex text-center py-12 text-gray-500 flex-1 items-center justify-center">
-          لا توجد جهات مرسلة. أضف جهة جديدة بالضغط على الزر أعلاه.
         </div>
       )}
     </div>

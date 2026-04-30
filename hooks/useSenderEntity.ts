@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/useSenderEntity.ts
 
 import { useState, useEffect, useCallback } from "react";
@@ -33,7 +34,7 @@ export function useSenderEntities() {
     fetchAll();
   }, [fetchAll]);
 
-  return { entities, loading, error, refetch: fetchAll };
+  return { entities,setEntities, loading, error, refetch: fetchAll };
 }
 
 /**
@@ -42,14 +43,18 @@ export function useSenderEntities() {
 export function useActiveSenderEntities() {
   const [entities, setEntities] = useState<SenderEntityResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [err, setError] = useState<string | null>(null);
 
   const fetchActive = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await senderEntityService.getActiveOnly();
       setEntities(data);
     } catch (err: any) {
-      console.error("Failed to fetch active sender entities:", err);
+      const message = err.response?.data?.message || "فشل في تحميل الجهات المرسلة";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -59,7 +64,7 @@ export function useActiveSenderEntities() {
     fetchActive();
   }, [fetchActive]);
 
-  return { entities, loading, refetch: fetchActive };
+  return { entities, loading,err ,refetch: fetchActive };
 }
 
 /**

@@ -5,22 +5,49 @@ import {
     faCircleQuestion,
     faGear,
     faSearch,
-    faUserCircle
+    faUserCircle,
+    faBars,      
+    faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
 import UserSettingsOverlay from "../overlays/UserSettings";
 import useUserSettingsStore from "@/store/userSettingsStore";
 import userInfoStore from "@/store/userInfoStore";
+import { useEffect, useState } from "react";
+
+interface NavbarProps {
+    onMenuClick?: () => void;
+    isMenuOpen?: boolean;
+}
 
 
-
-export default function Navbar() {
+export default function Navbar({ onMenuClick, isMenuOpen }: NavbarProps) {
     const { isUserSettingsShown, triggerUserSettings } = useUserSettingsStore();
     const { email, firstname, lastname } = userInfoStore();
+    const [isSmallScreen, setIsSmallScreen] = useState(false);
 
+    useEffect(() => {
+        const checkScreenSize = () => {
+            setIsSmallScreen(window.innerWidth < 1024);
+        };
+        checkScreenSize();
+        window.addEventListener("resize", checkScreenSize);
+        return () => window.removeEventListener("resize", checkScreenSize);
+    }, []);
     return (
         <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center justify-between px-6" dir="rtl">
+
+            {/* ✅ زر القائمة - يظهر فقط على الشاشات الصغيرة */}
+            {isSmallScreen && (
+                <button
+                    onClick={onMenuClick}
+                    className="p-2 rounded-lg hover:bg-blue-200 transition ml-2"
+                    aria-label={isMenuOpen ? "إغلاق القائمة" : "فتح القائمة"}
+                >
+                    <FontAwesomeIcon icon={isMenuOpen ? faTimes : faBars} className="h-5 w-5 text-gray-700" />
+                </button>
+            )}
 
             {/* RIGHT (in RTL): Logo */}
             <div className="flex items-center gap-2">
