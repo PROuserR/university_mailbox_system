@@ -1,7 +1,7 @@
 // components/layout/Sidebar.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import MailCompose from "@/components/overlays/MailCompose";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,13 +16,16 @@ import {
     faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailComposeStore from "@/store/mailComposeStore";
+
 interface SidebarProps {
     isOpen?: boolean;
     onClose?: () => void;
 }
+
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const { isMailComposeShown, tiggerMailCompose } = useMailComposeStore();
     const [isMobile, setIsMobile] = useState(false);
+
     // كشف حجم الشاشة
     useEffect(() => {
         const checkScreenSize = () => {
@@ -50,27 +53,38 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         };
     }, [isOpen, isMobile]);
 
-    // المحتوى الأصلي للـ Sidebar (لم يتغير)
     const sidebarContent = (
         <aside
             className={`
-                w-64 h-[calc(100vh-64px)] bg-gray-50 p-4 flex flex-col justify-between
+                bg-gray-50 flex flex-col justify-between
                 transition-transform duration-300 ease-in-out
-                ${isMobile ? "fixed top-16 right-0 z-40 shadow-xl" : "relative"}
+                p-3
+                ${isMobile 
+                    ? "fixed top-16 right-0 z-40 shadow-xl w-60" 
+                    : "relative w-60"
+                }
                 ${isMobile && !isOpen ? "translate-x-full" : "translate-x-0"}
             `}
+            style={{
+                height: 'calc(100dvh - 64px)',
+                overflowY: 'auto',
+                scrollbarWidth: 'thin',
+            }}
             dir="rtl"
         >
             {/* TOP SECTION */}
-            <div>
+            <div className="space-y-3">
                 {/* Compose Button */}
-                <button className="w-full bg-blue-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 mb-6 hover:bg-blue-700 transition" onClick={tiggerMailCompose}>
-                    <FontAwesomeIcon icon={faPlus} />
-                    انشاء بريد
+                <button 
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition text-sm"
+                    onClick={tiggerMailCompose}
+                >
+                    <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+                    <span>انشاء بريد</span>
                 </button>
 
                 {/* Main Navigation */}
-                <nav className="space-y-2">
+                <nav className="space-y-1">
                     <SidebarItem icon={faHouse} label="لوحة التحكم" active />
                     <SidebarItem icon={faInbox} label="الوارد" count={128} />
                     <SidebarItem icon={faPaperPlane} label="المرسل" />
@@ -81,29 +95,28 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 </nav>
 
                 {/* Divider */}
-                <div className="my-6 border-t"></div>
+                <div className="border-t"></div>
 
                 {/* Folders */}
-                <div>
-                    <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-gray-500">
                         <span>المجلدات</span>
-                        <FontAwesomeIcon icon={faPlus} className="cursor-pointer" />
+                        <FontAwesomeIcon icon={faPlus} className="cursor-pointer h-3 w-3" />
                     </div>
-
-                    <div className="space-y-2">
+                    <nav className="space-y-1">
                         <SidebarItem icon={faFolder} label="الإعلانات" count={12} />
                         <SidebarItem icon={faFolder} label="الدورات" count={24} />
                         <SidebarItem icon={faFolder} label="المشاريع" count={8} />
                         <SidebarItem icon={faFolder} label="إداري" count={5} />
-                    </div>
+                    </nav>
                 </div>
             </div>
 
             {/* BOTTOM: Storage */}
-            <div className="bg-gray-100 p-3 rounded-lg">
+            <div className="bg-gray-100 p-2 rounded-lg mt-3">
                 <p className="text-xs text-gray-500 mb-1">التخزين</p>
-                <div className="w-full bg-gray-300 h-2 rounded-full">
-                    <div className="bg-blue-600 h-2 rounded-full w-[24%]"></div>
+                <div className="w-full bg-gray-300 h-1.5 rounded-full">
+                    <div className="bg-blue-600 h-1.5 rounded-full w-[24%]"></div>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">2.4GB من 10GB</p>
             </div>
@@ -115,23 +128,22 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
     return (
         <>
-
             {/* الطبقة الخلفية الداكنة (Overlay) - فقط على الموبايل */}
-        {isMobile && isOpen && (
-        <div
-            className="fixed inset-0 bg-black/50 z-30"
-            onClick={() => {
-                if (onClose) onClose();  
-        }}
-        />
-    )}
+            {isMobile && isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-30"
+                    onClick={() => {
+                        if (onClose) onClose();  
+                    }}
+                />
+            )}
             {/* الـ Sidebar نفسه */}
             {sidebarContent}
         </>
     );
 }
 
-/* 🔹 Reusable Sidebar Item  */
+/* 🔹 Reusable Sidebar Item */
 function SidebarItem({
     icon,
     label,
@@ -146,17 +158,16 @@ function SidebarItem({
 }) {
     return (
         <div
-            className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition
+            className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition
                 ${active ? "bg-blue-100 text-blue-600" : "text-gray-600 hover:bg-gray-100"}
             `}
         >
-            <div className="flex items-center gap-3">
-                <FontAwesomeIcon icon={icon} />
+            <div className="flex items-center gap-2">
+                <FontAwesomeIcon icon={icon} className="h-3.5 w-3.5" />
                 <span className="text-sm">{label}</span>
             </div>
-
             {count !== undefined && (
-                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
+                <span className="text-xs bg-gray-200 px-1.5 py-0.5 rounded-full">
                     {count}
                 </span>
             )}

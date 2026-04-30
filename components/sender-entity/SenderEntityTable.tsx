@@ -73,24 +73,24 @@ export default function SenderEntityTable({
     const isEditMode = editingId === entity.id;
 
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 mb-3 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 mb-2 overflow-hidden">
         <div 
-          className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+          className="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50"
           onClick={() => {
             if (isEditMode) return;
             setIsExpanded(!isExpanded);
           }}
         >
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
               {startIndex + index + 1}
             </div>
             <div>
-              <p className="font-medium text-gray-800 truncate max-w-[150px] line-clamp-2">
+              <p className="font-medium text-gray-800 truncate max-w-[120px] line-clamp-2 text-sm">
                 {entity.name}
               </p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
                   entity.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
                 }`}>
                   {entity.isActive ? (
@@ -99,7 +99,7 @@ export default function SenderEntityTable({
                     <><FontAwesomeIcon icon={faBan} className="h-2 w-2" /> غير مفعل</>
                   )}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-[10px] text-gray-400">
                   {new Date(entity.createdAt).toLocaleDateString("ar-EG")}
                 </span>
               </div>
@@ -107,29 +107,29 @@ export default function SenderEntityTable({
           </div>
           <FontAwesomeIcon 
             icon={isExpanded || isEditMode ? faChevronLeft : faChevronRight} 
-            className="text-gray-400 text-sm"
+            className="text-gray-400 text-xs"
           />
         </div>
 
         {(isExpanded || isEditMode) && (
-          <div className="p-4 border-t border-gray-100 bg-gray-50">
+          <div className="p-3 border-t border-gray-100 bg-gray-50">
             {isEditMode ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <input
                   type="text"
                   value={editingName}
                   onChange={(e) => setEditingName(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
                   autoFocus
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEditSubmit();
                     }}
                     disabled={isOperationsLoading}
-                    className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+                    className="flex-1 px-2 py-1.5 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700"
                   >
                     حفظ
                   </button>
@@ -139,14 +139,14 @@ export default function SenderEntityTable({
                       setEditingId(null);
                       setEditingName("");
                     }}
-                    className="flex-1 px-3 py-2 bg-gray-300 rounded-lg text-sm hover:bg-gray-400"
+                    className="flex-1 px-2 py-1.5 bg-gray-300 rounded-lg text-xs hover:bg-gray-400"
                   >
                     إلغاء
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -154,9 +154,9 @@ export default function SenderEntityTable({
                     setEditingName(entity.name);
                   }}
                   disabled={isOperationsLoading}
-                  className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm hover:bg-blue-100 transition"
+                  className="flex items-center gap-1.5 px-2 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs hover:bg-blue-100 transition"
                 >
-                  <FontAwesomeIcon icon={faEdit} className="h-3 w-3" />
+                  <FontAwesomeIcon icon={faEdit} className="h-2.5 w-2.5" />
                   تعديل
                 </button>
                 
@@ -167,9 +167,9 @@ export default function SenderEntityTable({
                       onDeactivate(entity.id);
                     }}
                     disabled={isOperationsLoading}
-                    className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-600 rounded-lg text-sm hover:bg-orange-100 transition"
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-xs hover:bg-orange-100 transition"
                   >
-                    <FontAwesomeIcon icon={faBan} className="h-3 w-3" />
+                    <FontAwesomeIcon icon={faBan} className="h-2.5 w-2.5" />
                     إلغاء تفعيل
                   </button>
                 ) : (
@@ -179,9 +179,9 @@ export default function SenderEntityTable({
                       onActivate(entity.id);
                     }}
                     disabled={isOperationsLoading}
-                    className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-600 rounded-lg text-sm hover:bg-green-100 transition"
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-green-50 text-green-600 rounded-lg text-xs hover:bg-green-100 transition"
                   >
-                    <FontAwesomeIcon icon={faCheckCircle} className="h-3 w-3" />
+                    <FontAwesomeIcon icon={faCheckCircle} className="h-2.5 w-2.5" />
                     تفعيل
                   </button>
                 )}
@@ -194,9 +194,9 @@ export default function SenderEntityTable({
                     }
                   }}
                   disabled={isOperationsLoading}
-                  className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm hover:bg-red-100 transition"
+                  className="flex items-center gap-1.5 px-2 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs hover:bg-red-100 transition"
                 >
-                  <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                  <FontAwesomeIcon icon={faTrash} className="h-2.5 w-2.5" />
                   حذف
                 </button>
               </div>
@@ -220,198 +220,113 @@ export default function SenderEntityTable({
     visiblePages={5}
   />
 )
-    // <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-    //   {/* معلومات الصفحات */}
-    //   <div className="text-sm text-gray-500 order-2 sm:order-1">
-    //     عرض {startIndex + 1} - {Math.min(endIndex, entities.length)} من {entities.length} جهة
-    //   </div>
-
-    //   {/* أزرار التنقل */}
-    //   <div className="flex items-center gap-1 order-1 sm:order-2 flex-wrap justify-center">
-    //     {/* السطر الأول */}
-    //     <button
-    //       onClick={() => goToPage(1)}
-    //       disabled={currentPage === 1}
-    //       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
-    //     >
-    //       <FontAwesomeIcon icon={faAnglesRight} className="h-4 w-4" />
-    //     </button>
-        
-    //     <button
-    //       onClick={() => goToPage(currentPage - 1)}
-    //       disabled={currentPage === 1}
-    //       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
-    //     >
-    //       <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
-    //     </button>
-
-    //     {/* أرقام الصفحات - تظهر بشكل مختلف حسب حجم الشاشة */}
-    //     <div className="flex gap-1">
-    //       {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-    //         let pageNum;
-    //         if (totalPages <= 5) {
-    //           pageNum = i + 1;
-    //         } else if (currentPage <= 3) {
-    //           pageNum = i + 1;
-    //         } else if (currentPage >= totalPages - 2) {
-    //           pageNum = totalPages - 4 + i;
-    //         } else {
-    //           pageNum = currentPage - 2 + i;
-    //         }
-            
-    //         return (
-    //           <button
-    //             key={pageNum}
-    //             onClick={() => goToPage(pageNum)}
-    //             className={`min-w-[36px] h-9 px-2 rounded-lg text-sm transition ${
-    //               currentPage === pageNum
-    //                 ? "bg-blue-600 text-white"
-    //                 : "text-gray-600 hover:bg-gray-100"
-    //             }`}
-    //           >
-    //             {pageNum}
-    //           </button>
-    //         );
-    //       })}
-    //     </div>
-
-    //     <button
-    //       onClick={() => goToPage(currentPage + 1)}
-    //       disabled={currentPage === totalPages}
-    //       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
-    //     >
-    //       <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
-    //     </button>
-        
-    //     <button
-    //       onClick={() => goToPage(totalPages)}
-    //       disabled={currentPage === totalPages}
-    //       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
-    //     >
-    //       <FontAwesomeIcon icon={faAnglesLeft} className="h-4 w-4" />
-    //     </button>
-
-    //     {/* اختيار عدد العناصر في الصفحة */}
-    //     <select
-    //       value={itemsPerPage}
-    //       onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-    //       className="mr-2 px-2 py-1 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-500"
-    //     >
-    //       <option value={3}>3</option>
-    //       <option value={5}>5</option>
-    //       <option value={10}>10</option>
-    //       <option value={20}>20</option>
-    //       <option value={50}>50</option>
-    //     </select>
-    //   </div>
-    // </div>
   );
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Header */}
-      <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Header - مصغر */}
+      <div className="p-3 md:p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="text-right">
-          <h2 className="text-base md:text-lg font-semibold text-gray-800">
+          <h2 className="text-sm md:text-base font-semibold text-gray-800">
             قائمة الجهات المرسلة
           </h2>
-          <p className="text-xs md:text-sm text-gray-500 mt-1">
+          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">
             إجمالي {entities.length} جهة
           </p>
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm md:text-base"
+          className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-xs md:text-sm"
         >
-          <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
+          <FontAwesomeIcon icon={faPlus} className="h-3 w-3 md:h-3.5 md:w-3.5" />
           إضافة جهة جديدة
         </button>
       </div>
 
-      {/* Desktop Table View */}
+      {/* Desktop Table View - مصغر */}
       <div className="hidden md:block overflow-x-auto" dir="rtl">
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr className="text-right">
-              <th className="px-4 py-3 text-sm font-medium text-gray-600 w-16">#</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-600">الاسم</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-600 w-28">الحالة</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-600 w-36">تاريخ الإنشاء</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-600 w-36">الإجراءات</th>
+              <th className="px-3 py-2 text-xs font-medium text-gray-600 w-12">#</th>
+              <th className="px-3 py-2 text-xs font-medium text-gray-600">الاسم</th>
+              <th className="px-3 py-2 text-xs font-medium text-gray-600 w-20">الحالة</th>
+              <th className="px-3 py-2 text-xs font-medium text-gray-600 w-28">تاريخ الإنشاء</th>
+              <th className="px-3 py-2 text-xs font-medium text-gray-600 w-28">الإجراءات</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {currentEntities.map((entity, index) => (
               <tr key={entity.id} className="hover:bg-gray-50 transition">
-                <td className="px-4 py-3 text-sm text-gray-500">{startIndex + index + 1}</td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-2 text-xs text-gray-500">{startIndex + index + 1}</td>
+                <td className="px-3 py-2">
                   {editingId === entity.id ? (
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <input
                         type="text"
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
-                        className="border border-gray-200 rounded-lg px-3 py-1 text-sm focus:outline-none focus:border-blue-500"
+                        className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500"
                         autoFocus
                       />
                       <button
                         onClick={handleEditSubmit}
                         disabled={isOperationsLoading}
-                        className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
                       >
                         حفظ
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="px-3 py-1 bg-gray-300 rounded-lg text-sm hover:bg-gray-400"
+                        className="px-2 py-1 bg-gray-300 rounded text-xs hover:bg-gray-400"
                       >
                         إلغاء
                       </button>
                     </div>
                   ) : (
-                    <span className="text-gray-800 truncate max-w-[100px] lg:max-w-[200px] line-clamp-2">
+                    <span className="text-gray-800 truncate max-w-[80px] lg:max-w-[150px] line-clamp-2 text-sm">
                       {entity.name}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                <td className="px-3 py-2">
+                  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
                     entity.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
                   }`}>
                     {entity.isActive ? (
-                      <><FontAwesomeIcon icon={faCheckCircle} className="h-3 w-3" /> مفعل</>
+                      <><FontAwesomeIcon icon={faCheckCircle} className="h-2.5 w-2.5" /> مفعل</>
                     ) : (
-                      <><FontAwesomeIcon icon={faBan} className="h-3 w-3" /> غير مفعل</>
+                      <><FontAwesomeIcon icon={faBan} className="h-2.5 w-2.5" /> غير مفعل</>
                     )}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500">
+                <td className="px-3 py-2 text-xs text-gray-500">
                   {new Date(entity.createdAt).toLocaleDateString("ar-EG")}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2">
+                <td className="px-3 py-2">
+                  <div className="flex gap-1">
                     <button
                       onClick={() => {
                         setEditingId(entity.id);
                         setEditingName(entity.name);
                       }}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded transition"
                     >
-                      <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                      <FontAwesomeIcon icon={faEdit} className="h-[12px] w-[12px]" />
                     </button>
                     {entity.isActive ? (
                       <button
                         onClick={() => onDeactivate(entity.id)}
-                        className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition"
+                        className="p-1 text-orange-600 hover:bg-orange-50 rounded transition"
                       >
-                        <FontAwesomeIcon icon={faBan} className="h-4 w-4" />
+                        <FontAwesomeIcon icon={faBan} className="h-[12px] w-[12px]" />
                       </button>
                     ) : (
                       <button
                         onClick={() => onActivate(entity.id)}
-                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition"
+                        className="p-1 text-green-600 hover:bg-green-50 rounded transition"
                       >
-                        <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4" />
+                        <FontAwesomeIcon icon={faCheckCircle} className="h-[12px] w-[12px]" />
                       </button>
                     )}
                     <button
@@ -420,9 +335,9 @@ export default function SenderEntityTable({
                           onDelete(entity.id);
                         }
                       }}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
+                      className="p-1 text-red-600 hover:bg-red-50 rounded transition"
                     >
-                      <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                      <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
                     </button>
                   </div>
                 </td>
@@ -432,8 +347,8 @@ export default function SenderEntityTable({
         </table>
       </div>
 
-      {/* Mobile Card View */}
-      <div className="block md:hidden p-4">
+      {/* Mobile Card View - مصغر */}
+      <div className="block md:hidden p-2">
         {entities.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             لا توجد جهات مرسلة. أضف جهة جديدة بالضغط على الزر أعلاه.
@@ -451,8 +366,8 @@ export default function SenderEntityTable({
       {/* Create Form Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-4 md:p-6 w-full max-w-md">
-            <h3 className="text-lg md:text-xl font-semibold mb-4 text-right">
+          <div className="bg-white rounded-xl p-4 md:p-5 w-full max-w-md">
+            <h3 className="text-base md:text-lg font-semibold mb-3 text-right">
               إضافة جهة مرسلة جديدة
             </h3>
             <SenderEntityForm

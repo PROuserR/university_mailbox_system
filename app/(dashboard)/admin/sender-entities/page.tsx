@@ -84,14 +84,15 @@ export default function SenderEntitiesPage() {
       await refetch();
     }
   };
+  
   return (
-    <div className="flex-1 overflow-hidden p-4 md:p-6 lg:p-8" dir="rtl">
-      {/* Header - Responsive */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">
+    <div className="flex-1 overflow-hidden p-2 md:p-4 lg:p-6" dir="rtl">
+      {/* Header - Responsive ومصغر */}
+      <div className="mb-3 md:mb-4">
+        <h1 className="text-base md:text-lg lg:text-xl font-bold text-gray-800">
           إدارة الجهات المرسلة
         </h1>
-        <p className="text-sm md:text-base text-gray-500 mt-1 md:mt-2">
+        <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">
           إضافة وتعديل وحذف الجهات التي ترسل المراسلات (رئاسة الجامعة، الكليات، الجهات الخارجية...)
         </p>
       </div>

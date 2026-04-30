@@ -117,3 +117,20 @@ aside::-webkit-scrollbar-thumb:hover {
 .auto-show-scrollbar:hover::-webkit-scrollbar {
     opacity: 1;
 }
+
+/* تحسين للـ Zoom */
+@media screen and (max-width: 100%) {
+    aside {
+        font-size: 0.9rem;
+    }
+}
+@media (max-width: 768px) {
+    aside {
+        scrollbar-width: thin;
+    }
+    
+    /* منع الـ Overflow */
+    body {
+        overflow-x: hidden;
+    }
+}
