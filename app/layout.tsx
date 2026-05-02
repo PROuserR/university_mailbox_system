@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import { Toaster } from 'react-hot-toast';
+import Providers from "./tanStackQueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,15 +35,18 @@ export default function RootLayout({
     >
 
       <body className="min-h-full flex flex-col">
-        <header>
-          <Toaster />
-          <Navbar />
-        </header>
+        <Providers>
+          <header>
+            <Toaster />
+            <Navbar />
+          </header>
 
-        <main className="flex flex-row-reverse w-full">
-          <Sidebar />
-          {children}
-        </main>
+          <main className="flex flex-row-reverse w-full">
+            <Sidebar />
+            {children}
+          </main>
+        </Providers>
+
       </body>
     </html>
   );

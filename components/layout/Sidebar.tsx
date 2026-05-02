@@ -7,7 +7,6 @@ import {
     faPaperPlane,
     faFile,
     faStar,
-    faTriangleExclamation,
     faFolder,
     faPlus,
     faDashboard,
@@ -15,10 +14,41 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import useMailComposeStore from "@/store/mailComposeStore";
 import useMailFilterStore from "@/store/mailFilterStore";
+import { useQuery } from "@tanstack/react-query";
+import { apiWrapper } from "@/utils/apiClient";
+import { MailCounts } from "@/types/api/MailCounts";
 
 export default function Sidebar() {
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore()
     const { filter, setFilter } = useMailFilterStore()
+
+    const fetchMailsCount = async (): Promise<MailCounts> => {
+        const res = await apiWrapper.get<{ data: MailCounts }>("/Correspondence/statistics/counts-by-type")
+
+        if (!res.success || !res.data) {
+            throw new Error("Failed to fetch mails")
+        }
+        console.log(res.data.data)
+        return res.data.data
+    }
+
+    const {
+        data = {
+            incomingCount: 0,
+            outgoingCount: 0,
+            internalCount: 0,
+            professionalCount: 0,
+            totalCount: 0,
+        },
+        isLoading,
+        isError,
+        refetch,
+    } = useQuery({
+        queryKey: ["mailsCount"],
+        queryFn: fetchMailsCount, // ✅ FIXED
+    });
+
+
 
     return (
         <aside
@@ -35,13 +65,11 @@ export default function Sidebar() {
 
                 {/* Main Navigation */}
                 <nav className="space-y-2">
-                    <SidebarItem icon={faDashboard} label="لوحة التحكم" active />
-                    <SidebarItem icon={faInbox} label="الوارد" count={128} onClick={() => setFilter("Incoming")} />
-                    <SidebarItem icon={faPaperPlane} label="الصادر" onClick={() => setFilter("Outgoing")} />
-                    <SidebarItem icon={faFile} label="الداخلي" count={7} onClick={() => setFilter("Internal")} />
-                    <SidebarItem icon={faBriefcase} label="المهني" onClick={() => setFilter("Professional")} />
-                    <SidebarItem icon={faStar} label="المميزة" />
-                    <SidebarItem icon={faTriangleExclamation} label="المهم" />
+                    <SidebarItem icon={faDashboard} label="لوحة التحكم" onClick={() => setFilter("")} active={filter === ""} count={data.totalCount} />
+                    <SidebarItem icon={faInbox} label="الوارد" onClick={() => setFilter("Incoming")} active={filter === "Incoming"} count={data.incomingCount} />
+                    <SidebarItem icon={faPaperPlane} label="الصادر" onClick={() => setFilter("Outgoing")} active={filter === "Outgoing"} count={data.outgoingCount} />
+                    <SidebarItem icon={faFile} label="الداخلي" onClick={() => setFilter("Internal")} active={filter === "Internal"} count={data.internalCount} />
+                    <SidebarItem icon={faBriefcase} label="المهني" onClick={() => setFilter("Professional")} active={filter === "Professional"} count={data.professionalCount} />
                 </nav>
 
                 {/* Divider */}
@@ -55,10 +83,10 @@ export default function Sidebar() {
                     </div>
 
                     <div className="space-y-2">
-                        <SidebarItem icon={faFolder} label="الإعلانات" count={12} />
-                        <SidebarItem icon={faFolder} label="الدورات" count={24} />
-                        <SidebarItem icon={faFolder} label="المشاريع" count={8} />
-                        <SidebarItem icon={faFolder} label="إداري" count={5} />
+                        <SidebarItem icon={faFolder} label="الإعلانات" />
+                        <SidebarItem icon={faFolder} label="الدورات" count={12} />
+                        <SidebarItem icon={faFolder} label="المشاريع" count={3} />
+                        <SidebarItem icon={faFolder} label="إداري" count={4} />
                     </div>
                 </div>
             </div>

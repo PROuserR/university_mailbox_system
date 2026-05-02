@@ -27,7 +27,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import myAPI from "@/utils/myAPI";
 import useMailComposeStore from "@/store/mailComposeStore";
-
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 export default function MailComposeOverlay() {
     const [subject, setSubject] = useState<string>("");
@@ -36,8 +36,25 @@ export default function MailComposeOverlay() {
     const [loading, setLoading] = useState<boolean>(false);
     const [mailType, setMailType] = useState<string>("incoming");
     const [isProfessional, setIsProfessional] = useState<boolean>(true);
-
+    const [formData, setFormData] = useState(new FormData())
+    const queryClient = useQueryClient()
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
+    const createMail = useMutation({
+        mutationFn: async (newMail) => {
+            const res = await myAPI.post("/Correspondence", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+            return res.data.data
+        },
+
+        onSuccess: () => {
+            // ✅ invalidate BOTH queries correctly
+            queryClient.invalidateQueries({ queryKey: ["mails"] });
+            queryClient.invalidateQueries({ queryKey: ["mailsCount"] });
+        },
+    })
 
     const editor = useEditor({
         extensions: [
@@ -64,6 +81,7 @@ export default function MailComposeOverlay() {
             : "bg-gray-100 hover:bg-gray-200 text-gray-700"
         }`;
 
+
     const handleFiles = (files: FileList | null) => {
         if (!files) return;
         setAttachments((prev) => [...prev, ...Array.from(files)]);
@@ -86,7 +104,6 @@ export default function MailComposeOverlay() {
 
         try {
             // Use FormData to handle file uploads
-            const formData = new FormData();
             formData.append("senderEntityId", String(2));
             formData.append("DocumentTypeID", String(1));
             formData.append("Number", number);
@@ -102,14 +119,8 @@ export default function MailComposeOverlay() {
                 formData.append("AdditionalFiles", file);
             });
 
-            // Replace '/api/send-mail' with your actual endpoint
-            const response = await myAPI.post("/Correspondence", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
+            createMail.mutate();
 
-            console.log("Success:", response);
             toast.success("Mail sent successfully!", { id: loadingToast });
 
             // Reset form on success
@@ -132,7 +143,7 @@ export default function MailComposeOverlay() {
 
     if (isMailComposeShown)
         return (
-            <div className="absolute left-4 bottom-4 max-w-5xl mx-auto bg-white border rounded-2xl shadow p-4 space-y-4">
+            <div className="absolute left-4 bottom-4 max-w-5xl mx-auto bg-white border rounded-2xl shadow-md shadow-black p-4 space-y-4">
                 {/* Subject */}
                 <input
                     value={subject}
