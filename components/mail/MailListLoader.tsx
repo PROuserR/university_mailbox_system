@@ -7,8 +7,6 @@ import { faEnvelope } from "@fortawesome/free-regular-svg-icons";
 export default function MailListLoader() {
     return (
         <div className="flex flex-col gap-3 p-4 w-full">
-
-
             {/* Mail items */}
             {Array.from({ length: 8 }).map((_, i) => (
                 <motion.div
@@ -18,18 +16,6 @@ export default function MailListLoader() {
                     transition={{ delay: i * 0.05 }}
                     className="flex items-center gap-3 p-3 rounded-lg bg-white border hover:shadow-sm transition"
                 >
-                    {/* Icon pulse */}
-                    <motion.div
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{
-                            repeat: Infinity,
-                            duration: 1.2,
-                            delay: i * 0.1,
-                        }}
-                        className="text-gray-400"
-                    >
-                        <FontAwesomeIcon icon={faEnvelope} />
-                    </motion.div>
 
                     {/* Content lines */}
                     <div className="flex-1 space-y-2">
@@ -51,6 +37,18 @@ export default function MailListLoader() {
                         animate={{ opacity: [0.3, 1, 0.3] }}
                         transition={{ repeat: Infinity, duration: 1.1 }}
                     />
+                    {/* Icon pulse */}
+                    <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{
+                            repeat: Infinity,
+                            duration: 1.2,
+                            delay: i * 0.1,
+                        }}
+                        className="text-gray-400"
+                    >
+                        <FontAwesomeIcon icon={faEnvelope} />
+                    </motion.div>
                 </motion.div>
             ))}
         </div>

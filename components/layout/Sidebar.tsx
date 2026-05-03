@@ -6,7 +6,7 @@ import {
     faInbox,
     faPaperPlane,
     faFile,
-    faStar,
+    faEnvelope,
     faFolder,
     faPlus,
     faDashboard,
@@ -64,13 +64,13 @@ export default function Sidebar() {
                 </button>
 
                 {/* Main Navigation */}
-                <nav className="space-y-2">
-                    <SidebarItem icon={faDashboard} label="لوحة التحكم" onClick={() => setFilter("")} active={filter === ""} count={data.totalCount} />
+                <div className="flex flex-col gap-y-2">
+                    <SidebarItem icon={faEnvelope} label=" صندوق البريد" onClick={() => setFilter("")} active={filter === ""} count={data.totalCount} />
                     <SidebarItem icon={faInbox} label="الوارد" onClick={() => setFilter("Incoming")} active={filter === "Incoming"} count={data.incomingCount} />
                     <SidebarItem icon={faPaperPlane} label="الصادر" onClick={() => setFilter("Outgoing")} active={filter === "Outgoing"} count={data.outgoingCount} />
                     <SidebarItem icon={faFile} label="الداخلي" onClick={() => setFilter("Internal")} active={filter === "Internal"} count={data.internalCount} />
                     <SidebarItem icon={faBriefcase} label="المهني" onClick={() => setFilter("Professional")} active={filter === "Professional"} count={data.professionalCount} />
-                </nav>
+                </div>
 
                 {/* Divider */}
                 <div className="my-6 border-t"></div>

@@ -1,5 +1,5 @@
 'use client';
-import MailList from "@/components/dashboard/MailList";
+import MailList from "@/components/mail/MailList";
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 
 export default function DashboardPage() {

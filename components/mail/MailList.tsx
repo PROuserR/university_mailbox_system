@@ -9,8 +9,8 @@ import { Mail } from "@/types/api/Mail";
 import useInfiniteScroll from "@/hooks/useInfiniteScroll";
 import useMailFilterStore from "@/store/mailFilterStore";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import MailListLoader from "../loading/MailListLoader";
-import MailListError from "../error/MailListError";
+import MailListLoader from "./MailListLoader";
+import MailListError from "./MailListError";
 import { MailPageResponse } from "@/types/api/MailPageResponse";
 
 export default function MailList() {
@@ -79,7 +79,6 @@ export default function MailList() {
         if (!isMailDetailsStoreShown)
             return (
                 <div className="flex flex-col gap-y-1 p-4 h-full w-full" >
-                    <h1 className="font-semibold mb-4">ديوان جامعة حلب </h1>
                     {mailList.map(((mail: Mail) => (
                         <div className="w-full" key={mail.id}>
                             <div className="space-y-4" onClick={() => showMailDetails(mail)}>

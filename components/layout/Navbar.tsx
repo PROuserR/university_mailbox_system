@@ -22,8 +22,9 @@ export default function Navbar() {
     return (
         <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center justify-between px-6" dir="rtl">
             {/* RIGHT (in RTL): Logo */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-8">
                 <Image width="48" height="48" src="/aleppo_university_logo.svg" alt="Aleppo university logo" />
+                <span className="font-bold text-xl">ديوان جامعة حلب </span>
             </div>
 
             {/* CENTER: Search */}
