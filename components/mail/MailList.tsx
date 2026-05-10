@@ -80,17 +80,17 @@ export default function MailList() {
             return (
                 <div className="flex flex-col gap-y-1 p-4 h-full w-full" >
                     {mailList.map(((mail: Mail) => (
-                        <div className="w-full" key={mail.id}>
-                            <div className="space-y-4" onClick={() => showMailDetails(mail)}>
-                                <div className="p-3 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer">
-                                    <p className="font-medium ">{mail.title}</p>
-                                    <div className="flex w-full items-center text-sm">
-                                        <span className="mr-auto">{formatDate(mail.issuedDate)}</span>
-                                        <p className="text-gray-500">
-                                            {getEmailContentPreview(mail.content)}
-                                        </p>
-                                    </div>
-                                </div>
+                        <div className="flex flex-row-reverse items-center justify-center p-4 bg-gray-200 hover:bg-gray-300 rounded-lg cursor-pointer"
+                            onClick={() => showMailDetails(mail)} key={mail.id}>
+                            <div className="flex flex-row-reverse gap-16">
+                                <p className="font-bold">{mail.title}</p>
+                                <span className="text-gray-500">
+                                    {getEmailContentPreview(mail.content)}
+                                </span>
+                            </div>
+
+                            <div className="flex w-full items-center text-sm">
+                                <span className="mr-auto">{formatDate(mail.issuedDate)}</span>
                             </div>
                         </div>
                     )))}

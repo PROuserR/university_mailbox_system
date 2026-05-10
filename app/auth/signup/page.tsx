@@ -13,15 +13,16 @@ import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { apiWrapper } from "@/utils/apiClient";
+import useUserInfoStore from "@/store/userInfoStore";
 
 export default function SignupPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [agreeToTerms, setAgreeToTerms] = useState(false);
     const [firstname, setFirstname] = useState("");
     const [lastname, setLastname] = useState("");
-    const [userType, setUserType] = useState("employee"); // New state for user type
+    const [userType, setUserType] = useState("employee");
+    const { role } = useUserInfoStore()
 
     const signupUser = async () => {
         const userData = { "firstName": firstname, "lastName": lastname, "email": email, "password": password, "role": userType };
@@ -34,15 +35,15 @@ export default function SignupPage() {
     const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (password !== confirmPassword) {
-            alert("كلمة المرور والتأكيد غير متطابقين");
+            toast.error("كلمة المرور والتأكيد غير متطابقين");
             return;
         }
-        if (!agreeToTerms) {
-            alert("يرجى الموافقة على الشروط والأحكام");
-            return;
+        if (role === "dean") {
+            signupUser()
+            toast.success("تم إنشاء الحساب بنجاح!");
+        } else {
+            toast.error("المستخدم ليس لديه صلاحية")
         }
-        signupUser()
-        alert("تم إنشاء الحساب بنجاح!");
     };
 
     return (
@@ -116,8 +117,6 @@ export default function SignupPage() {
                         </div>
                     </div>
 
-
-
                     {/* Input Group: Email */}
                     <div className="relative group">
                         <input
@@ -143,8 +142,9 @@ export default function SignupPage() {
                             className="w-full bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-5 py-4 pr-12 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all duration-300 placeholder:text-slate-400 appearance-none"
                             required
                         >
-                            <option value="employee">موظف</option>
-                            <option value="dean">مسؤول</option>
+                            <option value="Employee">موظف</option>
+                            <option value="User">دكتور</option>
+                            <option value="Dean">عميد</option>
                         </select>
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
                             <FontAwesomeIcon icon={faUserTie} className="w-5 h-5" />

@@ -5,37 +5,35 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faLock,
     faEnvelope,
-    faPlusCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import userInfoStore from "@/store/userInfoStore";
 import toast from "react-hot-toast";
 import { apiWrapper } from "@/utils/apiClient";
 import { AxiosResponse } from "axios";
 import { UserLoginData } from "@/types/api/UserLoginData";
+import useUserInfoStore from "@/store/userInfoStore";
 
 export default function LoginPage() {
     const [emailInput, setEmailInpt] = useState("");
     const [passwordInput, setPasswordInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-    const { setEmail, setFirstname, setLastname } = userInfoStore();
+    const { setEmail, setFirstname, setLastname, setRole } = useUserInfoStore();
 
     const loginUser = async () => {
         const res = await apiWrapper.post<AxiosResponse<UserLoginData>>('/auth/login', { email: emailInput, password: passwordInput })
-        console.log(res)
         if (res.status === 200 && res.data) {
             const data = res.data.data
             setIsLoading(false);
             setEmail(data.email);
             setFirstname(data.firstName);
             setLastname(data.lastName);
+            setRole(data.role);
             toast.success("تم تسجيل الدخول بنجاح");
             router.push("/");
         }
-
     }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -44,7 +42,6 @@ export default function LoginPage() {
         setIsLoading(true);
         loginUser();
     };
-
 
     return (
         <div
@@ -148,24 +145,14 @@ export default function LoginPage() {
                         <Link href="/auth/forget-password" className="ml-auto text-blue-600 hover:text-blue-800 hover:underline decoration-dotted decoration-blue-300 underline-offset-4 transition-all duration-300 font-medium flex items-center gap-1 group">
                             استعادة كلمة المرور
                             <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
                         </Link>
-
 
                         {/* Help/Link */}
                         <Link href="/support" className="text-slate-500 hover:text-blue-600 transition-colors duration-300 flex items-center gap-1">
                             مساعدة؟
                         </Link>
                     </div>
-
-                    {/* Signup Password Link */}
-                    <Link href="/auth/signup" className="mx-auto text-blue-600 hover:text-blue-800 hover:underline decoration-dotted decoration-blue-300 underline-offset-4 transition-all duration-300 font-medium flex items-center gap-1 group">
-                        ليس لديك حساب؟
-                        <FontAwesomeIcon icon={faPlusCircle} className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                    </Link>
                 </footer>
-
             </div>
         </div>
     );

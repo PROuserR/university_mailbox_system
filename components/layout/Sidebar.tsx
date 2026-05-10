@@ -28,7 +28,6 @@ export default function Sidebar() {
         if (!res.success || !res.data) {
             throw new Error("Failed to fetch mails")
         }
-        console.log(res.data.data)
         return res.data.data
     }
 

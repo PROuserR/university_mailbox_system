@@ -9,6 +9,7 @@ import userSettingsOverlayStore from '@/store/userSettingsOverlayStore'
 import { useRouter } from "next/navigation";
 import { UserInfo } from '@/types/api/UserInfo';
 import { apiWrapper } from '@/utils/apiClient';
+import { useState } from 'react';
 
 
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
 export default function UserSettingsOverlay({ user }: Props) {
 
     const { triggerUserSettings } = userSettingsOverlayStore()
+    const [userRole, setUserRole] = useState("");
     const router = useRouter();
 
     const handleSignout = async () => {
@@ -30,6 +32,22 @@ export default function UserSettingsOverlay({ user }: Props) {
     const handleChangePassword = async () => {
         triggerUserSettings();
         router.push("/auth/change-password");
+    }
+
+    const getUserRoleInArabic = (userRole: string) => {
+        switch (user.role) {
+            case "Dean":
+                return("عميد")
+                break;
+            case "Employee":
+                return("موظف")
+                break;
+            case "User":
+                return("دكتور")
+                break;
+            default:
+                break;
+        }
     }
 
     return (
@@ -46,22 +64,8 @@ export default function UserSettingsOverlay({ user }: Props) {
 
                 {/* user info */}
                 <div className="flex flex-col items-center justify-center text-center gap-4 mb-6">
-                    {/* <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200">
-                        {user.avatar ? (
-                            <img
-                                src={user.avatar}
-                                alt="avatar"
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            <div className="flex items-center justify-center h-full">
-                                <FontAwesomeIcon icon={faUser} />
-                            </div>
-                        )}
-                    </div> */}
-
                     <div>
-                        <p className="font-semibold text-lg">{user.name}</p>
+                        <p className="font-semibold text-lg">{user.name} | {getUserRoleInArabic(user.role)}</p>
                         <p
                             className="text-sm text-blue-100">
                             {user.email}

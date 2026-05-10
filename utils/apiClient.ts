@@ -49,11 +49,17 @@ export const apiWrapper = {
             params,
         }),
 
-    post: <T>(url: string, data?: object) =>
+    post: <T>(url: string, data?: object | FormData) =>
         request<T>({
             method: "POST",
             url,
             data,
+            headers:
+                data instanceof FormData
+                    ? {
+                        "Content-Type": "multipart/form-data",
+                    }
+                    : undefined,
         }),
 
     put: <T>(url: string, data?: object) =>

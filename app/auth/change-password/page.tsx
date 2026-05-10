@@ -19,7 +19,6 @@ export default function ChangePasswordPage() {
     const changePassword = async () => {
         const data = { "currentPassword": currentPasswordInput, "newPassword": newPasswordInput };
         const res = await apiWrapper.post("/auth/change-password", data);
-        console.log("change-password")
         if (res.status === 200) {
             setNewPasswordInput("");
             setConfirmNewPasswordInput("");

@@ -3,6 +3,7 @@ export type Mail = {
     title: string;
     content: string;
     issuedDate?: string | undefined;
+    senderEntityId: string | undefined
     number: string;
     isProfessional: boolean;
     attachments?: Attachment[];

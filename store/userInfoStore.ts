@@ -8,18 +8,22 @@ type UserInfoStore = {
     setLastname: (lastname: string) => void
     email: string
     setEmail: (email: string) => void
+    role: string
+    setRole: (role: string) => void
 }
 
 
-const userInfoStore = create<UserInfoStore>()(
+const useUserInfoStore = create<UserInfoStore>()(
     persist(
         (set) => ({
             firstname: "",
             lastname: "",
             email: "",
+            role: "",
             setFirstname: (firstname) => set({ firstname }),
             setLastname: (lastname) => set({ lastname }),
             setEmail: (email) => set({ email }),
+            setRole: (role) => set({ role }),
         }),
         {
             name: "auth-storage", // key in localStorage
@@ -27,4 +31,4 @@ const userInfoStore = create<UserInfoStore>()(
     )
 );
 
-export default userInfoStore;
+export default useUserInfoStore;

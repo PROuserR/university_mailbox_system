@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -25,29 +25,31 @@ import {
     faPaperclip,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-import myAPI from "@/utils/myAPI";
 import useMailComposeStore from "@/store/mailComposeStore";
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion";
+import { apiWrapper } from "@/utils/apiClient";
+import { SenderEntity, SenderEntityResponse } from "@/types/api/SenderEntity";
 
 export default function MailComposeOverlay() {
     const [subject, setSubject] = useState<string>("");
     const [number, setNumber] = useState<string>("");
     const [attachments, setAttachments] = useState<File[]>([]);
+    const [senderEntities, setSenderEntities] = useState<SenderEntity[]>();
+    const [senderEntityId, setSenderEntityId] = useState("");
     const [loading, setLoading] = useState<boolean>(false);
     const [mailType, setMailType] = useState<string>("incoming");
     const [isProfessional, setIsProfessional] = useState<boolean>(true);
     const [formData, setFormData] = useState(new FormData())
     const queryClient = useQueryClient()
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
+
+
     const createMail = useMutation({
         mutationFn: async (newMail) => {
-            const res = await myAPI.post("/Correspondence", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-            return res.data.data
+            const res = await apiWrapper.post<CreateMailResponse>("/Correspondence", formData);
+            if (res.data)
+                return res.data.data
         },
 
         onSuccess: () => {
@@ -56,6 +58,18 @@ export default function MailComposeOverlay() {
             queryClient.invalidateQueries({ queryKey: ["mailsCount"] });
         },
     })
+
+    const getSenderEntities = async () => {
+        const req = await apiWrapper.get<SenderEntityResponse>("/SenderEntity")
+        console.log(req.data)
+        if (req.data) {
+            setSenderEntities(req.data.data)
+        }
+    }
+
+    useEffect(() => {
+        getSenderEntities()
+    }, [])
 
     const editor = useEditor({
         extensions: [
@@ -105,7 +119,6 @@ export default function MailComposeOverlay() {
 
         try {
             // Use FormData to handle file uploads
-            formData.append("senderEntityId", String(2));
             formData.append("DocumentTypeID", String(1));
             formData.append("Number", number);
             formData.append("Title", subject);
@@ -114,7 +127,7 @@ export default function MailComposeOverlay() {
             formData.append("IsProfessional", String(isProfessional));
             formData.append("IssuedDate", now.toISOString());
             formData.append("ReceivedDate", now.toISOString());
-            formData.append("Notes", "23");
+            formData.append("senderEntityId", senderEntityId);
 
             attachments.forEach((file) => {
                 formData.append("AdditionalFiles", file);
@@ -226,6 +239,24 @@ export default function MailComposeOverlay() {
                                 />
                             </label>
                         </div>
+
+                        {/* Sender entity Select */}
+                        <div className="flex items-center gap-3 text-sm">
+                            <label className="flex items-center gap-1">
+                                الجهة المرسلة:
+                                <select
+                                    onChange={(e) => setSenderEntityId(e.target.value)}
+                                    className="border rounded-lg p-2 text-sm bg-white"
+                                >
+                                    {senderEntities?.map(senderEntityData => (
+                                        <option value={senderEntityData.id} key={senderEntityData.id}>
+                                            {senderEntityData.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
+
                     </div>
 
                     {/* Toolbar */}

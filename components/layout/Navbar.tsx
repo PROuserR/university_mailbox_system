@@ -11,12 +11,12 @@ import Image from "next/image";
 import Link from "next/link";
 import UserSettingsOverlay from "../overlays/UserSettings";
 import userSettingsOverlayStore from "@/store/userSettingsOverlayStore";
-import userInfoStore from "@/store/userInfoStore";
 import useSearchInputStore from "@/store/searchInputStore";
+import useUserInfoStore from "@/store/userInfoStore";
 
 export default function Navbar() {
     const { isUserSettingsShown, triggerUserSettings } = userSettingsOverlayStore();
-    const { email, firstname, lastname } = userInfoStore();
+    const { email, firstname, lastname, role } = useUserInfoStore();
     const { setSearchInput } = useSearchInputStore()
 
     return (
@@ -43,20 +43,20 @@ export default function Navbar() {
             {/* LEFT (in RTL): Actions */}
             <div className="flex items-center gap-5">
                 {/* Help */}
-                <Link href="/support">
+                {/* <Link href="/support">
                     <FontAwesomeIcon
                         icon={faCircleQuestion}
                         className="text-lg cursor-pointer"
                     />
-                </Link>
+                </Link> */}
 
                 {/* Settings */}
-                <Link href="/settings">
+                {/* <Link href="/settings">
                     <FontAwesomeIcon
                         icon={faGear}
                         className="text-lg cursor-pointer"
                     />
-                </Link>
+                </Link> */}
 
                 {/* Profile */}
                 <div className="flex items-center gap-2 cursor-pointer" onClick={triggerUserSettings}>
@@ -67,7 +67,8 @@ export default function Navbar() {
             {isUserSettingsShown ? <UserSettingsOverlay
                 user={{
                     name: `${firstname} ${lastname}`,
-                    email: email
+                    email: email,
+                    role: role
                 }}
             /> : null}
 
