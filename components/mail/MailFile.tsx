@@ -2,33 +2,46 @@
 
 import { apiWrapper } from "@/utils/apiClient";
 import blobToImageUrl from "@/utils/blobToImageUrl";
+import Image from "next/image";
 import { useEffect, useState } from "react";
+import LoadingCircleSpinner from "../ui/LoadingSpinner";
 
-export default function MailFile({ filePath }: { filePath: string }) {
+export default function MailFile({ filePath, fileName, isImage }: { filePath: string, fileName: string | undefined, isImage: boolean }) {
     const [url, setUrl] = useState<string | null>(null);
 
     useEffect(() => {
         let objectUrl: string;
 
         const load = async () => {
-            const res = await apiWrapper.get<ArrayBuffer>("/attachment/view", {
-                params: { filePath },
-                responseType: "arraybuffer",
-            });
-            if (res.data)
-                objectUrl = blobToImageUrl(res.data)
+            const res = await apiWrapper.get<ArrayBuffer>(
+                "/Attachment/view",
+                {
+                    filePath,
+                },
+                {
+                    responseType: "blob",
+                }
+            );
+            if (res.data) {
 
-            setUrl(objectUrl);
+                const objectUrl = blobToImageUrl(res.data)
+                setUrl(objectUrl)
+            }
         };
-
         load();
 
-        return () => {
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
-        };
+
     }, [filePath]);
 
-    if (!url) return <div>Loading...</div>;
+    if (!url) return <LoadingCircleSpinner />;
 
-    return <img src={url} className="max-w-2xl mx-auto" />;
+    return <>
+        {isImage ?
+            <Image src={url} alt="Mail attachment image" width={600}
+                height={600} /> :
+            <a href={url} download={fileName} className="underline text-blue-600">
+                Download file: {fileName}
+            </a>}
+
+    </>;
 }

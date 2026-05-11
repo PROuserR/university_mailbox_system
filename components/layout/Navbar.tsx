@@ -2,8 +2,7 @@
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faCircleQuestion,
-    faGear,
+    faAdd,
     faSearch,
     faUserCircle
 } from "@fortawesome/free-solid-svg-icons";
@@ -20,15 +19,15 @@ export default function Navbar() {
     const { setSearchInput } = useSearchInputStore()
 
     return (
-        <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center justify-between px-6" dir="rtl">
+        <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center px-6 z-20" dir="rtl">
             {/* RIGHT (in RTL): Logo */}
-            <div className="flex items-center justify-center gap-8">
+            <Link href="/" className="flex items-center justify-center gap-8">
                 <Image width="48" height="48" src="/aleppo_university_logo.svg" alt="Aleppo university logo" />
                 <span className="font-bold text-xl">ديوان جامعة حلب </span>
-            </div>
+            </Link>
 
             {/* CENTER: Search */}
-            <div className="flex-1 max-w-xl ml-[40%]">
+            <div className="flex-1 max-w-xl mr-10">
                 <div className="flex items-center bg-gray-100 rounded-lg px-3 py-2">
                     <input
                         type="text"
@@ -41,14 +40,16 @@ export default function Navbar() {
             </div>
 
             {/* LEFT (in RTL): Actions */}
-            <div className="flex items-center gap-5">
-                {/* Help */}
-                {/* <Link href="/support">
-                    <FontAwesomeIcon
-                        icon={faCircleQuestion}
-                        className="text-lg cursor-pointer"
-                    />
-                </Link> */}
+            <div className="flex items-center gap-5 mr-auto">
+                {/* Add user */}
+                {role === "Dean" &&
+                    <Link href="/auth/signup">
+                        <FontAwesomeIcon
+                            icon={faAdd}
+                            className="text-lg cursor-pointer"
+                        />
+                    </Link>}
+
 
                 {/* Settings */}
                 {/* <Link href="/settings">

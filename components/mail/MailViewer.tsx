@@ -37,7 +37,6 @@ export default function MailViewer({ data }: Props) {
                         {data?.number}
                     </span>
                     <FontAwesomeIcon icon={faArrowRight} className="ml-auto" onClick={triggerMailDetailsStoreShown} />
-
                 </header>
 
                 <div className="pr-8 mb-8">
@@ -57,11 +56,12 @@ export default function MailViewer({ data }: Props) {
                         </div>
 
                     </div>
-
-                    <div>
+                    <div className="flex justify-center items-center gap-16 w-full">
                         {data?.attachments?.map(attachment => (
                             <div key={attachment?.id}>
-                                {attachment?.mimeType.startsWith("image/") ? <MailFile key={attachment.id} filePath={attachment.filePath} /> : null}
+                                {attachment?.mimeType.startsWith("image/") ? <MailFile key={attachment.id} filePath={attachment.filePath} isImage={true} fileName={undefined} /> :
+                                    <MailFile key={attachment.id} filePath={attachment.filePath} fileName={attachment.fileName} isImage={false} />}
+
                             </div>
                         ))}
                     </div>

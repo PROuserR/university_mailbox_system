@@ -6,7 +6,7 @@ export default function DashboardPage() {
   useAuthGuard();
 
   return (
-    <main className="flex flex-col h-fit w-screen overflow-hidden gap-12 p-4">
+    <main className="flex flex-col h-fit w-full overflow-hidden gap-12 p-4">
       <div className="flex flex-row-reverse text-right">
         {/* Mail List */}
         <div className="w-full  mx-auto">

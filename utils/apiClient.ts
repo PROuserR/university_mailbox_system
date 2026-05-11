@@ -42,11 +42,16 @@ async function request<T>(
 }
 
 export const apiWrapper = {
-    get: <T>(url: string, params?: object) =>
+    get: <T>(
+        url: string,
+        params?: object,
+        config?: AxiosRequestConfig
+    ) =>
         request<T>({
             method: "GET",
             url,
             params,
+            ...config,
         }),
 
     post: <T>(url: string, data?: object | FormData) =>

@@ -33,20 +33,28 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-screen bg-white">
         <Providers>
-          <header>
-            <Toaster />
+          <Toaster />
+
+          {/* Fixed Navbar */}
+          <header className="fixed top-0 left-0 w-full z-50">
             <Navbar />
           </header>
 
-          <main className="flex flex-row-reverse w-full">
-            <Sidebar />
-            {children}
-          </main>
-        </Providers>
+          {/* Layout */}
+          <div className="flex flex-row-reverse pt-16">
+            {/* Fixed Sidebar */}
+            <aside className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-64 z-40">
+              <Sidebar />
+            </aside>
 
+            {/* Page Content */}
+            <main className="absolute top-16 right-64 w-[calc(100vw-16rem)]">
+              {children}
+            </main>
+          </div>
+        </Providers>
       </body>
     </html>
   );
