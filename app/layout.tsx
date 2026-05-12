@@ -38,19 +38,19 @@ export default function RootLayout({
           <Toaster />
 
           {/* Fixed Navbar */}
-          <header className="fixed top-0 left-0 w-full z-50">
+          <header className="fixed top-0 left-0 w-full">
             <Navbar />
           </header>
 
           {/* Layout */}
           <div className="flex flex-row-reverse pt-16">
             {/* Fixed Sidebar */}
-            <aside className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-64 z-40">
+            <aside className="sticky right-0 top-16 h-[calc(100vh-4rem)] w-64">
               <Sidebar />
             </aside>
 
             {/* Page Content */}
-            <main className="absolute top-16 right-64 w-[calc(100vw-16rem)]">
+            <main className="w-[calc(100vw-16rem)]">
               {children}
             </main>
           </div>
