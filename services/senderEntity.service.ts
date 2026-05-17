@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/services/senderEntity.service.ts
+// src/services/SenderEntities.service.ts
 
 import myAPI from "@/utils/myAPI";
 import type { ApiResult } from "@/types/api/ApiResult";
@@ -16,44 +16,44 @@ import type {
 export const senderEntityService = {
   /**
    * Get all sender entities (including inactive)
-   * GET /api/SenderEntity
+   * GET /api/SenderEntities
    */
   async getAll(): Promise<SenderEntity[]> {
     const response = await myAPI.get<ApiResult<SenderEntity[]>>(
-      "/SenderEntity"
+      "/SenderEntities"
     );
     return response.data.data;
   },
 
   /**
    * Get active only sender entities (for dropdown lists)
-   * GET /api/SenderEntity/active
+   * GET /api/SenderEntities/active
    */
   async getActiveOnly(): Promise<SenderEntity[]> {
     const response = await myAPI.get<ApiResult<SenderEntity[]>>(
-      "/SenderEntity/active"
+      "/SenderEntities/active"
     );
     return response.data.data;
   },
 
   /**
    * Get single sender entity by ID
-   * GET /api/SenderEntity/{id}
+   * GET /api/SenderEntities/{id}
    */
   async getById(id: number): Promise<SenderEntity> {
     const response = await myAPI.get<ApiResult<SenderEntity>>(
-      `/SenderEntity/${id}`
+      `/SenderEntities/${id}`
     );
     return response.data.data;
   },
 
   /**
    * Create new sender entity (Dean only)
-   * POST /api/SenderEntity
+   * POST /api/SenderEntities
    */
   async create(data: CreateSenderEntityRequest): Promise<SenderEntity> {
     const response = await myAPI.post<ApiResult<SenderEntity>>(
-      "/SenderEntity",
+      "/SenderEntities",
       data
     );
     return response.data.data;
@@ -61,14 +61,14 @@ export const senderEntityService = {
 
   /**
    * Update existing sender entity (Dean only)
-   * PUT /api/SenderEntity/{id}
+   * PUT /api/SenderEntities/{id}
    */
   async update(
     id: number,
     data: UpdateSenderEntityRequest
   ): Promise<SenderEntity> {
     const response = await myAPI.put<ApiResult<SenderEntity>>(
-      `/SenderEntity/${id}`,
+      `/SenderEntities/${id}`,
       data
     );
     return response.data.data;
@@ -76,31 +76,31 @@ export const senderEntityService = {
 
   /**
    * Delete sender entity (Dean only)
-   * DELETE /api/SenderEntity/{id}
+   * DELETE /api/SenderEntities/{id}
    */
   async delete(id: number): Promise<void> {
-    await myAPI.delete(`/SenderEntity/${id}`);
+    await myAPI.delete(`/SenderEntities/${id}`);
   },
 
   /**
    * Activate sender entity (Dean only)
-   * POST /api/SenderEntity/{id}/activate
+   * POST /api/SenderEntities/{id}/activate
    */
   async activate(id: number): Promise<void> {
-    await myAPI.post(`/SenderEntity/${id}/activate`);
+    await myAPI.post(`/SenderEntities/${id}/activate`);
   },
 
   /**
    * Deactivate sender entity (Dean only)
-   * POST /api/SenderEntity/{id}/deactivate
+   * POST /api/SenderEntities/{id}/deactivate
    */
   async deactivate(id: number): Promise<void> {
-    await myAPI.post(`/SenderEntity/${id}/deactivate`);
+    await myAPI.post(`/SenderEntities/${id}/deactivate`);
   },
 
   /**
    * Search sender entities by name
-   * GET /api/SenderEntity/search?name={name}
+   * GET /api/SenderEntities/search?name={name}
    */
   async search(searchTerm?: string): Promise<SenderEntity[]> {
     const params: Record<string, any> = {};
@@ -108,7 +108,7 @@ export const senderEntityService = {
       params.search = searchTerm.trim();
     }
     const response = await myAPI.get<ApiResult<SenderEntity[]>>(
-      "/SenderEntity",
+      "/SenderEntities",
       { params }
     );
     return response.data.data;

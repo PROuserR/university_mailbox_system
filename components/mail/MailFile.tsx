@@ -14,7 +14,7 @@ export default function MailFile({ filePath, fileName, isImage }: { filePath: st
 
         const load = async () => {
             const res = await apiWrapper.get<ArrayBuffer>(
-                "/Attachment/view",
+                "/Attachments/view",
                 {
                     filePath,
                 },

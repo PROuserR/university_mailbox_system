@@ -1,4 +1,4 @@
-// components/sender-entity/SenderEntityTable.tsx
+// components/sender-entity/SenderEntitiesTable.tsx
 "use client";
 import Pagination from "@/components/ui/Pagination";
 import { useMemo, useRef, useState } from "react";
@@ -116,8 +116,8 @@ export default function SenderEntityTable({
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span
                   className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${entity.isActive
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-500"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-500"
                     }`}
                 >
                   {entity.isActive ? (
@@ -348,8 +348,8 @@ export default function SenderEntityTable({
                 <td className="px-3 py-2">
                   <span
                     className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${entity.isActive
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-500"
                       }`}
                   >
                     {entity.isActive ? (

@@ -60,7 +60,7 @@ export default function MailComposeOverlay() {
     })
 
     const getSenderEntities = async () => {
-        const req = await apiWrapper.get<SenderEntityResponse>("/SenderEntity")
+        const req = await apiWrapper.get<SenderEntityResponse>("/SenderEntities")
         console.log(req.data)
         if (req.data) {
             setSenderEntities(req.data.data)

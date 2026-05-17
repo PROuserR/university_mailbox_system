@@ -2,14 +2,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/useSenderEntity.ts
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
-import { senderEntityService } from "@/services/senderEntity.service";
 import type {
   CreateSenderEntityRequest,
   SenderEntity,
   UpdateSenderEntityRequest,
 } from "@/types/api/SenderEntity";
+import { senderEntityService } from "@/services/senderEntity.service";
 
 /**
  * Hook for fetching and managing sender entities

@@ -1,11 +1,17 @@
 import myAPI from "./myAPI";
-import axios, { AxiosRequestConfig } from "axios";
+
+import axios, {
+    AxiosRequestConfig,
+} from "axios";
 
 // Generic response type
 type ApiResponse<T> = {
     status: number;
+
     data: T | null;
+
     error: string | null;
+
     success: boolean;
 };
 
@@ -14,29 +20,48 @@ async function request<T>(
     config: AxiosRequestConfig
 ): Promise<ApiResponse<T>> {
     try {
-        const res = await myAPI.request<T>(config);
+        const res =
+            await myAPI.request<T>(
+                config
+            );
 
         return {
             data: res.data,
+
             error: null,
+
             success: true,
-            status: res.status
+
+            status: res.status,
         };
     } catch (err: unknown) {
-        let message = "Something went wrong";
+        let message =
+            "Something went wrong";
 
-        if (axios.isAxiosError(err)) {
+        let status = 0;
+
+        if (
+            axios.isAxiosError(err)
+        ) {
             message =
-                err.response?.data?.message ||
+                err.response?.data
+                    ?.message ||
                 err.message ||
                 "API error";
+
+            status =
+                err.response?.status ||
+                0;
         }
 
         return {
             data: null,
+
             error: message,
+
             success: false,
-            status: 0
+
+            status,
         };
     }
 }
@@ -49,34 +74,68 @@ export const apiWrapper = {
     ) =>
         request<T>({
             method: "GET",
+
             url,
+
             params,
+
             ...config,
         }),
 
-    post: <T>(url: string, data?: object | FormData) =>
+    post: <T>(
+        url: string,
+        data?:
+            | object
+            | FormData
+    ) =>
         request<T>({
             method: "POST",
+
             url,
+
             data,
+
             headers:
-                data instanceof FormData
+                data instanceof
+                    FormData
                     ? {
-                        "Content-Type": "multipart/form-data",
+                        "Content-Type":
+                            "multipart/form-data",
                     }
                     : undefined,
         }),
 
-    put: <T>(url: string, data?: object) =>
+    put: <T>(
+        url: string,
+        data?: object
+    ) =>
         request<T>({
             method: "PUT",
+
             url,
+
             data,
         }),
 
-    delete: <T>(url: string) =>
+    // ✅ NEW PATCH METHOD
+    patch: <T>(
+        url: string,
+        data?: object
+    ) =>
+        request<T>({
+            method: "PATCH",
+
+            url,
+
+            data,
+        }),
+
+    delete: <T>(
+        url: string
+    ) =>
         request<T>({
             method: "DELETE",
+
             url,
         }),
 };

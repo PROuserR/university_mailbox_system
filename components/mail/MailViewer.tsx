@@ -7,6 +7,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { useEffect } from "react";
 import formatDate from "@/utils/formatDate";
 import { Mail } from "@/types/api/Mail";
+import MailDistribute from "./MailDistribute";
 
 type Props = {
     data: Mail;
@@ -30,16 +31,20 @@ export default function MailViewer({ data }: Props) {
 
     if (isMailDetailsStoreShown)
         return (
-            <div >
-                <header className="flex gap-4 w-full ml-auto cursor-pointer items-center mb-8">
+            <>
+                <header className="flex flex-col gap-4 w-full ml-auto cursor-pointer items-center mb-8">
                     <span className="mr-auto text-gray-400">
                         رقم البريد:
                         {data?.number}
                     </span>
                     <FontAwesomeIcon icon={faArrowRight} className="ml-auto" onClick={triggerMailDetailsStoreShown} />
+
+                    <MailDistribute correspondenceId={data?.id} />
                 </header>
 
-                <div className="pr-8 mb-8">
+
+
+                <main className="pr-8 mb-8">
                     <div className="flex w-full items-center justify-center gap-4 ml-auto text-lg font-semibold mb-2">
 
                         <span className=" text-gray-600">
@@ -69,7 +74,9 @@ export default function MailViewer({ data }: Props) {
                     <div>
                         <EditorContent editor={editor} />
                     </div>
-                </div>
-            </div>
+                </main>
+
+
+            </>
         );
 }

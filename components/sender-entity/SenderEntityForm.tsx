@@ -1,4 +1,4 @@
-// src/components/sender-entity/SenderEntityForm.tsx
+// src/components/sender-entity/SenderEntitiesForm.tsx
 
 "use client";
 
@@ -26,7 +26,7 @@ export default function SenderEntityForm({
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       setError("الاسم مطلوب");
       return;
@@ -67,7 +67,7 @@ export default function SenderEntityForm({
           <FontAwesomeIcon icon={faSave} className="h-4 w-4" />
           {isLoading ? "جاري الحفظ..." : "حفظ"}
         </button>
-        
+
         <button
           type="button"
           onClick={onCancel}

@@ -23,7 +23,7 @@ export default function Sidebar() {
     const { filter, setFilter } = useMailFilterStore()
 
     const fetchMailsCount = async (): Promise<MailCounts> => {
-        const res = await apiWrapper.get<{ data: MailCounts }>("/Correspondence/statistics/counts-by-type")
+        const res = await apiWrapper.get<{ data: MailCounts }>("/Correspondences/statistics/counts-by-type")
 
         if (!res.success || !res.data) {
             throw new Error("Failed to fetch mails")

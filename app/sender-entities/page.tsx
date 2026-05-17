@@ -5,7 +5,7 @@ import {
     useSenderEntities,
     useSenderEntityOperations,
 } from "@/hooks/useSenderEntity";
-import { SenderEntityTable } from "@/components/sender-entities";
+import { SenderEntityTable } from "@/components/sender-entity";
 
 export default function SenderEntitiesPage() {
     const { entities, loading, refetch, setEntities } = useSenderEntities();

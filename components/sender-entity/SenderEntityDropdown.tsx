@@ -1,4 +1,4 @@
-// src/components/sender-entity/SenderEntityDropdown.tsx
+// src/components/sender-entity/SenderEntitiesDropdown.tsx
 
 "use client";
 
