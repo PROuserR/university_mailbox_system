@@ -9,7 +9,6 @@ import {
     faEnvelope,
     faFolder,
     faPlus,
-    faDashboard,
     faBriefcase,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailComposeStore from "@/store/mailComposeStore";
@@ -51,7 +50,7 @@ export default function Sidebar() {
 
     return (
         <aside
-            className="w-64 h-[calc(100vh-64px)] bg-gray-50 p-4 flex flex-col justify-between z-10"
+            className="w-64 h-[calc(100vh-64px)] bg-blue-50 p-4 flex flex-col justify-between z-10"
             dir="rtl"
         >
             {/* TOP SECTION */}

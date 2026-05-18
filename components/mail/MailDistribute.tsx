@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiWrapper } from "@/utils/apiClient";
 
 import toast from "react-hot-toast";
+import UsersDropdown from "../ui/UsersDropdown";
 
 type User = {
     id: number;
@@ -106,10 +107,7 @@ export default function MailDistribute({ correspondenceId }: Props) {
     if (isError) return <p>Failed to load users</p>;
 
     return (
-        <div className="flex flex-row-reverse text-xl ml-auto items-center gap-8">
-            <span className="font-bold">
-                توزيع البريد
-            </span>
+        <div className="flex flex-row-reverse  ml-auto items-center gap-8">
 
             <form
                 onSubmit={handleSubmit}
@@ -120,21 +118,11 @@ export default function MailDistribute({ correspondenceId }: Props) {
 
                 <label>المستلمين</label>
 
-                <select
-                    multiple
-                    value={selectedUsers.map(String)}
-                    onChange={handleSelect}
-                    className="p-2 border rounded-xl min-w-[200px]"
-                >
-                    {users?.map((user) => (
-                        <option
-                            key={user.id}
-                            value={user.id}
-                        >
-                            {user.firstName} {user.lastName}
-                        </option>
-                    ))}
-                </select>
+                <UsersDropdown
+                    users={users}
+                    selectedUsers={selectedUsers}
+                    setSelectedUsers={setSelectedUsers}
+                />
 
                 {/* NOTES */}
 

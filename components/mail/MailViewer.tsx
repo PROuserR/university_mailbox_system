@@ -1,10 +1,10 @@
 import useShowMailDetailsStore from "@/store/showMailDetails";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faL } from "@fortawesome/free-solid-svg-icons";
 import MailFile from "./MailFile";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import formatDate from "@/utils/formatDate";
 import { Mail } from "@/types/api/Mail";
 import MailDistribute from "./MailDistribute";
@@ -14,7 +14,8 @@ type Props = {
 };
 
 export default function MailViewer({ data }: Props) {
-    const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } = useShowMailDetailsStore()
+    const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } = useShowMailDetailsStore();
+    const [showMailDistribute, setShowMailDistribute] = useState(false);
 
     const editor = useEditor({
         extensions: [StarterKit],
@@ -32,14 +33,20 @@ export default function MailViewer({ data }: Props) {
     if (isMailDetailsStoreShown)
         return (
             <>
-                <header className="flex flex-col gap-4 w-full ml-auto cursor-pointer items-center mb-8">
-                    <span className="mr-auto text-gray-400">
-                        رقم البريد:
-                        {data?.number}
-                    </span>
-                    <FontAwesomeIcon icon={faArrowRight} className="ml-auto" onClick={triggerMailDetailsStoreShown} />
+                <header className="flex flex-col gap-4 w-full ml-auto items-center mb-8">
+                    <div className="flex w-full">
+                        <span className="mr-auto text-gray-400">
+                            رقم البريد:
+                            {data?.number}
+                        </span>
+                        <FontAwesomeIcon icon={faArrowRight} className="ml-auto cursor-pointer" onClick={triggerMailDetailsStoreShown} />
+                    </div>
 
-                    <MailDistribute correspondenceId={data?.id} />
+
+                    <div className="flex gap-8 flex-row-reverse ml-auto text-xl">
+                        <button onClick={() => setShowMailDistribute(!showMailDistribute)} className="border border-blue-500 p-4 rounded-2xl text-black cursor-pointer disabled:opacity-50"> حالة التوزيع </button>
+                        {showMailDistribute && <MailDistribute correspondenceId={data?.id} />}
+                    </div>
                 </header>
 
 

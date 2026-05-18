@@ -2,9 +2,10 @@
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faAdd,
+    faUserPlus,
     faSearch,
-    faUserCircle
+    faUserCircle,
+    faBell
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,6 +13,7 @@ import UserSettingsOverlay from "../overlays/UserSettings";
 import userSettingsOverlayStore from "@/store/userSettingsOverlayStore";
 import useSearchInputStore from "@/store/searchInputStore";
 import useUserInfoStore from "@/store/userInfoStore";
+import NotificationsDropdown from "../ui/NotificationsDropdown";
 
 export default function Navbar() {
     const { isUserSettingsShown, triggerUserSettings } = userSettingsOverlayStore();
@@ -41,28 +43,24 @@ export default function Navbar() {
 
             {/* LEFT (in RTL): Actions */}
             <div className="flex items-center gap-5 mr-auto">
+
+                <NotificationsDropdown />
+
                 {/* Add user */}
                 {role === "Dean" &&
                     <Link href="/auth/signup">
                         <FontAwesomeIcon
-                            icon={faAdd}
+                            icon={faUserPlus}
                             className="text-lg cursor-pointer"
                         />
                     </Link>}
-
-
-                {/* Settings */}
-                {/* <Link href="/settings">
-                    <FontAwesomeIcon
-                        icon={faGear}
-                        className="text-lg cursor-pointer"
-                    />
-                </Link> */}
 
                 {/* Profile */}
                 <div className="flex items-center gap-2 cursor-pointer" onClick={triggerUserSettings}>
                     <FontAwesomeIcon icon={faUserCircle} className="text-lg cursor-pointer" />
                 </div>
+
+
             </div>
 
             {isUserSettingsShown ? <UserSettingsOverlay
