@@ -15,7 +15,7 @@ import useMailComposeStore from "@/store/mailComposeStore";
 import useMailFilterStore from "@/store/mailFilterStore";
 import { useQuery } from "@tanstack/react-query";
 import { apiWrapper } from "@/utils/apiClient";
-import { MailCounts } from "@/types/api/MailCounts";
+import { MailCounts } from "@/types/api/Mail/MailCounts";
 
 export default function Sidebar() {
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore()

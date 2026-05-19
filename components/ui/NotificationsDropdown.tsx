@@ -3,26 +3,36 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { useQuery } from "@tanstack/react-query"
-import toast from "react-hot-toast";
+import {
+    useMutation,
+    useQuery,
+    useQueryClient,
+} from "@tanstack/react-query"
+import toast from "react-hot-toast"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
     faBell,
-    faCheckCircle,
     faCircleInfo,
     faTriangleExclamation,
     faSpinner,
     faXmark,
     faCircleCheck,
+    faCheck,
+    faCheckDouble,
 } from "@fortawesome/free-solid-svg-icons"
+
 import { apiWrapper } from "@/utils/apiClient"
+
 import { NotificationsResponse } from "@/types/api/Notifications/NotificationsResponse"
 import { NotificationItem } from "@/types/api/Notifications/NotificationItem"
 
 export default function NotificationsDropdown() {
     const [open, setOpen] = useState(false)
 
-    const dropdownRef = useRef<HTMLDivElement>(null)
+    const dropdownRef =
+        useRef<HTMLDivElement>(null)
+
+    const queryClient = useQueryClient()
 
     const {
         data,
@@ -30,30 +40,87 @@ export default function NotificationsDropdown() {
         isError,
     } = useQuery<NotificationsResponse>({
         queryKey: ["notifications"],
-        queryFn: async (): Promise<NotificationsResponse> => {
-            try {
-                const response =
-                    await apiWrapper.get<NotificationsResponse>(
-                        "/Notifications"
+
+        queryFn:
+            async (): Promise<NotificationsResponse> => {
+                try {
+                    const response =
+                        await apiWrapper.get<NotificationsResponse>(
+                            "/Notifications"
+                        )
+
+                    if (!response.data) {
+                        throw new Error(
+                            "لم يتم العثور على بيانات الإشعارات"
+                        )
+                    }
+
+                    return response.data
+                } catch (error) {
+                    toast.error(
+                        "فشل في تحميل الإشعارات"
                     )
 
-                if (!response.data) {
-                    throw new Error(
-                        "No notifications data found"
-                    )
+                    throw error
                 }
+            },
 
-                return response.data
-            } catch (error) {
-                toast.error(
-                    "Failed to load notifications"
-                )
-
-                throw error
-            }
-        },
         refetchInterval: 30000,
     })
+
+    // تحديد إشعار كمقروء
+    const markAsReadMutation =
+        useMutation({
+            mutationFn: async (
+                notificationId: number
+            ) => {
+                await apiWrapper.post(
+                    `/Notifications/${notificationId}/read`
+                )
+            },
+
+            onSuccess: () => {
+                queryClient.invalidateQueries({
+                    queryKey: [
+                        "notifications",
+                    ],
+                })
+            },
+
+            onError: () => {
+                toast.error(
+                    "فشل في تحديد الإشعار كمقروء"
+                )
+            },
+        })
+
+    // تحديد جميع الإشعارات كمقروءة
+    const markAllAsReadMutation =
+        useMutation({
+            mutationFn: async () => {
+                await apiWrapper.post(
+                    "/Notifications/read-all"
+                )
+            },
+
+            onSuccess: () => {
+                toast.success(
+                    "تم تحديد جميع الإشعارات كمقروءة"
+                )
+
+                queryClient.invalidateQueries({
+                    queryKey: [
+                        "notifications",
+                    ],
+                })
+            },
+
+            onError: () => {
+                toast.error(
+                    "فشل في تحديد جميع الإشعارات كمقروءة"
+                )
+            },
+        })
 
     useEffect(() => {
         const handleClickOutside = (
@@ -82,7 +149,8 @@ export default function NotificationsDropdown() {
         }
     }, [])
 
-    const notifications = data?.data?.items || []
+    const notifications =
+        data?.data?.items || []
 
     const unreadCount =
         data?.data?.unreadCount || 0
@@ -123,35 +191,49 @@ export default function NotificationsDropdown() {
         }
     }
 
+    const handleReadNotification =
+        async (
+            notificationId: number
+        ) => {
+            try {
+                await markAsReadMutation.mutateAsync(
+                    notificationId
+                )
+            } catch {
+                //
+            }
+        }
+
     return (
         <div
-            className="relative"
+            className="relative z-10"
             ref={dropdownRef}
+            dir="rtl"
         >
-            {/* Bell Button */}
+            {/* زر الجرس */}
             <button
                 onClick={() =>
                     setOpen((prev) => !prev)
                 }
-                className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg transition hover:bg-blue-700"
+                className="relative flex h-11 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg transition hover:bg-blue-700"
             >
                 <FontAwesomeIcon
                     icon={faBell}
-                    className="text-lg"
+                    className="text-base"
                 />
 
                 {unreadCount > 0 && (
                     <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white"
+                        className="absolute -left-1 -top-1 flex h-4 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white"
                     >
                         {unreadCount}
                     </motion.div>
                 )}
             </button>
 
-            {/* Dropdown */}
+            {/* القائمة المنسدلة */}
             <AnimatePresence>
                 {open && (
                     <motion.div
@@ -175,43 +257,86 @@ export default function NotificationsDropdown() {
                         }}
                         className="absolute left-0 z-50 mt-3 w-[390px] overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-2xl"
                     >
-                        {/* Header */}
-                        <div className="flex items-center justify-between border-b border-blue-100 bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-4 text-white">
-                            <div>
-                                <h2 className="text-lg font-semibold">
-                                    Notifications
-                                </h2>
+                        {/* الهيدر */}
+                        <div className="border-b border-blue-100 bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-4 text-white">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <h2 className="text-lg font-semibold">
+                                        الإشعارات
+                                    </h2>
 
-                                <p className="text-sm text-blue-100">
-                                    {unreadCount} unread
-                                </p>
+                                    <p className="text-sm text-blue-100">
+                                        {unreadCount}{" "}
+                                        غير مقروءة
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    {unreadCount >
+                                        0 && (
+                                            <button
+                                                onClick={() =>
+                                                    markAllAsReadMutation.mutate()
+                                                }
+                                                disabled={
+                                                    markAllAsReadMutation.isPending
+                                                }
+                                                className="flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                {markAllAsReadMutation.isPending ? (
+                                                    <FontAwesomeIcon
+                                                        icon={
+                                                            faSpinner
+                                                        }
+                                                        spin
+                                                    />
+                                                ) : (
+                                                    <FontAwesomeIcon
+                                                        icon={
+                                                            faCheckDouble
+                                                        }
+                                                    />
+                                                )}
+
+                                                تحديد
+                                                الكل
+                                                كمقروء
+                                            </button>
+                                        )}
+
+                                    <button
+                                        onClick={() =>
+                                            setOpen(
+                                                false
+                                            )
+                                        }
+                                        className="rounded-full p-2 transition hover:bg-white/10"
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={
+                                                faXmark
+                                            }
+                                        />
+                                    </button>
+                                </div>
                             </div>
-
-                            <button
-                                onClick={() =>
-                                    setOpen(false)
-                                }
-                                className="rounded-full p-2 transition hover:bg-white/10"
-                            >
-                                <FontAwesomeIcon
-                                    icon={faXmark}
-                                />
-                            </button>
                         </div>
 
-                        {/* Content */}
+                        {/* المحتوى */}
                         <div className="max-h-[500px] overflow-y-auto">
                             {isLoading && (
                                 <div className="flex flex-col items-center justify-center gap-3 py-10 text-blue-600">
                                     <FontAwesomeIcon
-                                        icon={faSpinner}
+                                        icon={
+                                            faSpinner
+                                        }
                                         spin
                                         className="text-2xl"
                                     />
 
                                     <p className="text-sm">
-                                        Loading
-                                        notifications...
+                                        جاري تحميل
+                                        الإشعارات...
                                     </p>
                                 </div>
                             )}
@@ -226,8 +351,8 @@ export default function NotificationsDropdown() {
                                     />
 
                                     <p className="text-sm">
-                                        Failed to load
-                                        notifications
+                                        فشل في تحميل
+                                        الإشعارات
                                     </p>
                                 </div>
                             )}
@@ -236,8 +361,8 @@ export default function NotificationsDropdown() {
                                 notifications.length ===
                                 0 && (
                                     <div className="py-10 text-center text-gray-500">
-                                        No notifications
-                                        found
+                                        لا توجد
+                                        إشعارات
                                     </div>
                                 )}
 
@@ -245,75 +370,15 @@ export default function NotificationsDropdown() {
                                 notifications.map(
                                     (
                                         notification
-                                    ) => (
-                                        <motion.div
-                                            key={
-                                                notification.id
-                                            }
-                                            initial={{
-                                                opacity: 0,
-                                                y: 10,
-                                            }}
-                                            animate={{
-                                                opacity: 1,
-                                                y: 0,
-                                            }}
-                                        >
-                                            {notification.link ? (
-                                                <Link
-                                                    href={
-                                                        notification.link
-                                                    }
+                                    ) => {
+                                        const NotificationContent =
+                                            (
+                                                <div
+                                                    className={`group border-b border-gray-100 p-4 transition hover:bg-blue-50 ${!notification.isRead
+                                                        ? "bg-blue-50/40"
+                                                        : ""
+                                                        }`}
                                                 >
-                                                    <div
-                                                        className={`cursor-pointer border-b border-gray-100 p-4 transition hover:bg-blue-50 ${!notification.isRead
-                                                            ? "bg-blue-50/40"
-                                                            : ""
-                                                            }`}
-                                                    >
-                                                        <div className="flex items-start gap-3">
-                                                            <div
-                                                                className={`mt-1 flex h-10 w-10 items-center justify-center rounded-2xl ${getNotificationStyle(
-                                                                    notification.type
-                                                                )}`}
-                                                            >
-                                                                <FontAwesomeIcon
-                                                                    icon={getNotificationIcon(
-                                                                        notification.type
-                                                                    )}
-                                                                />
-                                                            </div>
-
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center justify-between gap-3">
-                                                                    <h3 className="font-semibold text-gray-800">
-                                                                        {
-                                                                            notification.title
-                                                                        }
-                                                                    </h3>
-
-                                                                    {!notification.isRead && (
-                                                                        <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
-                                                                    )}
-                                                                </div>
-
-                                                                <p className="mt-1 text-sm text-gray-600">
-                                                                    {
-                                                                        notification.message
-                                                                    }
-                                                                </p>
-
-                                                                <p className="mt-2 text-xs text-gray-400">
-                                                                    {new Date(
-                                                                        notification.createdAt
-                                                                    ).toLocaleString()}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </Link>
-                                            ) : (
-                                                <div className="border-b border-gray-100 p-4">
                                                     <div className="flex items-start gap-3">
                                                         <div
                                                             className={`mt-1 flex h-10 w-10 items-center justify-center rounded-2xl ${getNotificationStyle(
@@ -328,35 +393,115 @@ export default function NotificationsDropdown() {
                                                         </div>
 
                                                         <div className="flex-1">
-                                                            <div className="flex items-center justify-between gap-3">
-                                                                <h3 className="font-semibold text-gray-800">
-                                                                    {
-                                                                        notification.title
-                                                                    }
-                                                                </h3>
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <h3 className="font-semibold text-gray-800">
+                                                                            {
+                                                                                notification.title
+                                                                            }
+                                                                        </h3>
+
+                                                                        {!notification.isRead && (
+                                                                            <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+                                                                        )}
+                                                                    </div>
+
+                                                                    <p className="mt-1 text-sm text-gray-600">
+                                                                        {
+                                                                            notification.message
+                                                                        }
+                                                                    </p>
+
+                                                                    <p className="mt-2 text-xs text-gray-400">
+                                                                        {new Date(
+                                                                            notification.createdAt
+                                                                        ).toLocaleString(
+                                                                            "ar"
+                                                                        )}
+                                                                    </p>
+                                                                </div>
 
                                                                 {!notification.isRead && (
-                                                                    <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+                                                                    <button
+                                                                        onClick={(
+                                                                            e
+                                                                        ) => {
+                                                                            e.preventDefault()
+                                                                            e.stopPropagation()
+
+                                                                            handleReadNotification(
+                                                                                notification.id
+                                                                            )
+                                                                        }}
+                                                                        disabled={
+                                                                            markAsReadMutation.isPending
+                                                                        }
+                                                                        className="flex items-center gap-1 rounded-xl bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-md transition hover:bg-blue-700 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    >
+                                                                        <FontAwesomeIcon
+                                                                            icon={
+                                                                                markAsReadMutation.isPending
+                                                                                    ? faSpinner
+                                                                                    : faCheck
+                                                                            }
+                                                                            spin={
+                                                                                markAsReadMutation.isPending
+                                                                            }
+                                                                        />
+
+                                                                        مقروء
+                                                                    </button>
                                                                 )}
                                                             </div>
-
-                                                            <p className="mt-1 text-sm text-gray-600">
-                                                                {
-                                                                    notification.message
-                                                                }
-                                                            </p>
-
-                                                            <p className="mt-2 text-xs text-gray-400">
-                                                                {new Date(
-                                                                    notification.createdAt
-                                                                ).toLocaleString()}
-                                                            </p>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </motion.div>
-                                    )
+                                            )
+
+                                        return (
+                                            <motion.div
+                                                key={
+                                                    notification.id
+                                                }
+                                                initial={{
+                                                    opacity: 0,
+                                                    y: 10,
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                    y: 0,
+                                                }}
+                                            >
+                                                {notification.link ? (
+                                                    <Link
+                                                        href={
+                                                            notification.link
+                                                        }
+                                                        onClick={() => {
+                                                            if (
+                                                                !notification.isRead
+                                                            ) {
+                                                                handleReadNotification(
+                                                                    notification.id
+                                                                )
+                                                            }
+
+                                                            setOpen(
+                                                                false
+                                                            )
+                                                        }}
+                                                    >
+                                                        {
+                                                            NotificationContent
+                                                        }
+                                                    </Link>
+                                                ) : (
+                                                    NotificationContent
+                                                )}
+                                            </motion.div>
+                                        )
+                                    }
                                 )}
                         </div>
                     </motion.div>

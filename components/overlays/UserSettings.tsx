@@ -7,7 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import userSettingsOverlayStore from '@/store/userSettingsOverlayStore'
 import { useRouter } from "next/navigation";
-import { UserInfo } from '@/types/api/UserInfo';
+import { UserInfo } from '@/types/api/User/UserInfo';
 import { apiWrapper } from '@/utils/apiClient';
 import { useState } from 'react';
 

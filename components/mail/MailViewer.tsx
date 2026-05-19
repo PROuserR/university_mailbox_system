@@ -6,7 +6,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useState } from "react";
 import formatDate from "@/utils/formatDate";
-import { Mail } from "@/types/api/Mail";
+import { Mail } from "@/types/api/Mail/Mail";
 import MailDistribute from "./MailDistribute";
 
 type Props = {

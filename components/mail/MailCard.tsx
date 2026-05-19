@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail } from "@/types/api/Mail";
+import { Mail } from "@/types/api/Mail/Mail";
 
 import formatDate from "@/utils/formatDate";
 
@@ -57,17 +57,17 @@ export default function MailCard({
                 delay: index * 0.03,
             }}
             whileHover={{
-                scale: 1.01,
-                y: -2,
+                scale: 1.02,
+                zIndex: 50,
             }}
             whileTap={{
-                scale: 0.99,
+                scale: 1.02,
+                zIndex: 50,
             }}
-            className="group flex flex-row-reverse items-center justify-center p-4 bg-gray-200 hover:bg-gray-300 rounded-xl cursor-pointer shadow-sm"
+            className="group flex flex-row-reverse items-center justify-center p-4 bg-blue-100 rounded-xl cursor-pointer shadow-sm"
             onClick={() =>
                 onClick(mail)
-            }
-        >
+            }>
             <div className="flex flex-row-reverse gap-16">
                 <p className="font-bold">
                     {mail.title}
@@ -80,7 +80,7 @@ export default function MailCard({
                 </span>
             </div>
 
-            <div className="flex mr-auto items-center text-sm gap-2">
+            <div className="flex mr-auto items-center text-sm gap-8 p-4">
                 <span>
                     {formatDate(
                         mail.issuedDate
@@ -93,7 +93,7 @@ export default function MailCard({
 
                         onEdit(mail);
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-300 rounded-full"
+                    className="hidden group-hover:flex transition-opacity duration-200 text-blue-500 hover:text-blue-600 hover:bg-blue-300 rounded-full"
                 >
                     <FontAwesomeIcon
                         icon={faPen}
@@ -110,7 +110,7 @@ export default function MailCard({
                         );
                     }}
                     disabled={isDeleting}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2 text-red-500 hover:text-red-600 hover:bg-red-300 rounded-full"
+                    className="hidden group-hover:flex transition-opacity duration-200 text-red-500 hover:text-red-600 hover:bg-red-300 rounded-full"
                 >
                     <FontAwesomeIcon
                         icon={faTrash}

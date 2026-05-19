@@ -5,7 +5,6 @@ import {
     faUserPlus,
     faSearch,
     faUserCircle,
-    faBell
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
@@ -21,7 +20,7 @@ export default function Navbar() {
     const { setSearchInput } = useSearchInputStore()
 
     return (
-        <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center px-6 z-20" dir="rtl">
+        <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center px-8 z-20" dir="rtl">
             {/* RIGHT (in RTL): Logo */}
             <Link href="/" className="flex items-center justify-center gap-8">
                 <Image width="48" height="48" src="/aleppo_university_logo.svg" alt="Aleppo university logo" />
@@ -42,7 +41,7 @@ export default function Navbar() {
             </div>
 
             {/* LEFT (in RTL): Actions */}
-            <div className="flex items-center gap-5 mr-auto">
+            <div className="flex items-center gap-6 mr-auto">
 
                 <NotificationsDropdown />
 

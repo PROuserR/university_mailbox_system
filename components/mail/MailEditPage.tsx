@@ -25,9 +25,9 @@ import toast from "react-hot-toast";
 
 import { apiWrapper } from "@/utils/apiClient";
 
-import { Mail } from "@/types/api/Mail";
+import { Mail } from "@/types/api/Mail/Mail";
 
-import { MailPageResponse } from "@/types/api/MailPageResponse";
+import { MailPageResponse } from "@/types/api/Mail/MailPageResponse";
 
 type Attachment = {
     id: number;

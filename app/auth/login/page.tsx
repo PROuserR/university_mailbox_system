@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { apiWrapper } from "@/utils/apiClient";
 import { AxiosResponse } from "axios";
-import { UserLoginData } from "@/types/api/UserLoginData";
+import { UserLoginData } from "@/types/api/User/UserLoginData";
 import useUserInfoStore from "@/store/userInfoStore";
 
 export default function LoginPage() {
