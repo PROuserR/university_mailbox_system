@@ -50,7 +50,6 @@ export default function MailViewer({ data }: Props) {
                 </header>
 
 
-
                 <main className="pr-8 mb-8">
                     <div className="flex w-full items-center justify-center gap-4 ml-auto text-lg font-semibold mb-2">
 

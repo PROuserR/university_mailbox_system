@@ -110,11 +110,11 @@ export default function MailComposeOverlay() {
         const content = editor.getHTML();
 
         // Validation with toast
-        if (!subject.trim()) return toast.error("Subject required");
-        if (!content || content === "<p></p>") return toast.error("Message empty");
+        if (!subject.trim()) return toast.error("الموضوع مطلوب");
+        if (!content || content === "<p></p>") return toast.error("الرسالة فارغة");
 
         setLoading(true);
-        const loadingToast = toast.loading("Sending mail...");
+        const loadingToast = toast.loading("جاري إرسال الرسالة...");
         const now = new Date()
 
         try {
@@ -135,7 +135,7 @@ export default function MailComposeOverlay() {
 
             createMail.mutate();
 
-            toast.success("Mail sent successfully!", { id: loadingToast });
+            toast.success("تم إرسال الرسالة بنجاح!", { id: loadingToast });
 
             // Reset form on success
             // setTo("");
@@ -147,8 +147,9 @@ export default function MailComposeOverlay() {
             triggerMailCompose();
             editor.commands.clearContent();
         } catch (error: any) {
-            console.error("Error sending mail:", error);
-            const errorMessage = error.response?.data?.message || "Failed to send mail. Please try again.";
+            const errorMessage =
+                error.response?.data?.message || "فشل إرسال الرسالة. يرجى المحاولة مرة أخرى.";
+
             toast.error(errorMessage, { id: loadingToast });
         } finally {
             setLoading(false);
