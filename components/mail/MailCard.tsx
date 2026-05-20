@@ -56,7 +56,7 @@ export default function MailCard({
                 duration: 0.35,
                 delay: index * 0.03,
             }}
-            className={`group flex flex-row-reverse items-center justify-center p-4  rounded-2xl cursor-pointer ${index % 2 === 0 ? "bg-blue-200 hover:bg-blue-300 shadow-lg" : "bg-blue-100 hover:bg-blue-200"}`}
+            className={`group flex flex-row-reverse items-center justify-center p-4 rounded-2xl cursor-pointer hover:bg-blue-300 shadow-lg hover:shadow-xl ${index % 2 === 0 ? "bg-blue-200 " : "bg-blue-100" }`}
             onClick={() =>
                 onClick(mail)
             }>
@@ -68,7 +68,7 @@ export default function MailCard({
 
                 </span>
 
-                <span className="font-bold text-lg">
+                <span className="font-bold text-xl">
                     {mail.title}
                 </span>
 
@@ -80,7 +80,7 @@ export default function MailCard({
             </div>
 
             <div className="flex mr-auto items-start text-sm gap-8 p-4">
-                <span>
+                <span className="italic">
                     {formatDate(
                         mail.issuedDate
                     )}

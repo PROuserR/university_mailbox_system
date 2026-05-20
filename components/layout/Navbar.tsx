@@ -22,7 +22,7 @@ export default function Navbar() {
     return (
         <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center px-8 z-20" dir="rtl">
             {/* RIGHT (in RTL): Logo */}
-            <Link href="/" className="flex items-center justify-center gap-8 mr-16">
+            <Link href="/" className="flex items-center justify-center gap-8 mr-20">
                 <Image width="48" height="48" src="/aleppo_university_logo.svg" alt="Aleppo university logo" />
             </Link>
 

@@ -49,7 +49,7 @@ export default function Sidebar() {
 
     return (
         <aside
-            className="w-64 h-[calc(100vh-64px)] bg-blue-100 p-4 flex flex-col justify-between z-10"
+            className="w-72 h-[calc(100vh-64px)] bg-blue-100 p-4 flex flex-col justify-between z-10"
             dir="rtl"
         >
             {/* TOP SECTION */}
