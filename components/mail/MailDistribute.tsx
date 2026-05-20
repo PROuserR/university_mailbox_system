@@ -7,7 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiWrapper } from "@/utils/apiClient";
 
 import toast from "react-hot-toast";
-import UsersDropdown from "../ui/UsersDropdown";
+import UsersDropdown from "../dropdown/UsersDropdown";
 
 type User = {
     id: number;

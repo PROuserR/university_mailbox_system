@@ -718,7 +718,7 @@ export default function MailEditPage({
                                                             attachment.id
                                                         )
                                                     }
-                                                    className="p-3 rounded-xl text-red-500 hover:bg-red-100 transition-colors"
+                                                    className="p-3 rounded-xl text-yellow-500 hover:bg-yellow-100 transition-colors"
                                                 >
                                                     <FontAwesomeIcon
                                                         icon={
@@ -784,7 +784,7 @@ export default function MailEditPage({
                                                             file.name
                                                         )
                                                     }
-                                                    className="p-3 rounded-xl text-red-500 hover:bg-red-100 transition-colors"
+                                                    className="p-3 rounded-xl text-yellow-500 hover:bg-yellow-100 transition-colors"
                                                 >
                                                     <FontAwesomeIcon
                                                         icon={

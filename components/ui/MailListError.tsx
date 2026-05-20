@@ -20,7 +20,7 @@ export default function MailListError({
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="text-red-500 text-4xl mb-4"
+                className="text-yellow-500 text-4xl mb-4"
             >
                 <FontAwesomeIcon icon={faTriangleExclamation} />
             </motion.div>
@@ -49,7 +49,7 @@ export default function MailListError({
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={onRetry}
-                    className="mt-5 flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                    className="mt-5 flex items-center gap-2 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition"
                 >
                     <FontAwesomeIcon icon={faRotateRight} />
                     إعادة المحاولة

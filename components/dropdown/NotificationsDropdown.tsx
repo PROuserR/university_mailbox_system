@@ -184,7 +184,7 @@ export default function NotificationsDropdown() {
                 return "bg-yellow-100 text-yellow-600"
 
             case "Error":
-                return "bg-red-100 text-red-600"
+                return "bg-yellow-100 text-yellow-600"
 
             default:
                 return "bg-blue-100 text-blue-600"
@@ -215,18 +215,18 @@ export default function NotificationsDropdown() {
                 onClick={() =>
                     setOpen((prev) => !prev)
                 }
-                className="relative flex h-11 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg transition hover:bg-blue-700"
+                className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg transition hover:bg-blue-700"
             >
                 <FontAwesomeIcon
                     icon={faBell}
-                    className="text-base"
+                    className="text-base cursor-pointer"
                 />
 
                 {unreadCount > 0 && (
                     <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute -left-1 -top-1 flex h-4 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white"
+                        className="absolute -left-1 -top-1 flex h-4 min-w-[20px] items-center justify-center rounded-full bg-yellow-400 px-1 text-xs font-bold text-black"
                     >
                         {unreadCount}
                     </motion.div>
@@ -342,7 +342,7 @@ export default function NotificationsDropdown() {
                             )}
 
                             {isError && (
-                                <div className="flex flex-col items-center justify-center gap-3 py-10 text-red-500">
+                                <div className="flex flex-col items-center justify-center gap-3 py-10 text-yellow-500">
                                     <FontAwesomeIcon
                                         icon={
                                             faTriangleExclamation

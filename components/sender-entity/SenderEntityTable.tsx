@@ -233,7 +233,7 @@ export default function SenderEntityTable({
                     }
                   }}
                   disabled={isOperationsLoading}
-                  className="flex items-center gap-1.5 px-2 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs hover:bg-red-100 transition"
+                  className="flex items-center gap-1.5 px-2 py-1.5 bg-yellow-50 text-yellow-600 rounded-lg text-xs hover:bg-yellow-100 transition"
                 >
                   <FontAwesomeIcon icon={faTrash} className="h-2.5 w-2.5" />
                   حذف
@@ -412,7 +412,7 @@ export default function SenderEntityTable({
                           onDelete(entity.id);
                         }
                       }}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded transition"
+                      className="p-1 text-yellow-600 hover:bg-yellow-50 rounded transition"
                     >
                       <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
                     </button>

@@ -37,13 +37,13 @@ export default function UserSettingsOverlay({ user }: Props) {
     const getUserRoleInArabic = (userRole: string) => {
         switch (user.role) {
             case "Dean":
-                return("عميد")
+                return ("عميد")
                 break;
             case "Employee":
-                return("موظف")
+                return ("موظف")
                 break;
             case "User":
-                return("دكتور")
+                return ("دكتور")
                 break;
             default:
                 break;
@@ -77,7 +77,7 @@ export default function UserSettingsOverlay({ user }: Props) {
                 <div className="flex gap-x-4  w-full">
                     <button
                         onClick={handleSignout}
-                        className="flex w-1/2 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-red-500 hover:bg-red-600 text-white"
+                        className="flex w-1/2 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
                     >
                         <FontAwesomeIcon icon={faSignOutAlt} />
                         <span>تسجيل الخروج</span>
@@ -85,7 +85,7 @@ export default function UserSettingsOverlay({ user }: Props) {
 
                     <button
                         onClick={handleChangePassword}
-                        className="flex w-1/2 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-red-500 hover:bg-red-600 text-white"
+                        className="flex w-1/2 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
                     >
                         <FontAwesomeIcon icon={faLock} />
                         <span>تغير كلمة السر </span>

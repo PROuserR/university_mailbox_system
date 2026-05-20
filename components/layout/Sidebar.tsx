@@ -16,6 +16,7 @@ import useMailFilterStore from "@/store/mailFilterStore";
 import { useQuery } from "@tanstack/react-query";
 import { apiWrapper } from "@/utils/apiClient";
 import { MailCounts } from "@/types/api/Mail/MailCounts";
+import SidebarItem from "./SidebarItem";
 
 export default function Sidebar() {
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore()
@@ -46,11 +47,9 @@ export default function Sidebar() {
         queryFn: fetchMailsCount, // ✅ FIXED
     });
 
-
-
     return (
         <aside
-            className="w-64 h-[calc(100vh-64px)] bg-blue-50 p-4 flex flex-col justify-between z-10"
+            className="w-64 h-[calc(100vh-64px)] bg-blue-100 p-4 flex flex-col justify-between z-10"
             dir="rtl"
         >
             {/* TOP SECTION */}
@@ -90,10 +89,10 @@ export default function Sidebar() {
             </div>
 
             {/* BOTTOM: Storage */}
-            <div className="bg-gray-100 p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1">التخزين</p>
+            <div className="p-4 rounded-lg">
+                <p className=" text-gray-500 mb-1">التخزين</p>
                 <div className="w-full bg-gray-300 h-2 rounded-full">
-                    <div className="bg-blue-600 h-2 rounded-full w-[24%]"></div>
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-200 h-2 rounded-full w-[24%]"></div>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">2.4GB من 10GB</p>
             </div>
@@ -102,42 +101,7 @@ export default function Sidebar() {
             {isMailComposeShown ?
                 <MailCompose />
                 : null}
-
         </aside>
     );
 }
 
-/* 🔹 Reusable Sidebar Item */
-function SidebarItem({
-    icon,
-    label,
-    count,
-    active,
-    onClick
-}: {
-    icon: any;
-    label: string;
-    count?: number;
-    active?: boolean;
-    onClick?: () => void;
-}) {
-    return (
-        <div
-            onClick={onClick} // 👈 IMPORTANT
-            className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition
-        ${active ? "bg-blue-100 text-blue-600" : "text-gray-600 hover:bg-gray-100"}
-      `}
-        >
-            <div className="flex items-center gap-3">
-                <FontAwesomeIcon icon={icon} />
-                <span className="text-sm">{label}</span>
-            </div>
-
-            {count !== undefined && (
-                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-                    {count}
-                </span>
-            )}
-        </div>
-    );
-}

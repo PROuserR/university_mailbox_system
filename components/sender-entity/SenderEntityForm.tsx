@@ -45,7 +45,7 @@ export default function SenderEntityForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1 text-right">
-          اسم الجهة <span className="text-red-500">*</span>
+          اسم الجهة <span className="text-yellow-500">*</span>
         </label>
         <input
           type="text"
@@ -55,7 +55,7 @@ export default function SenderEntityForm({
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
           autoFocus
         />
-        {error && <p className="text-red-500 text-sm mt-1 text-right">{error}</p>}
+        {error && <p className="text-yellow-500 text-sm mt-1 text-right">{error}</p>}
       </div>
 
       <div className="flex gap-3 pt-2">

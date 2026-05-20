@@ -56,31 +56,30 @@ export default function MailCard({
                 duration: 0.35,
                 delay: index * 0.03,
             }}
-            whileHover={{
-                scale: 1.02,
-                zIndex: 50,
-            }}
-            whileTap={{
-                scale: 1.02,
-                zIndex: 50,
-            }}
-            className="group flex flex-row-reverse items-center justify-center p-4 bg-blue-100 rounded-xl cursor-pointer shadow-sm"
+            className={`group flex flex-row-reverse items-center justify-center p-4  rounded-2xl cursor-pointer ${index % 2 === 0 ? "bg-blue-200 hover:bg-blue-300 shadow-lg" : "bg-blue-100 hover:bg-blue-200"}`}
             onClick={() =>
                 onClick(mail)
             }>
-            <div className="flex flex-row-reverse gap-16">
-                <p className="font-bold">
-                    {mail.title}
-                </p>
+            <div className="flex flex-col gap-2">
+                <span className="text-blue-400 gap-4">
+                    <span>رقم البريد:  </span>
 
-                <span className="text-gray-500">
+                    <span>{mail.number}</span>
+
+                </span>
+
+                <span className="font-bold text-lg">
+                    {mail.title}
+                </span>
+
+                <p className="text-gray-500">
                     {getEmailContentPreview(
                         mail.content
                     )}
-                </span>
+                </p>
             </div>
 
-            <div className="flex mr-auto items-center text-sm gap-8 p-4">
+            <div className="flex mr-auto items-start text-sm gap-8 p-4">
                 <span>
                     {formatDate(
                         mail.issuedDate
@@ -93,7 +92,7 @@ export default function MailCard({
 
                         onEdit(mail);
                     }}
-                    className="hidden group-hover:flex transition-opacity duration-200 text-blue-500 hover:text-blue-600 hover:bg-blue-300 rounded-full"
+                    className="hidden group-hover:flex transition-opacity duration-200 text-blue-500 hover:text-blue-600  rounded-full"
                 >
                     <FontAwesomeIcon
                         icon={faPen}
@@ -110,7 +109,7 @@ export default function MailCard({
                         );
                     }}
                     disabled={isDeleting}
-                    className="hidden group-hover:flex transition-opacity duration-200 text-red-500 hover:text-red-600 hover:bg-red-300 rounded-full"
+                    className="hidden group-hover:flex transition-opacity duration-200 text-yellow-400 hover:text-yellow-500  rounded-full"
                 >
                     <FontAwesomeIcon
                         icon={faTrash}

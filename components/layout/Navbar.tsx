@@ -12,7 +12,7 @@ import UserSettingsOverlay from "../overlays/UserSettings";
 import userSettingsOverlayStore from "@/store/userSettingsOverlayStore";
 import useSearchInputStore from "@/store/searchInputStore";
 import useUserInfoStore from "@/store/userInfoStore";
-import NotificationsDropdown from "../ui/NotificationsDropdown";
+import NotificationsDropdown from "../dropdown/NotificationsDropdown";
 
 export default function Navbar() {
     const { isUserSettingsShown, triggerUserSettings } = userSettingsOverlayStore();
@@ -22,14 +22,13 @@ export default function Navbar() {
     return (
         <nav className="w-full h-16 bg-blue-100 text-gray-800 flex items-center px-8 z-20" dir="rtl">
             {/* RIGHT (in RTL): Logo */}
-            <Link href="/" className="flex items-center justify-center gap-8">
+            <Link href="/" className="flex items-center justify-center gap-8 mr-16">
                 <Image width="48" height="48" src="/aleppo_university_logo.svg" alt="Aleppo university logo" />
-                <span className="font-bold text-xl">ديوان جامعة حلب </span>
             </Link>
 
             {/* CENTER: Search */}
-            <div className="flex-1 max-w-xl mr-10">
-                <div className="flex items-center bg-gray-100 rounded-lg px-3 py-2">
+            <div className="flex-1 max-w-xl mr-36">
+                <div className="flex items-center bg-white rounded-2xl px-3 py-2 shadow-lg">
                     <input
                         type="text"
                         placeholder="بحث في البريد..."
@@ -41,21 +40,21 @@ export default function Navbar() {
             </div>
 
             {/* LEFT (in RTL): Actions */}
-            <div className="flex items-center gap-6 mr-auto">
+            <div className="flex items-center gap-4 mr-auto">
 
                 <NotificationsDropdown />
 
                 {/* Add user */}
                 {role === "Dean" &&
-                    <Link href="/auth/signup">
+                    <Link href="/auth/signup" className="flex bg-gradient-to-br from-blue-600 to-blue-400 p-2 rounded-2xl text-white shadow-lg h-10 w-10 items-center justify-center">
                         <FontAwesomeIcon
                             icon={faUserPlus}
-                            className="text-lg cursor-pointer"
+                            className="text-base cursor-pointer"
                         />
                     </Link>}
 
                 {/* Profile */}
-                <div className="flex items-center gap-2 cursor-pointer" onClick={triggerUserSettings}>
+                <div className="flex bg-gradient-to-br from-blue-600 to-blue-400 p-2 rounded-2xl text-white shadow-lg h-10 w-10 items-center justify-center" onClick={triggerUserSettings}>
                     <FontAwesomeIcon icon={faUserCircle} className="text-lg cursor-pointer" />
                 </div>
 

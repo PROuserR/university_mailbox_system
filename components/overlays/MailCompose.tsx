@@ -47,7 +47,7 @@ export default function MailComposeOverlay() {
 
     const createMail = useMutation({
         mutationFn: async (newMail) => {
-            const res = await apiWrapper.post<CreateMailResponse>("/Correspondence", formData);
+            const res = await apiWrapper.post<CreateMailResponse>("/Correspondences", formData);
             if (res.data)
                 return res.data.data
         },
@@ -368,7 +368,7 @@ export default function MailComposeOverlay() {
 
                         <button
                             onClick={triggerMailCompose}
-                            className={`flex items-center gap-2 px-5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                            className={`flex items-center gap-2 px-5 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-700 transition ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
                             <FontAwesomeIcon icon={faXmark} />
                             الغاء
