@@ -368,7 +368,7 @@ export default function MailComposeOverlay() {
 
                         <button
                             onClick={triggerMailCompose}
-                            className={`flex items-center gap-2 px-5 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-700 transition ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                            className={`flex items-center gap-2 px-5 py-2 bg-yellow-500 text-black rounded-xl hover:bg-yellow-700 transition ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
                             <FontAwesomeIcon icon={faXmark} />
                             الغاء

@@ -32,49 +32,6 @@ export default function NotFound() {
 
             {/* GRID */}
             <div className="absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.04)_1px,transparent_1px)] bg-[size:55px_55px]" />
-
-            {/* TOP BAR */}
-            <header className="relative z-20 border-b border-white/30 bg-white/60 backdrop-blur-2xl">
-                <div className="flex items-center justify-between px-6 py-4">
-                    {/* RIGHT */}
-                    <div className="flex items-center gap-3">
-                        <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-sky-400 shadow-lg shadow-blue-500/20"
-                        >
-                            <FontAwesomeIcon
-                                icon={faBell}
-                                className="text-white"
-                            />
-                        </motion.div>
-
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-100 bg-white shadow-md">
-                            <div className="h-5 w-5 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500" />
-                        </div>
-                    </div>
-
-                    {/* SEARCH */}
-                    <div className="relative w-full max-w-lg">
-                        <FontAwesomeIcon
-                            icon={faMagnifyingGlass}
-                            className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-
-                        <input
-                            placeholder="ابحث في النظام..."
-                            className="w-full rounded-2xl border border-white/30 bg-white/80 py-3 pr-12 pl-5 text-right shadow-lg outline-none backdrop-blur-xl placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-200/40"
-                        />
-                    </div>
-
-                    {/* LOGO */}
-                    <div className="hidden md:block">
-                        <div className="rounded-2xl bg-white/80 px-5 py-2 font-bold text-slate-700 shadow-lg">
-                            نظام البريد
-                        </div>
-                    </div>
-                </div>
-            </header>
-
             {/* MAIN CONTENT */}
             <section className="relative z-10 flex min-h-[calc(100vh-80px)] items-center justify-center px-6 py-16">
                 <motion.div

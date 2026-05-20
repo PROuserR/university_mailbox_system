@@ -44,7 +44,7 @@ export default function MailViewer({ data }: Props) {
 
 
                     <div className="flex gap-8 flex-row-reverse ml-auto text-xl">
-                        <button onClick={() => setShowMailDistribute(!showMailDistribute)} className="border border-blue-500 p-4 rounded-2xl text-black cursor-pointer disabled:opacity-50"> حالة التوزيع </button>
+                        <button onClick={() => setShowMailDistribute(!showMailDistribute)} className="bg-blue-500 text-white p-4 rounded-2xl cursor-pointer disabled:opacity-50"> حالة التوزيع </button>
                         {showMailDistribute && <MailDistribute correspondenceId={data?.id} />}
                     </div>
                 </header>
