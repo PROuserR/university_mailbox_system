@@ -61,7 +61,7 @@ export default function MailCard({
                 onClick(mail)
             }>
             <div className="flex flex-col gap-2">
-                <span className="text-blue-400 gap-4">
+                <span className="text-blue-500 gap-4 text-sm">
                     <span>رقم البريد:  </span>
 
                     <span>{mail.number}</span>

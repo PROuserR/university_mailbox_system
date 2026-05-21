@@ -6,6 +6,6 @@ export type Mail = {
     senderEntityId: string | undefined
     number: string;
     isProfessional: boolean;
-    attachments?: Attachment[];
+    attachments?: Attachment[] | null;
     totalCount: number;
 };

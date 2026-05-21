@@ -19,6 +19,7 @@ import {
     faCircleCheck,
     faCheck,
     faCheckDouble,
+    faTrash,
 } from "@fortawesome/free-solid-svg-icons"
 
 import { apiWrapper } from "@/utils/apiClient"
@@ -122,6 +123,36 @@ export default function NotificationsDropdown() {
             },
         })
 
+    // حذف إشعار
+    const deleteNotificationMutation =
+        useMutation({
+            mutationFn: async (
+                notificationId: number
+            ) => {
+                await apiWrapper.delete(
+                    `Notifications/${notificationId}`
+                )
+            },
+
+            onSuccess: () => {
+                toast.success(
+                    "تم حذف الإشعار"
+                )
+
+                queryClient.invalidateQueries({
+                    queryKey: [
+                        "notifications",
+                    ],
+                })
+            },
+
+            onError: () => {
+                toast.error(
+                    "فشل في حذف الإشعار"
+                )
+            },
+        })
+
     useEffect(() => {
         const handleClickOutside = (
             event: MouseEvent
@@ -184,7 +215,7 @@ export default function NotificationsDropdown() {
                 return "bg-yellow-100 text-yellow-600"
 
             case "Error":
-                return "bg-yellow-100 text-yellow-600"
+                return "bg-red-100 text-red-600"
 
             default:
                 return "bg-blue-100 text-blue-600"
@@ -219,7 +250,7 @@ export default function NotificationsDropdown() {
             >
                 <FontAwesomeIcon
                     icon={faBell}
-                    className="text-base cursor-pointer"
+                    className="cursor-pointer text-base"
                 />
 
                 {unreadCount > 0 && (
@@ -375,8 +406,8 @@ export default function NotificationsDropdown() {
                                             (
                                                 <div
                                                     className={`group border-b border-gray-100 p-4 transition hover:bg-blue-50 ${!notification.isRead
-                                                        ? "bg-blue-50/40"
-                                                        : ""
+                                                            ? "bg-blue-50/40"
+                                                            : ""
                                                         }`}
                                                 >
                                                     <div className="flex items-start gap-3">
@@ -422,7 +453,39 @@ export default function NotificationsDropdown() {
                                                                     </p>
                                                                 </div>
 
-                                                                {!notification.isRead && (
+                                                                <div className="flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
+                                                                    {!notification.isRead && (
+                                                                        <button
+                                                                            onClick={(
+                                                                                e
+                                                                            ) => {
+                                                                                e.preventDefault()
+                                                                                e.stopPropagation()
+
+                                                                                handleReadNotification(
+                                                                                    notification.id
+                                                                                )
+                                                                            }}
+                                                                            disabled={
+                                                                                markAsReadMutation.isPending
+                                                                            }
+                                                                            className="flex items-center gap-1 rounded-xl bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white shadow-md transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        >
+                                                                            <FontAwesomeIcon
+                                                                                icon={
+                                                                                    markAsReadMutation.isPending
+                                                                                        ? faSpinner
+                                                                                        : faCheck
+                                                                                }
+                                                                                spin={
+                                                                                    markAsReadMutation.isPending
+                                                                                }
+                                                                            />
+
+                                                                            مقروء
+                                                                        </button>
+                                                                    )}
+
                                                                     <button
                                                                         onClick={(
                                                                             e
@@ -430,29 +493,29 @@ export default function NotificationsDropdown() {
                                                                             e.preventDefault()
                                                                             e.stopPropagation()
 
-                                                                            handleReadNotification(
+                                                                            deleteNotificationMutation.mutate(
                                                                                 notification.id
                                                                             )
                                                                         }}
                                                                         disabled={
-                                                                            markAsReadMutation.isPending
+                                                                            deleteNotificationMutation.isPending
                                                                         }
-                                                                        className="flex items-center gap-1 rounded-xl bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-md transition hover:bg-blue-700 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        className="flex items-center gap-1 rounded-xl bg-yellow-500 px-2.5 py-1.5 text-xs font-medium text-black shadow-md transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                                                                     >
                                                                         <FontAwesomeIcon
                                                                             icon={
-                                                                                markAsReadMutation.isPending
+                                                                                deleteNotificationMutation.isPending
                                                                                     ? faSpinner
-                                                                                    : faCheck
+                                                                                    : faTrash
                                                                             }
                                                                             spin={
-                                                                                markAsReadMutation.isPending
+                                                                                deleteNotificationMutation.isPending
                                                                             }
                                                                         />
 
-                                                                        مقروء
+                                                                        حذف
                                                                     </button>
-                                                                )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
