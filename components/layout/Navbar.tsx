@@ -6,18 +6,16 @@ import {
     faUserPlus,
     faSearch,
     faUserCircle,
+    faAngleRight,
 } from "@fortawesome/free-solid-svg-icons";
-
 import Image from "next/image";
 import Link from "next/link";
-
 import UserSettingsOverlay from "../overlays/UserSettings";
-
 import userSettingsOverlayStore from "@/store/userSettingsOverlayStore";
 import useSearchInputStore from "@/store/searchInputStore";
 import useUserInfoStore from "@/store/userInfoStore";
-
 import NotificationsDropdown from "../dropdown/NotificationsDropdown";
+import useSidebarToggleStore from "@/store/sidebarToggleStore";
 
 export default function Navbar() {
     const {
@@ -34,6 +32,8 @@ export default function Navbar() {
 
     const { setSearchInput } =
         useSearchInputStore();
+
+    const { isSidebarToggleShown, triggerSidebar } = useSidebarToggleStore();
 
     return (
         <motion.nav
@@ -52,27 +52,30 @@ export default function Navbar() {
             className="sticky top-0 z-20 flex h-16 w-full items-center border-b border-blue-200/50 bg-blue-100/90 px-8 text-gray-800 backdrop-blur-md"
             dir="rtl"
         >
-            {/* RIGHT (RTL) - Logo */}
+
+            {/* RIGHT (RTL) - Logo + Toggle Button */}
             <motion.div
-                whileHover={{
-                    scale: 1.05,
-                }}
-                whileTap={{
-                    scale: 0.96,
-                }}
+                className={`flex items-center justify-center gap-8  ${isSidebarToggleShown ? "mr-12" : "-mr-1"}`}
             >
+                <motion.button
+                    whileHover={{
+                        scale: 1.25,
+                    }}
+                    whileTap={{
+                        scale: 0.96,
+                    }}
+                    onClick={triggerSidebar} className="text-xl">
+                    <FontAwesomeIcon icon={faAngleRight} />
+                </motion.button>
                 <Link
                     href="/"
-                    className="mr-20 flex items-center justify-center gap-8"
                 >
                     <motion.div
-                        animate={{
-                            y: [0, -2, 0],
+                        whileHover={{
+                            scale: 1.1,
                         }}
-                        transition={{
-                            duration: 3,
-                            repeat: Infinity,
-                            ease: "easeInOut",
+                        whileTap={{
+                            scale: 0.96,
                         }}
                     >
                         <Image
@@ -84,6 +87,7 @@ export default function Navbar() {
                         />
                     </motion.div>
                 </Link>
+
             </motion.div>
 
             {/* CENTER - Search */}

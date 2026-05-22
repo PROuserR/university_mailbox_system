@@ -45,12 +45,12 @@ export default function RootLayout({
           {/* Layout */}
           <div className="flex flex-row-reverse pt-16">
             {/* Fixed Sidebar */}
-            <aside className="sticky right-0 top-16 h-[calc(100vh-4rem)] w-72">
+            <aside className="sticky top-16 h-[calc(100vh-4rem)] w-fit">
               <Sidebar />
             </aside>
 
             {/* Page Content */}
-            <main className="w-[calc(100vw-16rem)] bg-gradient-to-br from-blue-50 via-yellow-100 to-blue-100">
+            <main className="w-full bg-blue-50">
               {children}
             </main>
           </div>
