@@ -1,15 +1,10 @@
 "use client";
 
 import { Mail } from "@/types/api/Mail/Mail";
-
 import formatDate from "@/utils/formatDate";
-
 import getEmailContentPreview from "@/utils/getEmailContentPreview";
-
 import { motion } from "framer-motion";
-
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
 import {
     faPen,
     faTrash,
@@ -42,6 +37,13 @@ export default function MailCard({
     onDelete,
     isDeleting,
 }: Props) {
+    const senderName =
+        mail.senderEntity?.trim() ||
+        "غير معروف";
+
+    const senderInitial =
+        senderName.charAt(0).toUpperCase();
+
     return (
         <motion.div
             initial={{
@@ -56,31 +58,75 @@ export default function MailCard({
                 duration: 0.35,
                 delay: index * 0.03,
             }}
-            className={`group flex flex-row-reverse items-center justify-center p-4 rounded-2xl cursor-pointer hover:bg-blue-300 shadow-lg hover:shadow-xl ${index % 2 === 0 ? "bg-blue-200 " : "bg-blue-100" }`}
+            className={`
+                group
+                flex
+                flex-row-reverse
+                items-center
+                gap-16
+                p-4
+                rounded-2xl
+                cursor-pointer
+                shadow-lg
+                hover:shadow-xl
+                transition-all
+                hover:bg-blue-300
+                ${index % 2 === 0
+                    ? "bg-blue-200"
+                    : "bg-blue-100"
+                }
+            `}
             onClick={() =>
                 onClick(mail)
-            }>
-            <div className="flex flex-col gap-2">
-                <span className="text-blue-500 gap-4 text-sm">
-                    <span>رقم البريد:  </span>
+            }
+        >
+            {/* Sender Entity (Gmail style) */}
+            <div className="flex gap-4 w-48 ">
+                <div className="w-36 ml-auto text-end">
+                    <p className="font-bold text-gray-800">
+                        {senderName}
+                    </p>
 
-                    <span>{mail.number}</span>
+                    <span className="text-xs text-blue-500">
+                        #{mail.number}
+                    </span>
+                </div>
+                <div
+                    className="
+                        w-12
+                        h-12
+                        rounded-full
+                        bg-blue-600
+                        text-white
+                        flex
+                        items-center
+                        justify-center
+                        font-bold
+                        text-lg
+                        shrink-0
+                        ml-auto
+                    "
+                >
+                    {senderInitial}
+                </div>
+            </div>
 
-                </span>
-
-                <span className="font-bold text-xl">
+            {/* Mail Content */}
+            <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-lg truncate">
                     {mail.title}
-                </span>
+                </h3>
 
-                <p className="text-gray-500">
+                <p className="text-gray-500 truncate">
                     {getEmailContentPreview(
-                        mail.content
+                        mail.content ?? ""
                     )}
                 </p>
             </div>
 
-            <div className="flex mr-auto items-start text-sm gap-8 p-4">
-                <span className="italic">
+            {/* Right Side */}
+            <div className="flex items-center gap-6 shrink-0 mr-auto">
+                <span className="italic text-sm whitespace-nowrap">
                     {formatDate(
                         mail.issuedDate
                     )}
@@ -89,10 +135,9 @@ export default function MailCard({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
-
                         onEdit(mail);
                     }}
-                    className="hidden group-hover:flex transition-opacity duration-200 text-blue-500 hover:text-blue-600  rounded-full"
+                    className="hidden group-hover:flex text-blue-500 hover:text-blue-600 transition"
                 >
                     <FontAwesomeIcon
                         icon={faPen}
@@ -109,7 +154,7 @@ export default function MailCard({
                         );
                     }}
                     disabled={isDeleting}
-                    className="hidden group-hover:flex transition-opacity duration-200 text-yellow-400 hover:text-yellow-500  rounded-full"
+                    className="hidden group-hover:flex text-yellow-500 hover:text-yellow-600 transition"
                 >
                     <FontAwesomeIcon
                         icon={faTrash}

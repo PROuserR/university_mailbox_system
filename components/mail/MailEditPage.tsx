@@ -73,11 +73,9 @@ export default function MailEditPage({
     const [issuedDate, setIssuedDate] =
         useState("");
 
-    const [senderEntityId, setSenderEntityId] =
-        useState("");
+    const [senderEntityId, setSenderEntityId] = useState<string>(""); // FIX
 
-    const [number, setNumber] =
-        useState("");
+    const [number, setNumber] = useState("");
 
     const [
         isProfessional,
@@ -107,27 +105,17 @@ export default function MailEditPage({
     // =========================
 
     useEffect(() => {
-        setTitle(mail.title);
-
-        setContent(mail.content);
-
-        setIssuedDate(
-            mail.issuedDate || ""
-        );
-
+        setTitle(mail.title ?? "");
+        setContent(mail.content ?? "");
+        setIssuedDate(mail.issuedDate ?? "");
         setSenderEntityId(
-            mail.senderEntityId || ""
+            mail.senderEntityId !== undefined && mail.senderEntityId !== null
+                ? String(mail.senderEntityId)
+                : ""
         );
-
-        setNumber(mail.number);
-
-        setIsProfessional(
-            mail.isProfessional
-        );
-
-        setAttachments(
-            mail.attachments || []
-        );
+        setNumber(mail.number ?? "");
+        setIsProfessional(!!mail.isProfessional);
+        setAttachments(mail.attachments ?? []);
     }, [mail]);
 
     // =========================
@@ -260,10 +248,12 @@ export default function MailEditPage({
                     issuedDate
                 );
 
-                formData.append(
-                    "senderEntityId",
-                    senderEntityId
-                );
+                if (senderEntityId !== "") {
+                    formData.append(
+                        "senderEntityId",
+                        senderEntityId
+                    );
+                }
 
                 formData.append(
                     "number",
@@ -559,11 +549,7 @@ export default function MailEditPage({
                                 onChange={(
                                     e
                                 ) =>
-                                    setSenderEntityId(
-                                        e
-                                            .target
-                                            .value
-                                    )
+                                    setSenderEntityId(e.target.value)
                                 }
                                 className="w-full p-4 rounded-2xl border border-gray-300 outline-none focus:border-blue-500"
                                 placeholder="معرف الجهة"
