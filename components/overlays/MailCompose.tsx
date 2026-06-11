@@ -1,39 +1,34 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import TextAlign from "@tiptap/extension-text-align";
-import Placeholder from "@tiptap/extension-placeholder";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faBold,
-    faItalic,
-    faUnderline,
-    faListUl,
-    faListOl,
-    faQuoteLeft,
-    faCode,
-    faAlignLeft,
-    faAlignCenter,
-    faAlignRight,
-    faUndo,
-    faRedo,
-    faHeading,
     faPaperPlane,
     faPaperclip,
     faXmark,
+    faCalendarAlt,
+    faFileAlt,
+    faUser,
+    faHashtag,
+    faInfoCircle,
+    faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailComposeStore from "@/store/mailComposeStore";
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiWrapper } from "@/utils/apiClient";
 import { SenderEntity, SenderEntityResponse } from "@/types/api/SenderEntity";
 import { DocumentTypeResponse, DocumentType } from "@/types/api/DocumentTypesResponse";
 
+interface CreateMailResponse {
+    data: any;
+    message?: string;
+}
+
 export default function MailComposeOverlay() {
     const [subject, setSubject] = useState<string>("");
+    const [content, setContent] = useState<string>("");
     const [number, setNumber] = useState<string>("");
     const [attachments, setAttachments] = useState<File[]>([]);
     const [senderEntities, setSenderEntities] = useState<SenderEntity[]>();
@@ -43,69 +38,40 @@ export default function MailComposeOverlay() {
     const [loading, setLoading] = useState<boolean>(false);
     const [mailType, setMailType] = useState<string>("incoming");
     const [isProfessional, setIsProfessional] = useState<boolean>(true);
-    const [formData, setFormData] = useState(new FormData())
-    const queryClient = useQueryClient()
+    const [sentDate, setSentDate] = useState("");
+    const [issuedDate, setIssuedDate] = useState("");
+    const [receivedDate, setReceivedDate] = useState("");
+    const [showMetadata, setShowMetadata] = useState(true);
+
+    const queryClient = useQueryClient();
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
 
-
-    const createMail = useMutation({
-        mutationFn: async (newMail) => {
-            const res = await apiWrapper.post<CreateMailResponse>("/Correspondences", formData);
-            if (res.data)
-                return res.data.data
-        },
-
-        onSuccess: () => {
-            // ✅ invalidate BOTH queries correctly
-            queryClient.invalidateQueries({ queryKey: ["mails"] });
-            queryClient.invalidateQueries({ queryKey: ["mailsCount"] });
-        },
-    })
-
     const getSenderEntities = async () => {
-        const req = await apiWrapper.get<SenderEntityResponse>("/SenderEntities")
+        const req = await apiWrapper.get<SenderEntityResponse>("/SenderEntities");
         if (req.data) {
-            setSenderEntities(req.data.data)
+            setSenderEntities(req.data.data);
+            if (req.data.data.length > 0) setSenderEntityId(req.data.data[0].id.toString());
         }
-    }
+    };
 
     const getDocumentTypes = async () => {
-        const req = await apiWrapper.get <DocumentTypeResponse>("/DocumentTypes")
+        const req = await apiWrapper.get<DocumentTypeResponse>("/DocumentTypes");
         if (req.data) {
-            setDocumentTypes(req.data.data)
+            setDocumentTypes(req.data.data);
+            if (req.data.data.length > 0) setDocumentTypeId(req.data.data[0].id.toString());
         }
-    }
+    };
 
     useEffect(() => {
-        getSenderEntities()
-        getDocumentTypes()
-    }, [])
-
-    const editor = useEditor({
-        extensions: [
-            StarterKit.configure({
-                heading: { levels: [1, 2, 3] },
-            }),
-            Underline,
-            TextAlign.configure({
-                types: ["heading", "paragraph"],
-            }),
-            Placeholder.configure({
-                placeholder: "Write your mail...",
-            }),
-        ],
-        content: "",
-        immediatelyRender: false
-    });
-
-    if (!editor) return null;
-
-    const btn = (active: boolean) =>
-        `w-9 h-9 flex items-center justify-center rounded-lg transition ${active
-            ? "bg-blue-500 text-white"
-            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-        }`;
-
+        if (isMailComposeShown) {
+            getSenderEntities();
+            getDocumentTypes();
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "unset";
+        }
+        return () => { document.body.style.overflow = "unset"; };
+    }, [isMailComposeShown]);
 
     const handleFiles = (files: FileList | null) => {
         if (!files) return;
@@ -117,294 +83,293 @@ export default function MailComposeOverlay() {
     };
 
     const handleSend = async () => {
-        const content = editor.getHTML();
-
-        // Validation with toast
         if (!subject.trim()) return toast.error("الموضوع مطلوب");
-        if (!content || content === "<p></p>") return toast.error("الرسالة فارغة");
+        if (!content.trim()) return toast.error("الرسالة فارغة");
 
         setLoading(true);
         const loadingToast = toast.loading("جاري إرسال الرسالة...");
-        const now = new Date()
+        const now = new Date();
 
         try {
-            // Use FormData to handle file uploads
-            formData.append("DocumentTypeID", documentTypeId);
-            formData.append("Number", number);
-            formData.append("Title", subject);
-            formData.append("Content", content);
-            formData.append("MainType", mailType);
-            formData.append("IsProfessional", String(isProfessional));
-            formData.append("IssuedDate", now.toISOString());
-            formData.append("ReceivedDate", now.toISOString());
-            formData.append("senderEntityId", senderEntityId);
+            const newFormData = new FormData();
+            newFormData.append("DocumentTypeID", documentTypeId);
+            newFormData.append("Number", number);
+            newFormData.append("Title", subject);
+            newFormData.append("Content", content); // Sending plain text
+            newFormData.append("MainType", mailType);
+            newFormData.append("IsProfessional", String(isProfessional));
+            newFormData.append("sentDate", sentDate || now.toISOString());
+            newFormData.append("issuedDate", issuedDate || now.toISOString());
+            newFormData.append("receivedDate", receivedDate || now.toISOString());
+            newFormData.append("senderEntityId", senderEntityId);
+            attachments.forEach((file) => newFormData.append("AdditionalFiles", file));
 
-            attachments.forEach((file) => {
-                formData.append("AdditionalFiles", file);
-            });
-
-            createMail.mutate();
+            await apiWrapper.post<CreateMailResponse>("/Correspondences", newFormData);
+            queryClient.invalidateQueries({ queryKey: ["mails"] });
+            queryClient.invalidateQueries({ queryKey: ["mailsCount"] });
 
             toast.success("تم إرسال الرسالة بنجاح!", { id: loadingToast });
-
-            // Reset form on success
-            // setTo("");
-            setSubject("");
-            setNumber("");
-            setAttachments([]);
-            setMailType("incoming");
-            setIsProfessional(true);
+            resetForm();
             triggerMailCompose();
-            editor.commands.clearContent();
         } catch (error: any) {
-            const errorMessage =
-                error.response?.data?.message || "فشل إرسال الرسالة. يرجى المحاولة مرة أخرى.";
-
+            const errorMessage = error.response?.data?.message || "فشل إرسال الرسالة.";
             toast.error(errorMessage, { id: loadingToast });
         } finally {
             setLoading(false);
         }
     };
 
+    const resetForm = () => {
+        setSubject("");
+        setContent("");
+        setNumber("");
+        setAttachments([]);
+        setMailType("incoming");
+        setIsProfessional(true);
+        setSentDate("");
+        setIssuedDate("");
+        setReceivedDate("");
+    };
 
     return (
-        <AnimatePresence mode="wait">
-            {isMailComposeShown && <>
-                {/* 🔥 Backdrop */}
+        <AnimatePresence>
+            {isMailComposeShown && (
                 <motion.div
-                    className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                />
-                <motion.div
-                    initial={{ opacity: 0, y: 80, scale: 0.90 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{
-                        opacity: 0,
-                        y: 120,
-                        scale: 0.9,
-                        filter: "blur(6px)"
-                    }}
-                    transition={{ duration: 0.4, ease: "easeInOut" }}
-                    className="fixed left-4 bottom-4 z-50 max-w-4xl w-full bg-white border rounded-2xl shadow-xl p-4 space-y-4">
-                    {/* Subject */}
-                    <input
-                        value={subject}
-                        onChange={(e) => setSubject(e.target.value)}
-                        placeholder="الموضوع"
-                        className="w-full border-b p-2 outline-none focus:border-blue-500 text-right"
-                    />
+                    dir="rtl"
+                    className="fixed inset-0 z-[100] bg-white flex flex-col"
+                >
+                    {/* Header */}
+                    <header className="h-16 px-8 border-b flex items-center justify-between bg-slate-900 text-white shrink-0">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <FontAwesomeIcon icon={faPaperPlane} className="text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-lg font-bold tracking-tight">إنشاء بريد جديد</h1>
+                                <p className="text-xs text-slate-400 font-medium">نظام المراسلات الإلكترونية</p>
+                            </div>
+                        </div>
 
-                    {/* ✅ NEW: Mail Type + Professional */}
-                    <div className="flex flex-wrap gap-4 items-center">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={triggerMailCompose}
+                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-red-500 transition-all group"
+                            >
+                                <FontAwesomeIcon icon={faXmark} className="group-hover:scale-110 transition-transform" />
+                            </button>
+                        </div>
+                    </header>
 
-                        {/* Mail Type Select */}
-                        <select
-                            value={mailType}
-                            onChange={(e) => setMailType(e.target.value)}
-                            className="border rounded-lg p-2 text-sm bg-white"
-                        >
-                            <option value="incoming">وارد</option>
-                            <option value="outgoing">صادر</option>
-                            <option value="internal">داخلي</option>
-                        </select>
-
-                        {/* Professional Radio */}
-                        <div className="flex items-center gap-3 text-sm">
-                            <span>مهني:</span>
-
-                            <label className="flex items-center gap-1">
+                    {/* Main Workspace */}
+                    <main className="flex-1 flex overflow-hidden">
+                        {/* Editor Side */}
+                        <div className="flex-1 flex flex-col bg-white overflow-hidden">
+                            {/* Subject Area */}
+                            <div className="px-12 py-10 border-b shrink-0">
                                 <input
-                                    type="radio"
-                                    name="professional"
-                                    checked={isProfessional === true}
-                                    onChange={() => setIsProfessional(true)}
+                                    value={subject}
+                                    onChange={(e) => setSubject(e.target.value)}
+                                    placeholder="أدخل عنوان الموضوع هنا..."
+                                    className="w-full text-4xl font-black text-slate-800 placeholder:text-slate-200 outline-none border-none"
                                 />
-                                نعم
-                            </label>
+                            </div>
 
-                            <label className="flex items-center gap-1">
-                                <input
-                                    type="radio"
-                                    name="professional"
-                                    checked={isProfessional === false}
-                                    onChange={() => setIsProfessional(false)}
+                            {/* Basic Textarea Content Area */}
+                            <div className="flex-1 overflow-y-auto px-12 py-8">
+                                <textarea
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    placeholder="اكتب محتوى الرسالة هنا..."
+                                    className="w-full h-full text-xl leading-relaxed text-slate-700 placeholder:text-slate-300 outline-none border-none resize-none bg-transparent"
                                 />
-                                لا
-                            </label>
-                        </div>
+                            </div>
 
-                        {/* Number Input */}
-                        <div className="flex items-center gap-3 text-sm">
-
-                            <label className="flex items-center gap-1">
-                                الرقم:
-                                <input
-                                    type="text"
-                                    name="number"
-                                    value={number}
-                                    onChange={(e) => setNumber(e.target.value)}
-                                    className="border"
-                                />
-                            </label>
-                        </div>
-
-                        {/* Sender entity Select */}
-                        <div className="flex items-center gap-3 text-sm">
-                            <label className="flex items-center gap-1">
-                                الجهة المرسلة:
-                                <select
-                                    onChange={(e) => setSenderEntityId(e.target.value)}
-                                    className="border rounded-lg p-2 text-sm bg-white"
-                                >
-                                    {senderEntities?.map(senderEntityData => (
-                                        <option value={senderEntityData.id} key={senderEntityData.id}>
-                                            {senderEntityData.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                        </div>
-
-                        {/* Document type Select */}
-                        <div className="flex items-center gap-3 text-sm">
-                            <label className="flex items-center gap-1">
-                                نوع المستند
-                                <select
-                                    onChange={(e) => setDocumentTypeId(e.target.value)}
-                                    className="border rounded-lg p-2 text-sm bg-white"
-                                >
-                                    {documentTypes?.map(documentTypeData => (
-                                        <option value={documentTypeData.id} key={documentTypeData.id}>
-                                            {documentTypeData.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                        </div>
-
-                    </div>
-
-                    {/* Toolbar */}
-                    <div className="flex flex-wrap gap-2 border rounded-xl p-2 bg-gray-50">
-                        <button onClick={() => editor.chain().focus().toggleBold().run()} className={btn(editor.isActive("bold"))}>
-                            <FontAwesomeIcon icon={faBold} />
-                        </button>
-
-                        <button onClick={() => editor.chain().focus().toggleItalic().run()} className={btn(editor.isActive("italic"))}>
-                            <FontAwesomeIcon icon={faItalic} />
-                        </button>
-
-                        <button onClick={() => editor.chain().focus().toggleUnderline().run()} className={btn(editor.isActive("underline"))}>
-                            <FontAwesomeIcon icon={faUnderline} />
-                        </button>
-
-                        <div className="w-px h-6 bg-gray-300 mx-1" />
-
-                        <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={btn(editor.isActive("heading", { level: 1 }))}>
-                            <FontAwesomeIcon icon={faHeading} /><span className="text-[10px] ml-1">1</span>
-                        </button>
-
-                        <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={btn(editor.isActive("heading", { level: 2 }))}>
-                            <FontAwesomeIcon icon={faHeading} /><span className="text-[10px] ml-1">2</span>
-                        </button>
-
-                        <div className="w-px h-6 bg-gray-300 mx-1" />
-
-                        <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={btn(editor.isActive("bulletList"))}>
-                            <FontAwesomeIcon icon={faListUl} />
-                        </button>
-
-                        <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={btn(editor.isActive("orderedList"))}>
-                            <FontAwesomeIcon icon={faListOl} />
-                        </button>
-
-                        <button onClick={() => editor.chain().focus().toggleBlockquote().run()} className={btn(editor.isActive("blockquote"))}>
-                            <FontAwesomeIcon icon={faQuoteLeft} />
-                        </button>
-
-                        <button onClick={() => editor.chain().focus().toggleCodeBlock().run()} className={btn(editor.isActive("codeBlock"))}>
-                            <FontAwesomeIcon icon={faCode} />
-                        </button>
-
-                        <div className="w-px h-6 bg-gray-300 mx-1" />
-
-                        <button onClick={() => editor.chain().focus().setTextAlign("right").run()} className={btn(editor.isActive({ textAlign: "left" }))}>
-                            <FontAwesomeIcon icon={faAlignLeft} />
-                        </button>
-
-                        <button onClick={() => editor.chain().focus().setTextAlign("center").run()} className={btn(editor.isActive({ textAlign: "center" }))}>
-                            <FontAwesomeIcon icon={faAlignCenter} />
-                        </button>
-
-                        <button onClick={() => editor.chain().focus().setTextAlign("left").run()} className={btn(editor.isActive({ textAlign: "right" }))}>
-                            <FontAwesomeIcon icon={faAlignRight} />
-                        </button>
-
-                        <div className="w-px h-6 bg-gray-300 mx-1" />
-
-                        <button onClick={() => editor.chain().focus().undo().run()} className={btn(false)}>
-                            <FontAwesomeIcon icon={faUndo} />
-                        </button>
-
-                        <button onClick={() => editor.chain().focus().redo().run()} className={btn(false)}>
-                            <FontAwesomeIcon icon={faRedo} />
-                        </button>
-
-                        <label className={btn(false) + " cursor-pointer"}>
-                            <FontAwesomeIcon icon={faPaperclip} />
-                            <input
-                                type="file"
-                                multiple
-                                className="hidden"
-                                onChange={(e) => handleFiles(e.target.files)}
-                            />
-                        </label>
-                    </div>
-
-                    {attachments.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                            {attachments.map((file, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-lg text-sm"
-                                >
-                                    <span className="truncate max-w-[150px]">{file.name}</span>
-                                    <button onClick={() => removeFile(i)}>
-                                        <FontAwesomeIcon icon={faXmark} />
-                                    </button>
+                            {/* Attachments Section */}
+                            <div className="px-12 py-6 bg-slate-50 border-t shrink-0">
+                                <div className="flex items-center gap-6">
+                                    <label className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-600 rounded-xl cursor-pointer hover:border-blue-500 hover:text-blue-600 transition-all font-bold text-sm shadow-sm">
+                                        <FontAwesomeIcon icon={faPaperclip} />
+                                        إرفاق ملفات
+                                        <input type="file" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+                                    </label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {attachments.map((file, i) => (
+                                            <div key={i} className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 shadow-sm animate-in fade-in slide-in-from-right-2">
+                                                <FontAwesomeIcon icon={faFileAlt} className="text-blue-500" />
+                                                <span className="max-w-[150px] truncate">{file.name}</span>
+                                                <button onClick={() => removeFile(i)} className="mr-2 text-slate-300 hover:text-red-500 transition-colors">
+                                                    <FontAwesomeIcon icon={faXmark} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            ))}
+                            </div>
                         </div>
-                    )}
 
-                    <div className="border rounded-xl prose max-w-none [&_h1]:text-3xl [&_h1]:font-bold [&_h2]:text-2xl [&_h2]:font-semibold [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1">
-                        <EditorContent editor={editor} className="h-full min-h-64" />
-                    </div>
+                        {/* Metadata Sidebar */}
+                        <aside className="w-80 border-r bg-slate-50 flex flex-col shrink-0">
+                            <div className="p-8 border-b bg-white">
+                                <h3 className="font-black text-slate-800 flex items-center gap-3 text-base">
+                                    <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600" />
+                                    بيانات المراسلة
+                                </h3>
+                            </div>
 
-                    <div className="flex gap-4 justify-end">
-                        <button
-                            onClick={handleSend}
-                            disabled={loading}
-                            className={`flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-                        >
-                            <FontAwesomeIcon icon={faPaperPlane} />
-                            {loading ? "جاري الارسال..." : "ارسال"}
-                        </button>
+                            <div className="flex-1 overflow-y-auto p-8 space-y-10">
+                                {/* Form Sections */}
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            نوع البريد
+                                        </label>
+                                        <select
+                                            value={mailType}
+                                            onChange={(e) => setMailType(e.target.value)}
+                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                        >
+                                            <option value="incoming">وارد</option>
+                                            <option value="outgoing">صادر</option>
+                                            <option value="internal">داخلي</option>
+                                        </select>
+                                    </div>
 
-                        <button
-                            onClick={triggerMailCompose}
-                            className={`flex items-center gap-2 px-5 py-2 bg-yellow-500 text-black rounded-xl hover:bg-yellow-700 transition ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-                        >
-                            <FontAwesomeIcon icon={faXmark} />
-                            الغاء
-                        </button>
-                    </div>
-                </motion.div >
-            </>}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            التصنيف المهني
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-2 bg-slate-200/50 p-1.5 rounded-2xl">
+                                            <button
+                                                onClick={() => setIsProfessional(true)}
+                                                className={`py-2.5 text-xs font-black rounded-xl transition-all ${isProfessional ? "bg-white text-blue-600 shadow-md" : "text-slate-500 hover:text-slate-700"
+                                                    }`}
+                                            >
+                                                مهني
+                                            </button>
+                                            <button
+                                                onClick={() => setIsProfessional(false)}
+                                                className={`py-2.5 text-xs font-black rounded-xl transition-all ${!isProfessional ? "bg-white text-blue-600 shadow-md" : "text-slate-500 hover:text-slate-700"
+                                                    }`}
+                                            >
+                                                غير مهني
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            الرقم المرجعي
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={number}
+                                            onChange={(e) => setNumber(e.target.value)}
+                                            placeholder="أدخل الرقم..."
+                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            الجهة المرسلة
+                                        </label>
+                                        <select
+                                            value={senderEntityId}
+                                            onChange={(e) => setSenderEntityId(e.target.value)}
+                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                        >
+                                            <option value="" disabled>اختر الجهة...</option>
+                                            {senderEntities?.map((entity) => (
+                                                <option value={entity.id} key={entity.id}>{entity.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            نوع المستند
+                                        </label>
+                                        <select
+                                            value={documentTypeId}
+                                            onChange={(e) => setDocumentTypeId(e.target.value)}
+                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                        >
+                                            <option value="" disabled>اختر النوع...</option>
+                                            {documentTypes?.map((type) => (
+                                                <option value={type.id} key={type.id}>{type.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            تاريخ الإصدار
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={issuedDate}
+                                            onChange={(e) => setIssuedDate(e.target.value)}
+                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            تاريخ الإرسال
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={sentDate}
+                                            onChange={(e) => setSentDate(e.target.value)}
+                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            تاريخ الاستلام
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={receivedDate}
+                                            onChange={(e) => setReceivedDate(e.target.value)}
+                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sidebar Footer */}
+                            <div className="p-8 border-t bg-white">
+                                <button
+                                    onClick={handleSend}
+                                    disabled={loading}
+                                    className={`w-full py-5 rounded-[2rem] font-black text-white bg-blue-600 hover:bg-blue-700 shadow-2xl shadow-blue-200 transition-all flex items-center justify-center gap-4 ${loading ? "opacity-70 cursor-not-allowed" : "active:scale-95 hover:-translate-y-1"
+                                        }`}
+                                >
+                                    {loading ? (
+                                        <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <FontAwesomeIcon icon={faPaperPlane} />
+                                    )}
+                                    {loading ? "جاري الإرسال..." : "إرسال المراسلة"}
+                                </button>
+                                <button
+                                    onClick={triggerMailCompose}
+                                    className="w-full mt-4 py-2 text-xs font-black text-slate-300 hover:text-slate-500 transition-colors uppercase tracking-widest"
+                                >
+                                    إلغاء العملية
+                                </button>
+                            </div>
+                        </aside>
+                    </main>
+                </motion.div>
+            )}
         </AnimatePresence>
-
     );
-};
+}
