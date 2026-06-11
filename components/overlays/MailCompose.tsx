@@ -30,6 +30,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion";
 import { apiWrapper } from "@/utils/apiClient";
 import { SenderEntity, SenderEntityResponse } from "@/types/api/SenderEntity";
+import { DocumentTypeResponse, DocumentType } from "@/types/api/DocumentTypesResponse";
 
 export default function MailComposeOverlay() {
     const [subject, setSubject] = useState<string>("");
@@ -37,6 +38,8 @@ export default function MailComposeOverlay() {
     const [attachments, setAttachments] = useState<File[]>([]);
     const [senderEntities, setSenderEntities] = useState<SenderEntity[]>();
     const [senderEntityId, setSenderEntityId] = useState("");
+    const [documentTypeId, setDocumentTypeId] = useState("");
+    const [documentTypes, setDocumentTypes] = useState<DocumentType[]>();
     const [loading, setLoading] = useState<boolean>(false);
     const [mailType, setMailType] = useState<string>("incoming");
     const [isProfessional, setIsProfessional] = useState<boolean>(true);
@@ -61,14 +64,21 @@ export default function MailComposeOverlay() {
 
     const getSenderEntities = async () => {
         const req = await apiWrapper.get<SenderEntityResponse>("/SenderEntities")
-        console.log(req.data)
         if (req.data) {
             setSenderEntities(req.data.data)
         }
     }
 
+    const getDocumentTypes = async () => {
+        const req = await apiWrapper.get <DocumentTypeResponse>("/DocumentTypes")
+        if (req.data) {
+            setDocumentTypes(req.data.data)
+        }
+    }
+
     useEffect(() => {
         getSenderEntities()
+        getDocumentTypes()
     }, [])
 
     const editor = useEditor({
@@ -119,7 +129,7 @@ export default function MailComposeOverlay() {
 
         try {
             // Use FormData to handle file uploads
-            formData.append("DocumentTypeID", String(1));
+            formData.append("DocumentTypeID", documentTypeId);
             formData.append("Number", number);
             formData.append("Title", subject);
             formData.append("Content", content);
@@ -252,6 +262,23 @@ export default function MailComposeOverlay() {
                                     {senderEntities?.map(senderEntityData => (
                                         <option value={senderEntityData.id} key={senderEntityData.id}>
                                             {senderEntityData.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
+
+                        {/* Document type Select */}
+                        <div className="flex items-center gap-3 text-sm">
+                            <label className="flex items-center gap-1">
+                                نوع المستند
+                                <select
+                                    onChange={(e) => setDocumentTypeId(e.target.value)}
+                                    className="border rounded-lg p-2 text-sm bg-white"
+                                >
+                                    {documentTypes?.map(documentTypeData => (
+                                        <option value={documentTypeData.id} key={documentTypeData.id}>
+                                            {documentTypeData.name}
                                         </option>
                                     ))}
                                 </select>

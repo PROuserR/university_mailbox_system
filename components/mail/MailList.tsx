@@ -165,10 +165,10 @@ export default function MailList() {
                     className="flex flex-col h-full w-full"
                 >
                     {/* TOP BAR */}
-                    <div className="flex items-center justify-between bg-blue-50 border-b border-blue-100 px-4 py-3 sticky top-0 z-10">
+                    <div className="flex items-center justify-between bg-blue-50 border-b border-blue-100 px-4 py-3">
                         <button
                             onClick={() => setKeyboardOpen(true)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white shadow-sm hover:bg-blue-100 transition"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-200 shadow-sm hover:bg-blue-100 transition"
                         >
                             <FontAwesomeIcon
                                 icon={faKeyboard}

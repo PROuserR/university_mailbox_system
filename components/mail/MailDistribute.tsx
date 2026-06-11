@@ -25,7 +25,6 @@ import {
     faXmark,
     faEnvelope,
     faUserCheck,
-    faShield,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -197,9 +196,9 @@ export default function MailDistribute({
                 <motion.div
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="rounded-[2rem] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-6 shadow-lg"
+                    className="rounded-[2rem] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-6 shadow-lg flex flex-col w-full"
                 >
-                    <div className="mb-5 flex flex-row-reverse items-center gap-3">
+                    <div className="mb-5 w-full text-right flex flex-row-reverse items-center justify-end gap-3">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
                             <FontAwesomeIcon icon={faUserCheck} />
                         </div>
@@ -214,7 +213,7 @@ export default function MailDistribute({
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex  gap-3">
                         <AnimatePresence>
                             {editorData.users
                                 .filter((u) => selectedUsers.includes(u.id))
@@ -233,7 +232,78 @@ export default function MailDistribute({
                                                 {user.firstName.charAt(0)}
                                             </div>
 
-                                            <div className="flex flex-col items-end text-right">
+                                            <div className="flex flex-col items-end justify-end text-right">
+                                                <span className="font-bold text-gray-800">
+                                                    {user.fullName}
+                                                </span>
+
+                                                <div className="mt-1 flex flex-row-reverse items-center gap-2 text-sm text-gray-500">
+                                                    <FontAwesomeIcon icon={faEnvelope} className="text-blue-500" />
+                                                    {user.email}
+                                                </div>
+
+                                                <div className="mt-2 flex flex-row-reverse items-center gap-2">
+                                                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700">
+                                                        {user.role}
+                                                    </span>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleUser(user.id)}
+                                                        className="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100"
+                                                    >
+                                                        <FontAwesomeIcon icon={faXmark} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                        </AnimatePresence>
+                    </div>
+                </motion.div>
+
+                {/* PERMANANT DISTRIBUTION */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="rounded-[2rem] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-6 shadow-lg flex flex-col w-full"
+                >
+                    <div className="mb-5 w-full text-right flex flex-row-reverse items-center justify-end gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
+                            <FontAwesomeIcon icon={faUserCheck} />
+                        </div>
+
+                        <div className="text-right">
+                            <h2 className="text-lg font-bold text-gray-800">
+                                التوزيع الدائم
+                            </h2>
+                            <p className="text-sm text-gray-500">
+                                المستخدمون الموزع عليهم
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex  gap-3">
+                        <AnimatePresence>
+                            {editorData.users
+                                .filter((u) => selectedUsers.includes(u.id))
+                                .map((user, i) => (
+                                    <motion.div
+                                        key={user.id}
+                                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.8 }}
+                                        transition={{ delay: i * 0.04 }}
+                                        className="group relative overflow-hidden rounded-3xl border border-blue-100 bg-white p-4 shadow-md transition hover:-translate-y-1 hover:shadow-xl text-right"
+                                    >
+                                        <div className="relative flex flex-row-reverse items-start gap-4">
+
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white font-bold">
+                                                {user.firstName.charAt(0)}
+                                            </div>
+
+                                            <div className="flex flex-col items-end justify-end text-right">
                                                 <span className="font-bold text-gray-800">
                                                     {user.fullName}
                                                 </span>
@@ -266,7 +336,7 @@ export default function MailDistribute({
 
                 {/* SELECT USERS */}
                 <div className="flex flex-col gap-3">
-                    <label className="flex flex-row-reverse items-center gap-2 text-sm font-bold text-gray-700">
+                    <label className="flex flex-row-reverse items-center justify-end gap-2 text-sm font-bold text-gray-700">
                         <FontAwesomeIcon icon={faUserGroup} className="text-blue-600" />
                         إدارة المستلمين
                     </label>
@@ -276,7 +346,7 @@ export default function MailDistribute({
                         <button
                             type="button"
                             onClick={() => setOpen(!open)}
-                            className="flex w-full flex-row-reverse items-center justify-between rounded-3xl border border-blue-100 bg-white px-5 py-4 shadow-lg text-right"
+                            className="flex w-full flex-row-reverse items-center justify-end rounded-3xl border border-blue-100 bg-white px-6 py-4 shadow-lg text-right"
                         >
                             <div className="flex flex-row-reverse items-center gap-3">
 
@@ -295,7 +365,7 @@ export default function MailDistribute({
 
                             </div>
 
-                            <motion.div animate={{ rotate: open ? 180 : 0 }}>
+                            <motion.div animate={{ rotate: open ? 180 : 0 }} className="pr-8">
                                 <FontAwesomeIcon icon={faChevronDown} />
                             </motion.div>
                         </button>
