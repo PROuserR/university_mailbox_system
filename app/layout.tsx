@@ -38,7 +38,7 @@ export default function RootLayout({
           <Toaster />
 
           {/* Fixed Navbar */}
-          <header className="fixed top-0 left-0 z-[9999] w-full">
+          <header className="fixed top-0 left-0 z-40 w-full">
             <Navbar />
           </header>
 

@@ -139,7 +139,7 @@ export default function MailComposeOverlay() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     dir="rtl"
-                    className="fixed inset-0 z-[100] bg-white flex flex-col"
+                    className="fixed inset-0 top-16 z-50 bg-white flex flex-col"
                 >
                     {/* Header */}
                     <header className="h-16 px-8 border-b flex items-center justify-between bg-blue-900 text-white shrink-0">
