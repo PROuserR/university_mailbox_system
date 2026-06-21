@@ -142,7 +142,7 @@ export default function MailComposeOverlay() {
                     className="fixed inset-0 z-[100] bg-white flex flex-col"
                 >
                     {/* Header */}
-                    <header className="h-16 px-8 border-b flex items-center justify-between bg-slate-900 text-white shrink-0">
+                    <header className="h-16 px-8 border-b flex items-center justify-between bg-blue-900 text-white shrink-0">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                                 <FontAwesomeIcon icon={faPaperPlane} className="text-white" />

@@ -1,48 +1,32 @@
 "use client";
 
 import useShowMailDetailsStore from "@/store/showMailDetails";
-
 import { useState } from "react";
-
 import { apiWrapper } from "@/utils/apiClient";
-
 import useSearchInputStore from "@/store/searchInputStore";
-
 import useInfiniteScroll from "@/hooks/useInfiniteScroll";
-
 import useMailFilterStore from "@/store/mailFilterStore";
-
 import {
     useInfiniteQuery,
     useMutation,
     useQueryClient,
 } from "@tanstack/react-query";
-
 import toast from "react-hot-toast";
-
 import { AnimatePresence, motion } from "framer-motion";
-
 import { Mail } from "@/types/api/Mail/Mail";
-
 import { MailPageResponse } from "@/types/api/Mail/MailPageResponse";
-
 import MailViewer from "@/components/mail/MailViewer";
-
 import MailCard from "@/components/mail/MailCard";
-
 import MailListLoader from "@/components/ui/MailListLoader";
-
 import MailListError from "@/components/ui/MailListError";
-
 import MailEditPage from "./MailEditPage";
-
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faKeyboard } from "@fortawesome/free-solid-svg-icons";
+import { faKeyboard, faSortAmountDown, faSortAmountUp } from "@fortawesome/free-solid-svg-icons";
 import VirtualKeyboard from "@/components/ui/VirtualKeyboard";
 
 export default function MailList() {
     const queryClient = useQueryClient();
-
+    
     const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } =
         useShowMailDetailsStore();
 
@@ -53,7 +37,9 @@ export default function MailList() {
     const { seachInput } = useSearchInputStore();
     const { filter } = useMailFilterStore();
 
-    const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+    // New Sort State
+    const [sortBy, setSortBy] = useState("createdAt");
+    const [sortOrderDESC, setSortOrderDESC] = useState(true);
 
     const fetchMails = async (pageParam: number): Promise<MailPageResponse> => {
         const res = await apiWrapper.get<{ data: MailPageResponse }>(
@@ -61,8 +47,8 @@ export default function MailList() {
             {
                 PageSize: 12,
                 Page: pageParam,
-                SortBy: "createdAt",
-                SortOrderDESC: true,
+                SortBy: sortBy,
+                SortOrderDESC: sortOrderDESC,
                 MainType: filter !== "Professional" ? filter : null,
                 IsProfessional: filter === "Professional" ? true : null,
                 Search: seachInput || undefined,
@@ -90,7 +76,7 @@ export default function MailList() {
 
         onSuccess: (_, deletedId) => {
             queryClient.setQueryData(
-                ["mails", filter, seachInput],
+                ["mails", filter, seachInput, sortBy, sortOrderDESC],
                 (oldData: any) => {
                     if (!oldData) return oldData;
 
@@ -119,7 +105,7 @@ export default function MailList() {
         isLoading,
         isError,
     } = useInfiniteQuery<MailPageResponse>({
-        queryKey: ["mails", filter, seachInput],
+        queryKey: ["mails", filter, seachInput, sortBy, sortOrderDESC],
         queryFn: ({ pageParam = 1 }) => fetchMails(pageParam as number),
         initialPageParam: 1,
         getNextPageParam: (lastPage, allPages) => {
@@ -165,22 +151,47 @@ export default function MailList() {
                     className="flex flex-col h-full w-full"
                 >
                     {/* TOP BAR */}
-                    <div className="flex items-center justify-between bg-blue-50 border-b border-blue-100 px-4 py-3">
-                        <button
-                            onClick={() => setKeyboardOpen(true)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-200 shadow-sm hover:bg-blue-100 transition"
-                        >
-                            <FontAwesomeIcon
-                                icon={faKeyboard}
-                                className="text-blue-600"
-                            />
-                            <span className="text-sm text-gray-600">
-                                لوحة المفاتيح
-                            </span>
-                        </button>
+                    <div className="flex items-center justify-between border-b border-blue-100 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                            {/* Keyboard Button */}
+                            <button
+                                onClick={() => setKeyboardOpen(true)}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm bg-white border border-blue-200 transition"
+                            >
+                                <FontAwesomeIcon
+                                    icon={faKeyboard}
+                                    className="text-blue-600"
+                                />
+                                <span className="text-sm text-gray-600">
+                                    لوحة المفاتيح
+                                </span>
+                            </button>
+
+                            {/* Sort Dropdown */}
+                            <div className="flex items-center gap-1 bg-white border border-blue-200 rounded-lg px-2 py-1 shadow-sm">
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                    className="text-sm text-gray-600 bg-transparent outline-none cursor-pointer"
+                                >
+                                    <option value="createdAt">التاريخ</option>
+                                    <option value="title">العنوان</option>
+                                    <option value="sender">المرسل</option>
+                                </select>
+                                <button
+                                    onClick={() => setSortOrderDESC(!sortOrderDESC)}
+                                    className="text-blue-600 hover:text-blue-800 transition p-1"
+                                    title={sortOrderDESC ? "تنازلي" : "تصاعدي"}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={sortOrderDESC ? faSortAmountDown : faSortAmountUp}
+                                    />
+                                </button>
+                            </div>
+                        </div>
 
                         <h2 className="text-blue-700 font-semibold text-sm">
-                            قائمة البريد 
+                            قائمة البريد
                         </h2>
 
                         <VirtualKeyboard

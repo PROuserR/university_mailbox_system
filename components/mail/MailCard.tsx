@@ -68,13 +68,12 @@ export default function MailCard({
                 rounded-2xl
                 cursor-pointer
                 shadow-lg
-                hover:shadow-xl
                 transition-all
-                hover:bg-blue-300
-                ${index % 2 === 0
-                    ? "bg-blue-200"
-                    : "bg-blue-100"
-                }
+                border
+                border-blue-400
+                hover:shadow-xl
+                hover:bg-yellow-200
+                bg-blue-200
             `}
             onClick={() =>
                 onClick(mail)
@@ -112,7 +111,7 @@ export default function MailCard({
             </div>
 
             {/* Mail Content */}
-            <div className="flex-1 min-w-0">
+            <div className="flex flex-row-reverse items-center gap-8 min-w-0">
                 <h3 className="font-bold text-lg truncate">
                     {mail.title}
                 </h3>

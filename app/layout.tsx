@@ -50,7 +50,7 @@ export default function RootLayout({
             </aside>
 
             {/* Page Content */}
-            <main className="w-full bg-blue-50">
+            <main className="w-full">
               {children}
             </main>
           </div>
