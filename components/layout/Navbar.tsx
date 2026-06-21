@@ -37,20 +37,8 @@ export default function Navbar() {
     const { isSidebarToggleShown, triggerSidebar } = useSidebarToggleStore();
 
     return (
-        <motion.nav
-            initial={{
-                opacity: 0,
-                y: -20,
-            }}
-            animate={{
-                opacity: 1,
-                y: 0,
-            }}
-            transition={{
-                duration: 0.45,
-                ease: "easeOut",
-            }}
-            className="sticky top-0 z-20 flex h-16 w-full items-center border-b border-blue-200/50 bg-blue-100/90 px-8 text-gray-800 backdrop-blur-md"
+        <nav
+            className="flex h-16 w-full items-center border-b border-blue-200/50 bg-blue-100/90 px-8 text-gray-800 backdrop-blur-md"
             dir="rtl"
         >
 
@@ -167,7 +155,7 @@ export default function Navbar() {
                     </motion.button>
                 </Link>
 
-                
+
                 {/* Notifications */}
                 <motion.div
                     whileHover={{
@@ -256,6 +244,6 @@ export default function Navbar() {
                     }}
                 />
             ) : null}
-        </motion.nav>
+        </nav>
     );
 }

@@ -196,7 +196,7 @@ export default function DeanDashboardPage() {
     ];
 
     return (
-        <div dir="rtl" className="min-h-screen bg-slate-50 p-6">
+        <div dir="rtl" className="relative isolate min-h-screen bg-slate-50 p-6 py-16">
             <div className="mx-auto max-w-7xl space-y-8">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900">
