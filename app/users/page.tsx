@@ -72,8 +72,6 @@ interface ApiResponse<T> {
 
 export default function UsersPage() {
 
-
-
     const [users, setUsers] = useState<User[]>([]);
 
 

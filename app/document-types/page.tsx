@@ -71,7 +71,7 @@ export default function DocumentTypesPage() {
 
 
             const response =
-                await apiWrapper.get < ApiResponse<DocumentType[]>>(
+                await apiWrapper.get<ApiResponse<DocumentType[]>>(
                     "/DocumentTypes"
                 );
 

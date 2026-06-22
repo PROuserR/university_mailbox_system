@@ -17,6 +17,7 @@ import useSearchInputStore from "@/store/searchInputStore";
 import useUserInfoStore from "@/store/userInfoStore";
 import NotificationsDropdown from "../dropdown/NotificationsDropdown";
 import useSidebarToggleStore from "@/store/sidebarToggleStore";
+import { usePathname } from "next/navigation";
 
 export default function Navbar() {
     const {
@@ -35,6 +36,7 @@ export default function Navbar() {
         useSearchInputStore();
 
     const { isSidebarToggleShown, triggerSidebar } = useSidebarToggleStore();
+    const pathname = usePathname();
 
     return (
         <nav
@@ -46,7 +48,7 @@ export default function Navbar() {
             <motion.div
                 className={`flex items-center justify-center gap-8  ${isSidebarToggleShown ? "mr-12" : "-mr-1"}`}
             >
-                <motion.button
+                {pathname === "/" && <motion.button
                     whileHover={{
                         scale: 1.25,
                     }}
@@ -55,7 +57,8 @@ export default function Navbar() {
                     }}
                     onClick={triggerSidebar} className="text-xl">
                     <FontAwesomeIcon icon={faAngleRight} />
-                </motion.button>
+                </motion.button>}
+
                 <Link
                     href="/"
                 >
