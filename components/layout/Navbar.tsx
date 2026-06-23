@@ -3,11 +3,13 @@
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faUserPlus,
+    faUserEdit,
     faSearch,
     faUserCircle,
     faAngleRight,
     faChartBar,
+    faFile,
+    faMessage,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
@@ -124,9 +126,10 @@ export default function Navbar() {
 
             {/* LEFT (RTL) - Actions */}
             <div className="mr-auto flex items-center gap-4">
-                <Link href="/statistics">
-                    {/* Statistics */}
-                    <motion.button
+
+                {/* Edit Document Types */}
+                {role === "Dean" && (
+                    <motion.div
                         whileHover={{
                             y: -2,
                             scale: 1.03,
@@ -135,28 +138,147 @@ export default function Navbar() {
                             type: "spring",
                             stiffness: 300,
                         }}
-                        className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg"
                     >
-                        {/* Animated shine */}
-                        <motion.div
-                            initial={{
-                                x: "-120%",
-                            }}
+                        <Link
+                            href="/document-types"
+                            className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg"
+                        >
+                            {/* Glow effect */}
+                            <div className="absolute inset-0 bg-white/0 transition duration-300 group-hover:bg-white/10" />
+
+                            <FontAwesomeIcon
+                                icon={faFile}
+                                className="relative z-10 cursor-pointer text-base transition-transform duration-300 group-hover:scale-110"
+                            />
+                        </Link>
+                    </motion.div>
+                )}
+
+                {/* Edit Sender Entities */}
+                {role === "Dean" && (
+                    <motion.div
+                        whileHover={{
+                            y: -2,
+                            scale: 1.03,
+                        }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 300,
+                        }}
+                    >
+                        <Link
+                            href="/sender-entities"
+                            className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg"
+                        >
+                            {/* Glow effect */}
+                            <div className="absolute inset-0 bg-white/0 transition duration-300 group-hover:bg-white/10" />
+
+                            <FontAwesomeIcon
+                                icon={faMessage}
+                                className="relative z-10 cursor-pointer text-base transition-transform duration-300 group-hover:scale-110"
+                            />
+                        </Link>
+                    </motion.div>
+                )}
+
+                {/* Edit users */}
+                {role === "Dean" && (
+                    <motion.div
+                        whileHover={{
+                            y: -2,
+                            scale: 1.03,
+                        }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 300,
+                        }}
+                    >
+                        <Link
+                            href="/users"
+                            className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg"
+                        >
+                            {/* Glow effect */}
+                            <div className="absolute inset-0 bg-white/0 transition duration-300 group-hover:bg-white/10" />
+
+                            <FontAwesomeIcon
+                                icon={faUserEdit}
+                                className="relative z-10 cursor-pointer text-base transition-transform duration-300 group-hover:scale-110"
+                            />
+                        </Link>
+                    </motion.div>
+                )}
+
+                {/* Statistics  */}
+                {role === "Dean" ? (
+                    <Link href="/statistics">
+                        {/* Statistics */}
+                        <motion.button
                             whileHover={{
-                                x: "120%",
+                                y: -2,
+                                scale: 1.03,
                             }}
                             transition={{
-                                duration: 0.7,
+                                type: "spring",
+                                stiffness: 300,
                             }}
-                            className="absolute inset-0 w-1/2 skew-x-12 bg-white/20 blur-sm"
-                        />
+                            className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg"
+                        >
+                            {/* Animated shine */}
+                            <motion.div
+                                initial={{
+                                    x: "-120%",
+                                }}
+                                whileHover={{
+                                    x: "120%",
+                                }}
+                                transition={{
+                                    duration: 0.7,
+                                }}
+                                className="absolute inset-0 w-1/2 skew-x-12 bg-white/20 blur-sm"
+                            />
 
-                        <FontAwesomeIcon
-                            icon={faChartBar}
-                            className="relative z-10 cursor-pointer text-lg transition-transform duration-300 group-hover:scale-110"
-                        />
-                    </motion.button>
-                </Link>
+                            <FontAwesomeIcon
+                                icon={faChartBar}
+                                className="relative z-10 cursor-pointer text-lg transition-transform duration-300 group-hover:scale-110"
+                            />
+                        </motion.button>
+                    </Link>
+                ): 
+                    <Link href="/user-statistics">
+                        {/* Statistics */}
+                        <motion.button
+                            whileHover={{
+                                y: -2,
+                                scale: 1.03,
+                            }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 300,
+                            }}
+                            className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg"
+                        >
+                            {/* Animated shine */}
+                            <motion.div
+                                initial={{
+                                    x: "-120%",
+                                }}
+                                whileHover={{
+                                    x: "120%",
+                                }}
+                                transition={{
+                                    duration: 0.7,
+                                }}
+                                className="absolute inset-0 w-1/2 skew-x-12 bg-white/20 blur-sm"
+                            />
+
+                            <FontAwesomeIcon
+                                icon={faChartBar}
+                                className="relative z-10 cursor-pointer text-lg transition-transform duration-300 group-hover:scale-110"
+                            />
+                        </motion.button>
+                    </Link>
+                }
+
 
 
                 {/* Notifications */}
@@ -173,32 +295,7 @@ export default function Navbar() {
                     <NotificationsDropdown />
                 </motion.div>
 
-                {/* Add user */}
-                {role === "Dean" && (
-                    <motion.div
-                        whileHover={{
-                            y: -2,
-                            scale: 1.03,
-                        }}
-                        transition={{
-                            type: "spring",
-                            stiffness: 300,
-                        }}
-                    >
-                        <Link
-                            href="/auth/signup"
-                            className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg"
-                        >
-                            {/* Glow effect */}
-                            <div className="absolute inset-0 bg-white/0 transition duration-300 group-hover:bg-white/10" />
 
-                            <FontAwesomeIcon
-                                icon={faUserPlus}
-                                className="relative z-10 cursor-pointer text-base transition-transform duration-300 group-hover:scale-110"
-                            />
-                        </Link>
-                    </motion.div>
-                )}
 
                 {/* Profile */}
                 <motion.button
@@ -234,7 +331,6 @@ export default function Navbar() {
                         className="relative z-10 cursor-pointer text-lg transition-transform duration-300 group-hover:scale-110"
                     />
                 </motion.button>
-
 
             </div>
 

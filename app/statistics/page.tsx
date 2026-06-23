@@ -96,7 +96,7 @@ interface DocumentTypeDistribution {
     }[];
 }
 
-const PIE_COLORS = ["#10b981", "#ef4444", "#f59e0b"];
+const PIE_COLORS = ["#60A5FA", "#F87171", "#FACC15"]; // Blue, Red (for ignored), Yellow
 
 export default function DeanDashboardPage() {
     const [dashboard, setDashboard] =
@@ -129,7 +129,7 @@ export default function DeanDashboardPage() {
         return (
             <div
                 dir="rtl"
-                className="flex min-h-screen items-center justify-center bg-slate-50"
+                className="flex min-h-screen items-center justify-center bg-blue-50"
             >
                 جاري تحميل لوحة الإحصائيات...
             </div>
@@ -140,7 +140,7 @@ export default function DeanDashboardPage() {
         return (
             <div
                 dir="rtl"
-                className="flex min-h-screen items-center justify-center bg-slate-50"
+                className="flex min-h-screen items-center justify-center bg-blue-50"
             >
                 فشل تحميل البيانات
             </div>
@@ -196,14 +196,14 @@ export default function DeanDashboardPage() {
     ];
 
     return (
-        <div dir="rtl" className="relative isolate min-h-screen bg-slate-50 p-6 py-16">
-            <div className="mx-auto max-w-7xl space-y-8">
+        <div dir="rtl" className="relative isolate min-h-screen w-screen bg-blue-50 p-4 lg:p-12">
+            <div className="mx-auto max-w-full space-y-6 lg:space-y-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">
+                    <h1 className="text-3xl font-bold text-blue-900 lg:text-4xl">
                         لوحة إحصائيات المراسلات
                     </h1>
 
-                    <p className="mt-2 text-sm text-slate-500">
+                    <p className="mt-2 text-sm text-blue-600 lg:text-base">
                         نظرة شاملة على أداء المراسلات وحالة القراءة والأنشطة الحديثة
                     </p>
                 </div>
@@ -212,44 +212,44 @@ export default function DeanDashboardPage() {
                     {cards.map((card) => (
                         <div
                             key={card.title}
-                            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md"
+                            className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm transition-all hover:shadow-md"
                         >
                             <div className="flex items-center justify-between">
-                                <div className="rounded-2xl bg-slate-100 p-3">
+                                <div className="rounded-2xl bg-blue-100 p-3">
                                     <FontAwesomeIcon
                                         icon={card.icon}
-                                        className="text-slate-700"
+                                        className="text-blue-700"
                                     />
                                 </div>
 
-                                <span className="text-sm text-slate-500">
+                                <span className="text-sm text-blue-600">
                                     {card.title}
                                 </span>
                             </div>
 
-                            <h2 className="mt-6 text-right text-4xl font-bold text-slate-900">
+                            <h2 className="mt-6 text-right text-4xl font-bold text-blue-900">
                                 {card.value}
                             </h2>
                         </div>
                     ))}
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
                     <div className="mb-6">
-                        <h2 className="text-xl font-bold">
+                        <h2 className="text-xl font-bold text-blue-900">
                             تطور المراسلات خلال العام
                         </h2>
 
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-blue-600">
                             مقارنة المراسلات الواردة والصادرة والداخلية
                         </p>
                     </div>
 
                     <ResponsiveContainer width="100%" height={420}>
                         <AreaChart data={dashboard.monthlyStatistics.data}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" />
-                            <YAxis />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E0E7FF" />
+                            <XAxis dataKey="month" stroke="#60A5FA" />
+                            <YAxis stroke="#60A5FA" />
                             <Tooltip />
                             <Legend />
 
@@ -258,6 +258,8 @@ export default function DeanDashboardPage() {
                                 dataKey="incoming"
                                 name="الواردة"
                                 stackId="1"
+                                stroke="#3B82F6"
+                                fill="#BFDBFE"
                             />
 
                             <Area
@@ -265,6 +267,8 @@ export default function DeanDashboardPage() {
                                 dataKey="outgoing"
                                 name="الصادرة"
                                 stackId="1"
+                                stroke="#FACC15"
+                                fill="#FEF9C3"
                             />
 
                             <Area
@@ -272,14 +276,16 @@ export default function DeanDashboardPage() {
                                 dataKey="internal"
                                 name="الداخلية"
                                 stackId="1"
+                                stroke="#60A5FA"
+                                fill="#DBEAFE"
                             />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
 
                 <div className="grid gap-6 xl:grid-cols-2">
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <h2 className="mb-6 text-xl font-bold">
+                    <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
+                        <h2 className="mb-6 text-xl font-bold text-blue-900">
                             حالة القراءة
                         </h2>
 
@@ -290,7 +296,11 @@ export default function DeanDashboardPage() {
                                     dataKey="value"
                                     innerRadius={80}
                                     outerRadius={120}
-                                >
+                                    labelLine={false}
+                                    label={({ name, percent = 0 }: {
+                                        name?: string;
+                                        percent?: number;
+                                    }) => `${name ?? ""}: ${(percent * 100).toFixed(0)}%`}                                >
                                     {readingData.map((_, index) => (
                                         <Cell
                                             key={index}
@@ -301,21 +311,21 @@ export default function DeanDashboardPage() {
 
                                 <Tooltip />
                             </PieChart>
+
+                            <div className="text-center">
+                                <h3 className="text-5xl font-bold text-blue-900">
+                                    {dashboard.overallReadingStatus.readPercentage.toFixed(1)}%
+                                </h3>
+
+                                <p className="mt-2 text-blue-600">
+                                    نسبة القراءة
+                                </p>
+                            </div>
                         </ResponsiveContainer>
-
-                        <div className="text-center">
-                            <h3 className="text-5xl font-bold text-slate-900">
-                                {dashboard.overallReadingStatus.readPercentage.toFixed(1)}%
-                            </h3>
-
-                            <p className="mt-2 text-slate-500">
-                                نسبة القراءة
-                            </p>
-                        </div>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <h2 className="mb-6 text-xl font-bold">
+                    <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
+                        <h2 className="mb-6 text-xl font-bold text-blue-900">
                             أنواع المراسلات
                         </h2>
 
@@ -324,16 +334,18 @@ export default function DeanDashboardPage() {
                                 layout="vertical"
                                 data={dashboard.documentTypeDistribution.documentTypes}
                             >
-                                <XAxis type="number" />
+                                <XAxis type="number" stroke="#60A5FA" />
                                 <YAxis
                                     type="category"
                                     width={140}
                                     dataKey="documentTypeName"
+                                    stroke="#60A5FA"
                                 />
                                 <Tooltip />
                                 <Bar
                                     dataKey="count"
                                     radius={[10, 10, 10, 10]}
+                                    fill="#60A5FA"
                                 />
                             </BarChart>
                         </ResponsiveContainer>
@@ -341,8 +353,8 @@ export default function DeanDashboardPage() {
                 </div>
 
                 <div className="grid gap-6 xl:grid-cols-2">
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <h2 className="mb-6 text-xl font-bold">
+                    <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
+                        <h2 className="mb-6 text-xl font-bold text-blue-900">
                             أكثر المستلمين تجاهلاً
                         </h2>
 
@@ -351,18 +363,18 @@ export default function DeanDashboardPage() {
                                 (receiver, index) => (
                                     <div key={receiver.userId}>
                                         <div className="mb-2 flex items-center justify-between">
-                                            <span className="font-medium">
+                                            <span className="font-medium text-blue-900">
                                                 {index + 1}. {receiver.userName}
                                             </span>
 
-                                            <span className="font-bold">
+                                            <span className="font-bold text-blue-900">
                                                 {receiver.ignoredPercentage.toFixed(0)}%
                                             </span>
                                         </div>
 
-                                        <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                                        <div className="h-3 overflow-hidden rounded-full bg-blue-100">
                                             <div
-                                                className="h-full rounded-full bg-red-500"
+                                                className="h-full rounded-full bg-yellow-400"
                                                 style={{
                                                     width: `${receiver.ignoredPercentage}%`,
                                                 }}
@@ -374,10 +386,10 @@ export default function DeanDashboardPage() {
                         </div>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
-                            <FontAwesomeIcon icon={faClockRotateLeft} />
-                            <h2 className="text-xl font-bold">
+                            <FontAwesomeIcon icon={faClockRotateLeft} className="text-blue-700" />
+                            <h2 className="text-xl font-bold text-blue-900">
                                 آخر الأنشطة
                             </h2>
                         </div>
@@ -389,18 +401,18 @@ export default function DeanDashboardPage() {
                                         key={index}
                                         className="flex gap-4"
                                     >
-                                        <div className="mt-2 h-3 w-3 rounded-full bg-blue-600" />
+                                        <div className="mt-2 h-3 w-3 rounded-full bg-yellow-400" />
 
                                         <div>
-                                            <p className="font-semibold">
+                                            <p className="font-semibold text-blue-900">
                                                 {activity.userName}
                                             </p>
 
-                                            <p className="text-slate-600">
+                                            <p className="text-blue-600">
                                                 {activity.action} — {activity.entityName}
                                             </p>
 
-                                            <p className="text-xs text-slate-400">
+                                            <p className="text-xs text-blue-400">
                                                 {new Date(
                                                     activity.createdAt
                                                 ).toLocaleString("ar-SA")}
