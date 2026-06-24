@@ -1,15 +1,16 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faSignOutAlt,
-    faUser,
     faTimes,
-    faLock
+    faLock,
+    faUserEdit
 } from '@fortawesome/free-solid-svg-icons'
 import userSettingsOverlayStore from '@/store/userSettingsOverlayStore'
 import { useRouter } from "next/navigation";
 import { UserInfo } from '@/types/api/User/UserInfo';
 import { apiWrapper } from '@/utils/apiClient';
 import { useState } from 'react';
+import Link from 'next/link';
 
 
 type Props = {
@@ -32,6 +33,11 @@ export default function UserSettingsOverlay({ user }: Props) {
     const handleChangePassword = async () => {
         triggerUserSettings();
         router.push("/auth/change-password");
+    }
+
+    const handleProfileNavigation = async () => {
+        triggerUserSettings();
+        router.push("/profile");
     }
 
     const getUserRoleInArabic = (userRole: string) => {
@@ -72,6 +78,17 @@ export default function UserSettingsOverlay({ user }: Props) {
                         </p>
                     </div>
                 </div>
+
+                <div className="flex gap-4 p-4 items-center justify-center  w-full">
+                    <button
+                        onClick={handleProfileNavigation}
+                        className="flex w-2/3 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
+                    >
+                        <FontAwesomeIcon icon={faUserEdit} />
+                        <span> الملف الشخصي</span>
+                    </button>
+                </div>
+
 
                 {/* actions */}
                 <div className="flex gap-x-4  w-full">

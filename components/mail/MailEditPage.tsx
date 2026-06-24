@@ -73,7 +73,7 @@ export default function MailEditPage({
     const [issuedDate, setIssuedDate] =
         useState("");
 
-    const [senderEntityId, setSenderEntityId] = useState<string>(""); // FIX
+    const [senderEntityId, setSenderEntityId] = useState<string>("");
 
     const [number, setNumber] = useState("");
 
@@ -410,15 +410,15 @@ export default function MailEditPage({
             transition={{
                 duration: 0.3,
             }}
-            className="w-full h-full overflow-y-auto bg-gray-50"
+            className="w-full h-full overflow-y-auto bg-gradient-to-br from-yellow-50 via-white to-blue-50"
         >
-            <div className="p-6 flex flex-col gap-6">
+            <div className="p-8 flex flex-col gap-8">
                 {/* HEADER */}
 
                 <div className="flex items-center justify-between">
                     <button
                         onClick={onBack}
-                        className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-200 hover:bg-gray-100 transition-colors"
+                        className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white border-2 border-blue-100 text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 font-semibold shadow-sm"
                     >
                         <FontAwesomeIcon
                             icon={
@@ -438,7 +438,10 @@ export default function MailEditPage({
                         disabled={
                             updateMailMutation.isPending
                         }
-                        className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white transition-colors disabled:opacity-50"
+                        className={`flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all duration-200 font-bold shadow-lg shadow-blue-200 ${updateMailMutation.isPending
+                                ? "opacity-70 cursor-not-allowed"
+                                : "active:scale-95 hover:shadow-xl"
+                            }`}
                     >
                         <FontAwesomeIcon
                             icon={faSave}
@@ -452,16 +455,23 @@ export default function MailEditPage({
                     </button>
                 </div>
 
-                {/* MAIN FORM */}
+                {/* MAIN FORM - Two Column Layout */}
 
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-200 flex flex-col gap-8">
-                    {/* TOP GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* LEFT PANEL - METADATA (PRIMARY) */}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="lg:col-span-1 bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-sm border border-blue-100/30 flex flex-col gap-6">
+                        <h2 className="font-bold text-blue-900 flex items-center gap-3 text-lg">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-sm">📋</span>
+                            </div>
+                            بيانات المراسلة
+                        </h2>
+
                         {/* TITLE */}
 
-                        <div className="flex flex-col gap-2">
-                            <label className="font-semibold text-gray-700">
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">
                                 العنوان
                             </label>
 
@@ -476,16 +486,16 @@ export default function MailEditPage({
                                             .value
                                     )
                                 }
-                                className="w-full p-4 rounded-2xl border border-gray-300 outline-none focus:border-blue-500"
+                                className="w-full p-3.5 rounded-xl border-2 border-blue-100 bg-white text-blue-900 placeholder:text-blue-200 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all font-semibold"
                                 placeholder="عنوان البريد"
                             />
                         </div>
 
                         {/* NUMBER */}
 
-                        <div className="flex flex-col gap-2">
-                            <label className="font-semibold text-gray-700">
-                                الرقم
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">
+                                الرقم المرجعي
                             </label>
 
                             <input
@@ -501,15 +511,15 @@ export default function MailEditPage({
                                             .value
                                     )
                                 }
-                                className="w-full p-4 rounded-2xl border border-gray-300 outline-none focus:border-blue-500"
+                                className="w-full p-3.5 rounded-xl border-2 border-blue-100 bg-white text-blue-900 placeholder:text-blue-200 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all font-semibold"
                                 placeholder="رقم البريد"
                             />
                         </div>
 
                         {/* DATE */}
 
-                        <div className="flex flex-col gap-2">
-                            <label className="font-semibold text-gray-700">
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">
                                 تاريخ الإصدار
                             </label>
 
@@ -531,14 +541,14 @@ export default function MailEditPage({
                                             .value
                                     )
                                 }
-                                className="w-full p-4 rounded-2xl border border-gray-300 outline-none focus:border-blue-500"
+                                className="w-full p-3.5 rounded-xl border-2 border-blue-100 bg-white text-blue-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all font-semibold"
                             />
                         </div>
 
                         {/* ENTITY */}
 
-                        <div className="flex flex-col gap-2">
-                            <label className="font-semibold text-gray-700">
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">
                                 معرف جهة الإرسال
                             </label>
 
@@ -551,238 +561,251 @@ export default function MailEditPage({
                                 ) =>
                                     setSenderEntityId(e.target.value)
                                 }
-                                className="w-full p-4 rounded-2xl border border-gray-300 outline-none focus:border-blue-500"
+                                className="w-full p-3.5 rounded-xl border-2 border-blue-100 bg-white text-blue-900 placeholder:text-blue-200 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all font-semibold"
                                 placeholder="معرف الجهة"
                             />
                         </div>
-                    </div>
 
-                    {/* PROFESSIONAL SWITCH */}
+                        {/* PROFESSIONAL TOGGLE */}
 
-                    <div className="flex items-center gap-4">
-                        <span className="font-semibold text-gray-700">
-                            احترافي
-                        </span>
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-yellow-50/60 border border-yellow-100">
+                            <span className="font-bold text-yellow-900">
+                                احترافي
+                            </span>
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setIsProfessional(
-                                    (
-                                        prev
-                                    ) =>
-                                        !prev
-                                )
-                            }
-                            className={`relative w-16 h-9 rounded-full transition-colors ${isProfessional
-                                ? "bg-blue-500"
-                                : "bg-gray-300"
-                                }`}
-                        >
-                            <div
-                                className={`absolute top-1 w-7 h-7 rounded-full bg-white transition-all ${isProfessional
-                                    ? "right-1"
-                                    : "left-1"
-                                    }`}
-                            />
-                        </button>
-                    </div>
-
-                    {/* CONTENT */}
-
-                    <div className="flex flex-col gap-2">
-                        <label className="font-semibold text-gray-700">
-                            المحتوى
-                        </label>
-
-                        <textarea
-                            value={content}
-                            onChange={(e) =>
-                                setContent(
-                                    e.target
-                                        .value
-                                )
-                            }
-                            className="w-full min-h-[350px] p-5 rounded-2xl border border-gray-300 outline-none resize-none focus:border-blue-500"
-                            placeholder="محتوى البريد..."
-                        />
-                    </div>
-
-                    {/* ATTACHMENTS */}
-
-                    <div className="flex flex-col gap-5">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <FontAwesomeIcon
-                                    icon={
-                                        faPaperclip
-                                    }
-                                    className="text-gray-500"
-                                />
-
-                                <h2 className="text-xl font-bold">
-                                    المرفقات
-                                </h2>
-
-                                <span className="text-sm text-gray-500">
-                                    (
-                                    {
-                                        totalFiles
-                                    }
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setIsProfessional(
+                                        (
+                                            prev
+                                        ) =>
+                                            !prev
                                     )
-                                </span>
-                            </div>
-
-                            <label className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white cursor-pointer transition-colors">
-                                <FontAwesomeIcon
-                                    icon={
-                                        faUpload
-                                    }
+                                }
+                                className={`relative w-14 h-8 rounded-full transition-all duration-200 ${isProfessional
+                                    ? "bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-lg shadow-yellow-200"
+                                    : "bg-blue-100"
+                                    }`}
+                            >
+                                <motion.div
+                                    layout
+                                    className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${isProfessional
+                                        ? "right-1"
+                                        : "left-1"
+                                        }`}
                                 />
+                            </button>
+                        </div>
+                    </div>
 
-                                <span>
-                                    تحميل الملفات
-                                </span>
+                    {/* RIGHT PANEL - CONTENT & ATTACHMENTS (SECONDARY) */}
 
-                                <input
-                                    type="file"
-                                    multiple
-                                    hidden
-                                    onChange={
-                                        handleFileUpload
-                                    }
-                                />
+                    <div className="lg:col-span-2 flex flex-col gap-8">
+                        {/* CONTENT */}
+
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-sm border border-blue-100/30 flex flex-col gap-3">
+                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">
+                                المحتوى
                             </label>
+
+                            <textarea
+                                value={content}
+                                onChange={(e) =>
+                                    setContent(
+                                        e.target
+                                            .value
+                                    )
+                                }
+                                className="w-full min-h-[300px] p-5 rounded-xl border-2 border-blue-100 bg-white text-blue-800 placeholder:text-blue-200 outline-none resize-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all font-light leading-relaxed"
+                                placeholder="محتوى البريد..."
+                            />
                         </div>
 
-                        {/* EXISTING ATTACHMENTS */}
+                        {/* ATTACHMENTS */}
 
-                        {attachments.length >
-                            0 && (
-                                <div className="flex flex-col gap-3">
-                                    <h3 className="font-semibold text-gray-700">
-                                        الملفات الموجودة
-                                    </h3>
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-sm border border-blue-100/30 flex flex-col gap-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
+                                        <FontAwesomeIcon
+                                            icon={
+                                                faPaperclip
+                                            }
+                                            className="text-white text-sm"
+                                        />
+                                    </div>
 
-                                    {attachments.map(
-                                        (
-                                            attachment
-                                        ) => (
-                                            <div
-                                                key={
-                                                    attachment.id
-                                                }
-                                                className="flex items-center justify-between p-4 rounded-2xl border border-gray-200 bg-gray-50"
-                                            >
-                                                <div className="flex items-center gap-4 overflow-hidden">
-                                                    <FontAwesomeIcon
-                                                        icon={getFileIcon(
-                                                            attachment.mimeType
-                                                        )}
-                                                        className="text-lg text-gray-600"
-                                                    />
+                                    <h2 className="text-lg font-bold text-blue-900">
+                                        المرفقات
+                                    </h2>
 
-                                                    <div className="overflow-hidden">
-                                                        <p className="font-medium truncate">
-                                                            {
-                                                                attachment.fileName
-                                                            }
-                                                        </p>
-
-                                                        <p className="text-sm text-gray-500 truncate">
-                                                            {
-                                                                attachment.mimeType
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        removeAttachment(
-                                                            attachment.id
-                                                        )
-                                                    }
-                                                    className="p-3 rounded-xl text-yellow-500 hover:bg-yellow-100 transition-colors"
-                                                >
-                                                    <FontAwesomeIcon
-                                                        icon={
-                                                            faTrash
-                                                        }
-                                                    />
-                                                </button>
-                                            </div>
-                                        )
-                                    )}
+                                    <span className="text-sm font-semibold text-blue-500 bg-blue-50 px-3 py-1 rounded-full">
+                                        {
+                                            totalFiles
+                                        }
+                                    </span>
                                 </div>
-                            )}
 
-                        {/* NEW FILES */}
+                                <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white cursor-pointer transition-all font-bold shadow-md hover:shadow-lg">
+                                    <FontAwesomeIcon
+                                        icon={
+                                            faUpload
+                                        }
+                                    />
 
-                        {newFiles.length >
-                            0 && (
-                                <div className="flex flex-col gap-3">
-                                    <h3 className="font-semibold text-gray-700">
-                                        ملفات جديدة
-                                    </h3>
+                                    <span>
+                                        تحميل
+                                    </span>
 
-                                    {newFiles.map(
-                                        (
-                                            file,
-                                            index
-                                        ) => (
-                                            <div
-                                                key={`${file.name}-${index}`}
-                                                className="flex items-center justify-between p-4 rounded-2xl border border-blue-200 bg-blue-50"
-                                            >
-                                                <div className="flex items-center gap-4 overflow-hidden">
-                                                    <FontAwesomeIcon
-                                                        icon={getFileIcon(
-                                                            file.type
-                                                        )}
-                                                        className="text-lg text-blue-600"
-                                                    />
+                                    <input
+                                        type="file"
+                                        multiple
+                                        hidden
+                                        onChange={
+                                            handleFileUpload
+                                        }
+                                    />
+                                </label>
+                            </div>
 
-                                                    <div className="overflow-hidden">
-                                                        <p className="font-medium truncate">
-                                                            {
+                            {/* EXISTING ATTACHMENTS */}
+
+                            {attachments.length >
+                                0 && (
+                                    <div className="flex flex-col gap-3">
+                                        <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">
+                                            الملفات الموجودة
+                                        </h3>
+
+                                        {attachments.map(
+                                            (
+                                                attachment
+                                            ) => (
+                                                <motion.div
+                                                    key={
+                                                        attachment.id
+                                                    }
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="flex items-center justify-between p-4 rounded-xl border-2 border-blue-100 bg-blue-50/60 hover:bg-blue-100/60 transition-all"
+                                                >
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className="w-8 h-8 bg-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                            <FontAwesomeIcon
+                                                                icon={getFileIcon(
+                                                                    attachment.mimeType
+                                                                )}
+                                                                className="text-blue-600 text-sm"
+                                                            />
+                                                        </div>
+
+                                                        <div className="overflow-hidden">
+                                                            <p className="font-semibold text-blue-900 truncate text-sm">
+                                                                {
+                                                                    attachment.fileName
+                                                                }
+                                                            </p>
+
+                                                            <p className="text-xs text-blue-500 truncate">
+                                                                {
+                                                                    attachment.mimeType
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            removeAttachment(
+                                                                attachment.id
+                                                            )
+                                                        }
+                                                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                                                    >
+                                                        <FontAwesomeIcon
+                                                            icon={
+                                                                faTrash
+                                                            }
+                                                        />
+                                                    </button>
+                                                </motion.div>
+                                            )
+                                        )}
+                                    </div>
+                                )}
+
+                            {/* NEW FILES */}
+
+                            {newFiles.length >
+                                0 && (
+                                    <div className="flex flex-col gap-3">
+                                        <h3 className="text-sm font-bold text-yellow-600 uppercase tracking-wider">
+                                            ملفات جديدة
+                                        </h3>
+
+                                        {newFiles.map(
+                                            (
+                                                file,
+                                                index
+                                            ) => (
+                                                <motion.div
+                                                    key={`${file.name}-${index}`}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="flex items-center justify-between p-4 rounded-xl border-2 border-yellow-200 bg-yellow-50/60 hover:bg-yellow-100/60 transition-all"
+                                                >
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className="w-8 h-8 bg-yellow-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                            <FontAwesomeIcon
+                                                                icon={getFileIcon(
+                                                                    file.type
+                                                                )}
+                                                                className="text-yellow-600 text-sm"
+                                                            />
+                                                        </div>
+
+                                                        <div className="overflow-hidden">
+                                                            <p className="font-semibold text-yellow-900 truncate text-sm">
+                                                                {
+                                                                    file.name
+                                                                }
+                                                            </p>
+
+                                                            <p className="text-xs text-yellow-600">
+                                                                {(
+                                                                    file.size /
+                                                                    1024
+                                                                ).toFixed(
+                                                                    1
+                                                                )}{" "}
+                                                                كيلوبايت
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            removeNewFile(
                                                                 file.name
-                                                            }
-                                                        </p>
-
-                                                        <p className="text-sm text-gray-500">
-                                                            {(
-                                                                file.size /
-                                                                1024
-                                                            ).toFixed(
-                                                                1
-                                                            )}{" "}
-                                                            كيلوبايت
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        removeNewFile(
-                                                            file.name
-                                                        )
-                                                    }
-                                                    className="p-3 rounded-xl text-yellow-500 hover:bg-yellow-100 transition-colors"
-                                                >
-                                                    <FontAwesomeIcon
-                                                        icon={
-                                                            faTrash
+                                                            )
                                                         }
-                                                    />
-                                                </button>
-                                            </div>
-                                        )
-                                    )}
-                                </div>
-                            )}
+                                                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                                                    >
+                                                        <FontAwesomeIcon
+                                                            icon={
+                                                                faTrash
+                                                            }
+                                                        />
+                                                    </button>
+                                                </motion.div>
+                                            )
+                                        )}
+                                    </div>
+                                )}
+                        </div>
                     </div>
                 </div>
             </div>

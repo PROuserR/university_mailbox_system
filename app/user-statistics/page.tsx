@@ -61,7 +61,7 @@ interface DashboardData {
 }
 
 interface DashboardResponse {
-    isSuccess: boolean;
+    success: boolean;
     data: DashboardData;
 }
 

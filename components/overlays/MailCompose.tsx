@@ -47,7 +47,7 @@ export default function MailComposeOverlay() {
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
 
     const getSenderEntities = async () => {
-        const req = await apiWrapper.get<SenderEntityResponse>("/SenderEntities");
+        const req = await apiWrapper.get<SenderEntityResponse>("/SenderEntities/active");
         if (req.data) {
             setSenderEntities(req.data.data);
             if (req.data.data.length > 0) setSenderEntityId(req.data.data[0].id.toString());
@@ -55,7 +55,7 @@ export default function MailComposeOverlay() {
     };
 
     const getDocumentTypes = async () => {
-        const req = await apiWrapper.get<DocumentTypeResponse>("/DocumentTypes");
+        const req = await apiWrapper.get<DocumentTypeResponse>("/DocumentTypes/active");
         if (req.data) {
             setDocumentTypes(req.data.data);
             if (req.data.data.length > 0) setDocumentTypeId(req.data.data[0].id.toString());
@@ -95,7 +95,7 @@ export default function MailComposeOverlay() {
             newFormData.append("DocumentTypeID", documentTypeId);
             newFormData.append("Number", number);
             newFormData.append("Title", subject);
-            newFormData.append("Content", content); // Sending plain text
+            newFormData.append("Content", content);
             newFormData.append("MainType", mailType);
             newFormData.append("IsProfessional", String(isProfessional));
             newFormData.append("sentDate", sentDate || now.toISOString());
@@ -139,234 +139,244 @@ export default function MailComposeOverlay() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     dir="rtl"
-                    className="fixed inset-0 top-16 z-50 bg-white flex flex-col"
+                    className="fixed inset-0 top-16 z-50 bg-gradient-to-br from-yellow-50 via-white to-blue-50 flex flex-col"
                 >
-                    {/* Header */}
-                    <header className="h-16 px-8 border-b flex items-center justify-between bg-blue-900 text-white shrink-0">
+                    {/* Modern Header */}
+                    <header className="h-20 px-8 border-b border-blue-100/50 flex items-center justify-between bg-white/80 backdrop-blur-xl shrink-0 shadow-sm">
                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                                <FontAwesomeIcon icon={faPaperPlane} className="text-white" />
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow">
+                                <FontAwesomeIcon icon={faPaperPlane} className="text-yellow-300 text-lg" />
                             </div>
                             <div>
-                                <h1 className="text-lg font-bold tracking-tight">إنشاء بريد جديد</h1>
-                                <p className="text-xs text-slate-400 font-medium">نظام المراسلات الإلكترونية</p>
+                                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">إنشاء مراسلة</h1>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={triggerMailCompose}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-red-500 transition-all group"
-                            >
-                                <FontAwesomeIcon icon={faXmark} className="group-hover:scale-110 transition-transform" />
-                            </button>
-                        </div>
+                        <button
+                            onClick={triggerMailCompose}
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 hover:bg-red-50 text-blue-600 hover:text-red-500 transition-all duration-200 group"
+                        >
+                            <FontAwesomeIcon icon={faXmark} className="group-hover:scale-110 transition-transform" />
+                        </button>
                     </header>
 
-                    {/* Main Workspace */}
-                    <main className="flex-1 flex overflow-hidden">
-                        {/* Editor Side */}
-                        <div className="flex-1 flex flex-col bg-white overflow-hidden">
-                            {/* Subject Area */}
-                            <div className="px-12 py-10 border-b shrink-0">
-                                <input
-                                    value={subject}
-                                    onChange={(e) => setSubject(e.target.value)}
-                                    placeholder="أدخل عنوان الموضوع هنا..."
-                                    className="w-full text-4xl font-black text-slate-800 placeholder:text-slate-200 outline-none border-none"
-                                />
+                    {/* Main Content Area */}
+                    <main className="flex-1 flex overflow-hidden gap-0">
+                        {/* Left Panel - Metadata (Primary) */}
+                        <aside className="w-1/3 border-r border-blue-100/30 bg-white/50 backdrop-blur-sm flex flex-col shrink-0 overflow-hidden">
+                            {/* Metadata Header */}
+                            <div className="p-6 border-b border-blue-100/30 bg-white/80">
+                                <h2 className="font-bold text-blue-900 flex items-center gap-3 text-base">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faInfoCircle} className="text-white text-sm" />
+                                    </div>
+                                    بيانات المراسلة
+                                </h2>
                             </div>
 
-                            {/* Basic Textarea Content Area */}
-                            <div className="flex-1 overflow-y-auto px-12 py-8">
-                                <textarea
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    placeholder="اكتب محتوى الرسالة هنا..."
-                                    className="w-full h-full text-xl leading-relaxed text-slate-700 placeholder:text-slate-300 outline-none border-none resize-none bg-transparent"
-                                />
-                            </div>
-
-                            {/* Attachments Section */}
-                            <div className="px-12 py-6 bg-slate-50 border-t shrink-0">
-                                <div className="flex items-center gap-6">
-                                    <label className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-600 rounded-xl cursor-pointer hover:border-blue-500 hover:text-blue-600 transition-all font-bold text-sm shadow-sm">
-                                        <FontAwesomeIcon icon={faPaperclip} />
-                                        إرفاق ملفات
-                                        <input type="file" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
-                                    </label>
-                                    <div className="flex flex-wrap gap-3">
-                                        {attachments.map((file, i) => (
-                                            <div key={i} className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 shadow-sm animate-in fade-in slide-in-from-right-2">
-                                                <FontAwesomeIcon icon={faFileAlt} className="text-blue-500" />
-                                                <span className="max-w-[150px] truncate">{file.name}</span>
-                                                <button onClick={() => removeFile(i)} className="mr-2 text-slate-300 hover:text-red-500 transition-colors">
-                                                    <FontAwesomeIcon icon={faXmark} />
-                                                </button>
-                                            </div>
+                            {/* Metadata Form - Scrollable */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                                {/* Mail Type Selection */}
+                                <div className="space-y-2.5">
+                                    <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">نوع البريد</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { value: "incoming", label: "وارد" },
+                                            { value: "outgoing", label: "صادر" },
+                                            { value: "internal", label: "داخلي" }
+                                        ].map((option) => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => setMailType(option.value)}
+                                                className={`py-3 px-3 rounded-xl font-bold text-sm transition-all duration-200 ${mailType === option.value
+                                                        ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200"
+                                                        : "bg-blue-50/60 text-blue-600 hover:bg-blue-100/60 border border-blue-100"
+                                                    }`}
+                                            >
+                                                {option.label}
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        {/* Metadata Sidebar */}
-                        <aside className="w-80 border-r bg-slate-50 flex flex-col shrink-0">
-                            <div className="p-8 border-b bg-white">
-                                <h3 className="font-black text-slate-800 flex items-center gap-3 text-base">
-                                    <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600" />
-                                    بيانات المراسلة
-                                </h3>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto p-8 space-y-10">
-                                {/* Form Sections */}
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            نوع البريد
-                                        </label>
-                                        <select
-                                            value={mailType}
-                                            onChange={(e) => setMailType(e.target.value)}
-                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
-                                        >
-                                            <option value="incoming">وارد</option>
-                                            <option value="outgoing">صادر</option>
-                                            <option value="internal">داخلي</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            التصنيف المهني
-                                        </label>
-                                        <div className="grid grid-cols-2 gap-2 bg-slate-200/50 p-1.5 rounded-2xl">
+                                {/* Professional Classification */}
+                                <div className="space-y-2.5">
+                                    <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">التصنيف</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { value: true, label: "مهني" },
+                                            { value: false, label: "غير مهني" }
+                                        ].map((option) => (
                                             <button
-                                                onClick={() => setIsProfessional(true)}
-                                                className={`py-2.5 text-xs font-black rounded-xl transition-all ${isProfessional ? "bg-white text-blue-600 shadow-md" : "text-slate-500 hover:text-slate-700"
+                                                key={String(option.value)}
+                                                onClick={() => setIsProfessional(option.value)}
+                                                className={`py-3 px-3 rounded-xl font-bold text-sm transition-all duration-200 ${isProfessional === option.value
+                                                        ? "bg-gradient-to-br from-yellow-400 to-yellow-500 text-blue-900 shadow-lg shadow-yellow-200"
+                                                        : "bg-yellow-50/60 text-yellow-700 hover:bg-yellow-100/60 border border-yellow-100"
                                                     }`}
                                             >
-                                                مهني
+                                                {option.label}
                                             </button>
-                                            <button
-                                                onClick={() => setIsProfessional(false)}
-                                                className={`py-2.5 text-xs font-black rounded-xl transition-all ${!isProfessional ? "bg-white text-blue-600 shadow-md" : "text-slate-500 hover:text-slate-700"
-                                                    }`}
-                                            >
-                                                غير مهني
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            الرقم المرجعي
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={number}
-                                            onChange={(e) => setNumber(e.target.value)}
-                                            placeholder="أدخل الرقم..."
-                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
-                                        />
+                                        ))}
                                     </div>
                                 </div>
 
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            الجهة المرسلة
-                                        </label>
-                                        <select
-                                            value={senderEntityId}
-                                            onChange={(e) => setSenderEntityId(e.target.value)}
-                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
-                                        >
-                                            <option value="" disabled>اختر الجهة...</option>
-                                            {senderEntities?.map((entity) => (
-                                                <option value={entity.id} key={entity.id}>{entity.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            نوع المستند
-                                        </label>
-                                        <select
-                                            value={documentTypeId}
-                                            onChange={(e) => setDocumentTypeId(e.target.value)}
-                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
-                                        >
-                                            <option value="" disabled>اختر النوع...</option>
-                                            {documentTypes?.map((type) => (
-                                                <option value={type.id} key={type.id}>{type.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                {/* Sender Entity Selection */}
+                                <div className="space-y-2.5">
+                                    <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">الجهة المرسلة</label>
+                                    <select
+                                        value={senderEntityId}
+                                        onChange={(e) => setSenderEntityId(e.target.value)}
+                                        className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm hover:border-blue-200"
+                                    >
+                                        <option value="" disabled>اختر الجهة...</option>
+                                        {senderEntities?.map((entity) => (
+                                            <option value={entity.id} key={entity.id}>{entity.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
 
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            تاريخ الإصدار
-                                        </label>
+                                {/* Document Type Selection */}
+                                <div className="space-y-2.5">
+                                    <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">نوع المستند</label>
+                                    <select
+                                        value={documentTypeId}
+                                        onChange={(e) => setDocumentTypeId(e.target.value)}
+                                        className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm hover:border-blue-200"
+                                    >
+                                        <option value="" disabled>اختر النوع...</option>
+                                        {documentTypes?.map((type) => (
+                                            <option value={type.id} key={type.id}>{type.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Reference Number */}
+                                <div className="space-y-2.5">
+                                    <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">الرقم المرجعي</label>
+                                    <input
+                                        type="text"
+                                        value={number}
+                                        onChange={(e) => setNumber(e.target.value)}
+                                        placeholder="أدخل الرقم..."
+                                        className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 placeholder:text-blue-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
+                                    />
+                                </div>
+
+                                {/* Date Inputs */}
+                                <div className="space-y-3 pt-2">
+                                    <div className="space-y-2.5">
+                                        <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الإصدار</label>
                                         <input
                                             type="date"
                                             value={issuedDate}
                                             onChange={(e) => setIssuedDate(e.target.value)}
-                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                            className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            تاريخ الإرسال
-                                        </label>
+                                    <div className="space-y-2.5">
+                                        <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الإرسال</label>
                                         <input
                                             type="date"
                                             value={sentDate}
                                             onChange={(e) => setSentDate(e.target.value)}
-                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                            className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            تاريخ الاستلام
-                                        </label>
+                                    <div className="space-y-2.5">
+                                        <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الاستلام</label>
                                         <input
                                             type="date"
                                             value={receivedDate}
                                             onChange={(e) => setReceivedDate(e.target.value)}
-                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 transition-all outline-none shadow-sm"
+                                            className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Sidebar Footer */}
-                            <div className="p-8 border-t bg-white">
+                            {/* Metadata Footer - Action Buttons */}
+                            <div className="p-6 border-t border-blue-100/30 bg-white/80 space-y-3 shrink-0">
                                 <button
                                     onClick={handleSend}
                                     disabled={loading}
-                                    className={`w-full py-5 rounded-[2rem] font-black text-white bg-blue-600 hover:bg-blue-700 shadow-2xl shadow-blue-200 transition-all flex items-center justify-center gap-4 ${loading ? "opacity-70 cursor-not-allowed" : "active:scale-95 hover:-translate-y-1"
+                                    className={`w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-200 transition-all duration-200 flex items-center justify-center gap-3 ${loading ? "opacity-70 cursor-not-allowed" : "active:scale-95 hover:shadow-xl"
                                         }`}
                                 >
                                     {loading ? (
-                                        <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <>
+                                            <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                                            <span>جاري الإرسال...</span>
+                                        </>
                                     ) : (
-                                        <FontAwesomeIcon icon={faPaperPlane} />
+                                        <>
+                                            <FontAwesomeIcon icon={faPaperPlane} />
+                                            <span>إرسال المراسلة</span>
+                                        </>
                                     )}
-                                    {loading ? "جاري الإرسال..." : "إرسال المراسلة"}
                                 </button>
                                 <button
                                     onClick={triggerMailCompose}
-                                    className="w-full mt-4 py-2 text-xs font-black text-slate-300 hover:text-slate-500 transition-colors uppercase tracking-widest"
+                                    className="w-full py-2 text-xs font-bold text-blue-500 hover:text-blue-700 transition-colors uppercase tracking-widest"
                                 >
                                     إلغاء العملية
                                 </button>
                             </div>
                         </aside>
+
+                        {/* Right Panel - Content Editor (Secondary) */}
+                        <div className="w-2/3 flex-1 flex flex-col bg-white/40 backdrop-blur-sm overflow-hidden">
+                            {/* Subject Input - Minimal */}
+                            <div className="px-10 py-8 border-b border-blue-100/30 shrink-0">
+                                <input
+                                    value={subject}
+                                    onChange={(e) => setSubject(e.target.value)}
+                                    placeholder="الموضوع..."
+                                    className="w-full text-3xl font-bold text-blue-900 placeholder:text-blue-200 outline-none border-none bg-transparent"
+                                />
+                            </div>
+
+                            {/* Content Textarea - Main Focus */}
+                            <div className="flex-1 overflow-y-auto px-10 py-8">
+                                <textarea
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    placeholder="اكتب محتوى الرسالة هنا..."
+                                    className="w-full h-full text-lg leading-relaxed text-blue-800 placeholder:text-blue-200/70 outline-none border-none resize-none bg-transparent font-light"
+                                />
+                            </div>
+
+                            {/* Attachments Section - Minimal */}
+                            <div className="px-10 py-6 bg-yellow-50/40 border-t border-yellow-100/30 shrink-0">
+                                <div className="flex items-center gap-6">
+                                    <label className="flex items-center gap-2 py-4 px-8 bg-white border-2 border-yellow-400 text-yellow-700 rounded-lg cursor-pointer hover:border-yellow-400 hover:bg-yellow-50/50 transition-all font-semibold text-sm shadow-sm">
+                                        <FontAwesomeIcon icon={faPaperclip} className="text-yellow-600" />
+                                        إرفاق
+                                        <input type="file" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {attachments.map((file, i) => (
+                                            <motion.div
+                                                key={i}
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                className="flex items-center gap-2 bg-white border border-yellow-200 px-3 py-2 rounded-lg text-xs font-semibold text-yellow-700 shadow-sm"
+                                            >
+                                                <FontAwesomeIcon icon={faFileAlt} className="text-yellow-600" />
+                                                <span className="max-w-[120px] truncate">{file.name}</span>
+                                                <button
+                                                    onClick={() => removeFile(i)}
+                                                    className="ml-1 text-yellow-300 hover:text-red-500 transition-colors"
+                                                >
+                                                    <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                                                </button>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </main>
                 </motion.div>
             )}

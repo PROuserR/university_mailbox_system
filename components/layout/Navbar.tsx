@@ -279,8 +279,6 @@ export default function Navbar() {
                     </Link>
                 }
 
-
-
                 {/* Notifications */}
                 <motion.div
                     whileHover={{

@@ -1585,52 +1585,6 @@ export default function UsersPage() {
 
 
 
-
-
-
-
-
-                                                                    {/* BAN */}
-
-                                                                    <button
-
-                                                                        onClick={() =>
-                                                                            toggleBan(user)
-                                                                        }
-
-                                                                        className="
-                    w-10
-                    h-10
-                    rounded-xl
-                    bg-red-100
-                    text-red-600
-                    hover:bg-red-200
-                    transition
-                    "
-
-                                                                    >
-
-                                                                        <FontAwesomeIcon
-                                                                            icon={
-                                                                                user.isBanned
-                                                                                    ?
-                                                                                    faUnlock
-                                                                                    :
-                                                                                    faBan
-                                                                            }
-                                                                        />
-
-
-                                                                    </button>
-
-
-
-
-
-
-
-
-
                                                                     {/* PERMANENT RECEIVER */}
 
                                                                     <button
@@ -1661,36 +1615,6 @@ export default function UsersPage() {
 
 
 
-
-
-
-
-
-                                                                    {/* DELETE */}
-
-                                                                    <button
-
-                                                                        onClick={() =>
-                                                                            deleteUser(user.id)
-                                                                        }
-
-                                                                        className="
-                    w-10
-                    h-10
-                    rounded-xl
-                    bg-red-100
-                    text-red-700
-                    hover:bg-red-200
-                    transition
-                    "
-
-                                                                    >
-
-                                                                        <FontAwesomeIcon
-                                                                            icon={faTrash}
-                                                                        />
-
-                                                                    </button>
 
 
 
