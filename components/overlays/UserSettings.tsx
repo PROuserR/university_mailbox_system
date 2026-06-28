@@ -2,15 +2,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faSignOutAlt,
     faTimes,
-    faLock,
-    faUserEdit
+    faUserEdit,
+    faChartArea
 } from '@fortawesome/free-solid-svg-icons'
 import userSettingsOverlayStore from '@/store/userSettingsOverlayStore'
 import { useRouter } from "next/navigation";
 import { UserInfo } from '@/types/api/User/UserInfo';
 import { apiWrapper } from '@/utils/apiClient';
-import { useState } from 'react';
-import Link from 'next/link';
+import useUserInfoStore from '@/store/userInfoStore';
 
 
 type Props = {
@@ -20,24 +19,31 @@ type Props = {
 export default function UserSettingsOverlay({ user }: Props) {
 
     const { triggerUserSettings } = userSettingsOverlayStore()
-    const [userRole, setUserRole] = useState("");
+    const {
+        role,
+    } = useUserInfoStore();
     const router = useRouter();
 
     const handleSignout = async () => {
-        const res = await apiWrapper.post('/auth/logout')
+        await apiWrapper.post('/auth/logout')
         triggerUserSettings();
         localStorage.clear();
         router.push("/auth/login");
     }
 
-    const handleChangePassword = async () => {
+    const handleStatisticsPageNavigation = async () => {
         triggerUserSettings();
-        router.push("/auth/change-password");
+        router.push("statistics");
     }
 
     const handleProfileNavigation = async () => {
         triggerUserSettings();
-        router.push("/profile");
+        if (role === "Dean" || role == "Admin"){
+            router.push("/statistics");
+        }
+        else{
+            router.push("/user-statistics");     
+        }
     }
 
     const getUserRoleInArabic = (userRole: string) => {
@@ -79,33 +85,32 @@ export default function UserSettingsOverlay({ user }: Props) {
                     </div>
                 </div>
 
-                <div className="flex gap-4 p-4 items-center justify-center  w-full">
-                    <button
-                        onClick={handleProfileNavigation}
-                        className="flex w-2/3 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
-                    >
-                        <FontAwesomeIcon icon={faUserEdit} />
-                        <span> الملف الشخصي</span>
-                    </button>
-                </div>
 
 
                 {/* actions */}
-                <div className="flex gap-x-4  w-full">
+                <div className="flex flex-col gap-y-4 items-center w-full">
+                    <button
+                        onClick={handleStatisticsPageNavigation}
+                        className="flex w-2/3 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
+                    >
+                        <FontAwesomeIcon icon={faChartArea} />
+                        <span> احصائيات </span>
+                    </button>
+
                     <button
                         onClick={handleSignout}
-                        className="flex w-1/2 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
+                        className="flex w-2/3 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
                     >
                         <FontAwesomeIcon icon={faSignOutAlt} />
                         <span>تسجيل الخروج</span>
                     </button>
 
                     <button
-                        onClick={handleChangePassword}
-                        className="flex w-1/2 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
+                        onClick={handleProfileNavigation}
+                        className="flex w-2/3 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
                     >
-                        <FontAwesomeIcon icon={faLock} />
-                        <span>تغير كلمة السر </span>
+                        <FontAwesomeIcon icon={faUserEdit} />
+                        <span> الملف الشخصي</span>
                     </button>
                 </div>
             </div>

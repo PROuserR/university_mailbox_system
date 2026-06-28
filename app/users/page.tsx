@@ -653,18 +653,8 @@ export default function UsersPage() {
 
         return new Date(date)
             .toLocaleDateString(
-                "ar-SA",
-                {
 
-                    year: "numeric",
-
-                    month: "short",
-
-                    day: "numeric"
-
-                }
-
-            );
+        );
 
 
     }

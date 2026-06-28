@@ -10,6 +10,8 @@ import {
     faChartBar,
     faFile,
     faMessage,
+    faShare,
+    faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
@@ -126,9 +128,8 @@ export default function Navbar() {
 
             {/* LEFT (RTL) - Actions */}
             <div className="mr-auto flex items-center gap-4">
-
                 {/* Edit Document Types */}
-                {role === "Dean" && (
+                {(role === "Dean" || role == "Admin") && (
                     <motion.div
                         whileHover={{
                             y: -2,
@@ -155,7 +156,7 @@ export default function Navbar() {
                 )}
 
                 {/* Edit Sender Entities */}
-                {role === "Dean" && (
+                {(role === "Dean" || role == "Admin") && (
                     <motion.div
                         whileHover={{
                             y: -2,
@@ -182,7 +183,7 @@ export default function Navbar() {
                 )}
 
                 {/* Edit users */}
-                {role === "Dean" && (
+                {(role === "Dean" || role == "Admin") && (
                     <motion.div
                         whileHover={{
                             y: -2,
@@ -208,9 +209,11 @@ export default function Navbar() {
                     </motion.div>
                 )}
 
-                {/* Statistics  */}
-                {role === "Dean" ? (
-                    <Link href="/statistics">
+
+
+                {/* Approvals  */}
+                {(role === "Dean" || role == "Admin") && (
+                    <Link href="/approvals">
                         {/* Statistics */}
                         <motion.button
                             whileHover={{
@@ -238,46 +241,47 @@ export default function Navbar() {
                             />
 
                             <FontAwesomeIcon
-                                icon={faChartBar}
+                                icon={faCheck}
                                 className="relative z-10 cursor-pointer text-lg transition-transform duration-300 group-hover:scale-110"
                             />
                         </motion.button>
                     </Link>
-                ): 
-                    <Link href="/user-statistics">
-                        {/* Statistics */}
-                        <motion.button
+                )}
+
+                {/* Distribution  */}
+                <Link href="/distribution">
+                    {/* Statistics */}
+                    <motion.button
+                        whileHover={{
+                            y: -2,
+                            scale: 1.03,
+                        }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 300,
+                        }}
+                        className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg"
+                    >
+                        {/* Animated shine */}
+                        <motion.div
+                            initial={{
+                                x: "-120%",
+                            }}
                             whileHover={{
-                                y: -2,
-                                scale: 1.03,
+                                x: "120%",
                             }}
                             transition={{
-                                type: "spring",
-                                stiffness: 300,
+                                duration: 0.7,
                             }}
-                            className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-lg"
-                        >
-                            {/* Animated shine */}
-                            <motion.div
-                                initial={{
-                                    x: "-120%",
-                                }}
-                                whileHover={{
-                                    x: "120%",
-                                }}
-                                transition={{
-                                    duration: 0.7,
-                                }}
-                                className="absolute inset-0 w-1/2 skew-x-12 bg-white/20 blur-sm"
-                            />
+                            className="absolute inset-0 w-1/2 skew-x-12 bg-white/20 blur-sm"
+                        />
 
-                            <FontAwesomeIcon
-                                icon={faChartBar}
-                                className="relative z-10 cursor-pointer text-lg transition-transform duration-300 group-hover:scale-110"
-                            />
-                        </motion.button>
-                    </Link>
-                }
+                        <FontAwesomeIcon
+                            icon={faShare}
+                            className="relative z-10 cursor-pointer text-lg transition-transform duration-300 group-hover:scale-110"
+                        />
+                    </motion.button>
+                </Link>
 
                 {/* Notifications */}
                 <motion.div
@@ -292,8 +296,6 @@ export default function Navbar() {
                 >
                     <NotificationsDropdown />
                 </motion.div>
-
-
 
                 {/* Profile */}
                 <motion.button

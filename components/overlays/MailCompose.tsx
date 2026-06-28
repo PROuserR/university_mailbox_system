@@ -38,10 +38,7 @@ export default function MailComposeOverlay() {
     const [loading, setLoading] = useState<boolean>(false);
     const [mailType, setMailType] = useState<string>("incoming");
     const [isProfessional, setIsProfessional] = useState<boolean>(true);
-    const [sentDate, setSentDate] = useState("");
-    const [issuedDate, setIssuedDate] = useState("");
-    const [receivedDate, setReceivedDate] = useState("");
-    const [showMetadata, setShowMetadata] = useState(true);
+    const [issuedDate, setIssuedDate] = useState(new Date().toISOString().split("T")[0]);
 
     const queryClient = useQueryClient();
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
@@ -98,9 +95,7 @@ export default function MailComposeOverlay() {
             newFormData.append("Content", content);
             newFormData.append("MainType", mailType);
             newFormData.append("IsProfessional", String(isProfessional));
-            newFormData.append("sentDate", sentDate || now.toISOString());
             newFormData.append("issuedDate", issuedDate || now.toISOString());
-            newFormData.append("receivedDate", receivedDate || now.toISOString());
             newFormData.append("senderEntityId", senderEntityId);
             attachments.forEach((file) => newFormData.append("AdditionalFiles", file));
 
@@ -126,9 +121,7 @@ export default function MailComposeOverlay() {
         setAttachments([]);
         setMailType("incoming");
         setIsProfessional(true);
-        setSentDate("");
         setIssuedDate("");
-        setReceivedDate("");
     };
 
     return (
@@ -271,24 +264,6 @@ export default function MailComposeOverlay() {
                                             type="date"
                                             value={issuedDate}
                                             onChange={(e) => setIssuedDate(e.target.value)}
-                                            className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
-                                        />
-                                    </div>
-                                    <div className="space-y-2.5">
-                                        <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الإرسال</label>
-                                        <input
-                                            type="date"
-                                            value={sentDate}
-                                            onChange={(e) => setSentDate(e.target.value)}
-                                            className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
-                                        />
-                                    </div>
-                                    <div className="space-y-2.5">
-                                        <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الاستلام</label>
-                                        <input
-                                            type="date"
-                                            value={receivedDate}
-                                            onChange={(e) => setReceivedDate(e.target.value)}
                                             className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
                                         />
                                     </div>

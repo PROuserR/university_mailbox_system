@@ -17,9 +17,12 @@ import {
     faLanguage,
     faGear,
     faUpload,
+    faLockOpen,
+    faLock,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { apiWrapper } from "@/utils/apiClient";
+import Link from "next/link";
 
 
 
@@ -108,12 +111,6 @@ export default function ProfilePage() {
 
     }, []);
 
-
-
-
-
-
-
     function translateRole(role: string) {
 
         const roles: any = {
@@ -130,14 +127,6 @@ export default function ProfilePage() {
         return roles[role] ?? role;
 
     }
-
-
-
-
-
-
-
-
 
     async function loadProfile() {
 
@@ -786,13 +775,7 @@ export default function ProfilePage() {
 
 
 
-                        <div className="space-y-4">
-
-
-
-
-
-
+                        <div className="space-y-4 flex flex-col">
                             <input
 
                                 className="input"
@@ -910,14 +893,6 @@ export default function ProfilePage() {
 
                             />
 
-
-
-
-
-
-
-
-
                             <button
 
                                 onClick={
@@ -951,7 +926,24 @@ export default function ProfilePage() {
 
 
 
-
+                            <Link
+                                href="/auth/change-password"
+                                className="
+                                    w-full
+                                    bg-red-500
+                                    hover:bg-blue-600
+                                    text-white
+                                    text-center
+                                    py-3
+                                    rounded-xl
+                                    transition
+                                "
+                            >
+                                <FontAwesomeIcon
+                                    icon={faLock}
+                                />
+                                تغيير كلمة السر
+                            </Link>
 
 
 

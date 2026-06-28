@@ -311,14 +311,7 @@ export default function DocumentTypesPage() {
     ) {
 
         return new Date(date)
-            .toLocaleDateString(
-                "ar-SA",
-                {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric"
-                }
-            );
+            .toLocaleDateString();
 
     }
 

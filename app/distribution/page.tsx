@@ -27,12 +27,13 @@ import {
   faInbox,
   faPaperPlane,
   faSortAmountDown,
-  faSortAmountUp
+  faSortAmountUp,
 
 } from "@fortawesome/free-solid-svg-icons";
 
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import useUserInfoStore from "@/store/userInfoStore";
 
 
 
@@ -305,6 +306,10 @@ const normalizeMail = (
 export default function MailList() {
 
   const {
+    role,
+  } = useUserInfoStore();
+
+  const {
 
     isMailDetailsStoreShown,
 
@@ -332,18 +337,11 @@ export default function MailList() {
 
 
 
-  const [
-
-    sortBy,
-
-    setSortBy
-
-  ] = useState<
-    "date" | "title" | "sender"
-
-  >(
-    "date"
-  );
+  const [sortBy, setSortBy] = useState<
+    | "DistributedDate"
+    | "CorrespondenceTitle"
+    | "DistributorName"
+  >("DistributedDate");
 
 
 
@@ -395,24 +393,15 @@ export default function MailList() {
 
 
     const res = await apiWrapper.get<{
-
       data: PageResponse
-
     }>(
-
-
       endpoint,
-
-
       {
-
         page,
-
-        pageSize: 10
-
+        pageSize: 10,
+        sortBy,
+        sortDescending
       }
-
-
     );
 
 
@@ -457,11 +446,10 @@ export default function MailList() {
 
 
     queryKey: [
-
       "distribution-mails",
-
-      folder
-
+      folder,
+      sortBy,
+      sortDescending
     ],
 
 
@@ -506,127 +494,10 @@ export default function MailList() {
   });
 
 
-
-
-
   const mails =
-
-    data?.pages
-
-      .flatMap(
-
-        page => page.items
-
-      )
-
-      .sort((a, b) => {
-
-
-        let result = 0;
-
-
-
-        if (sortBy === "date") {
-
-
-          result =
-
-            new Date(
-              a.distributedDate
-            ).getTime()
-
-            -
-
-            new Date(
-              b.distributedDate
-            ).getTime();
-
-
-        }
-
-
-
-
-        if (sortBy === "title") {
-
-
-          result =
-
-            a.correspondenceTitle
-
-              .localeCompare(
-
-                b.correspondenceTitle
-
-              );
-
-
-        }
-
-
-
-
-        if (sortBy === "sender") {
-
-
-
-          const senderA =
-
-            a.distributorName ??
-
-            a.receiverName ??
-
-            "";
-
-
-
-          const senderB =
-
-            b.distributorName ??
-
-            b.receiverName ??
-
-            "";
-
-
-
-          result =
-
-            senderA.localeCompare(
-
-              senderB
-
-            );
-
-
-        }
-
-
-
-
-        return sortDescending
-
-          ?
-
-          -result
-
-          :
-
-          result;
-
-
-
-      })
-
-    ??
-
-    [];
-
-
-
-
-
-
+    data?.pages.flatMap(
+      page => page.items
+    ) ?? [];
 
   const bottomRef = useInfiniteScroll({
 
@@ -855,19 +726,13 @@ export default function MailList() {
 
                     value={sortBy}
 
-
-
                     onChange={(e) =>
-
                       setSortBy(
-
                         e.target.value as
-                        "date" |
-                        "title" |
-                        "sender"
-
+                        | "DistributedDate"
+                        | "CorrespondenceTitle"
+                        | "DistributorName"
                       )
-
                     }
 
 
@@ -880,33 +745,17 @@ export default function MailList() {
                                     "
 
                   >
-
-
-
-                    <option value="date">
-
+                    <option value="DistributedDate">
                       التاريخ
-
                     </option>
 
-
-
-                    <option value="title">
-
+                    <option value="CorrespondenceTitle">
                       العنوان
-
                     </option>
 
-
-
-
-                    <option value="sender">
-
+                    <option value="DistributorName">
                       المرسل
-
                     </option>
-
-
 
                   </select>
 
@@ -1041,8 +890,7 @@ export default function MailList() {
 
 
 
-
-                <button
+                {role != "User" && <button
 
 
                   onClick={() => setFolder("outbox")}
@@ -1075,9 +923,6 @@ export default function MailList() {
 
 
                 >
-
-
-
                   <FontAwesomeIcon
 
                     icon={faPaperPlane}
@@ -1092,10 +937,7 @@ export default function MailList() {
 
 
 
-                </button>
-
-
-
+                </button>}
               </div>
 
 
@@ -1196,13 +1038,11 @@ export default function MailList() {
 
                       onClick={openMail}
 
-
                       onEdit={() => { }}
-
 
                       onDelete={() => { }}
 
-
+                      editable={false}
                     />
 
 

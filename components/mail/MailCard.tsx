@@ -27,6 +27,7 @@ type Props = {
     ) => void;
 
     isDeleting?: boolean;
+    editable?: boolean
 };
 
 export default function MailCard({
@@ -36,6 +37,7 @@ export default function MailCard({
     onEdit,
     onDelete,
     isDeleting,
+    editable
 }: Props) {
     const senderName =
         mail.senderEntity?.trim() ||
@@ -131,35 +133,39 @@ export default function MailCard({
                     )}
                 </span>
 
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(mail);
-                    }}
-                    className="hidden group-hover:flex text-blue-500 hover:text-blue-600 transition"
-                >
-                    <FontAwesomeIcon
-                        icon={faPen}
-                        className="text-base"
-                    />
-                </button>
+                {editable == true &&
+                    <>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(mail);
+                            }}
+                            className="hidden group-hover:flex text-blue-500 hover:text-blue-600 transition"
+                        >
+                            <FontAwesomeIcon
+                                icon={faPen}
+                                className="text-base"
+                            />
+                        </button>
 
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
 
-                        onDelete(
-                            String(mail.id)
-                        );
-                    }}
-                    disabled={isDeleting}
-                    className="hidden group-hover:flex text-yellow-500 hover:text-yellow-600 transition"
-                >
-                    <FontAwesomeIcon
-                        icon={faTrash}
-                        className="text-base"
-                    />
-                </button>
+                                onDelete(
+                                    String(mail.id)
+                                );
+                            }}
+                            disabled={isDeleting}
+                            className="hidden group-hover:flex text-yellow-500 hover:text-yellow-600 transition"
+                        >
+                            <FontAwesomeIcon
+                                icon={faTrash}
+                                className="text-base"
+                            />
+                        </button>
+                    </>}
+
             </div>
         </motion.div>
     );

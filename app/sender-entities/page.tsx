@@ -224,12 +224,12 @@ export default function SenderEntitiesPage() {
                                         </td>
 
                                         <td className="p-4">
-                                            {new Date(entity.createdAt).toLocaleDateString("ar-SA")}
+                                            {new Date(entity.createdAt).toLocaleDateString()}
                                         </td>
 
                                         <td className="p-4">
                                             {entity.updatedAt
-                                                ? new Date(entity.updatedAt).toLocaleDateString("ar-SA")
+                                                ? new Date(entity.updatedAt).toLocaleDateString()
                                                 : "-"}
                                         </td>
 
