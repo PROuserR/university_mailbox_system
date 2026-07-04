@@ -16,12 +16,14 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!role) return; // Wait until role is loaded
 
-    if (role != "Dean" || role != "Employee") {
+    if (role != "Dean") {
+      router.push("/distribution")
+    }
+    if (role != "Employee") {
       router.push("/distribution")
     }
 
   }, [])
-
 
   return (
     <main className="flex flex-col h-fit w-full overflow-hidden gap-12">
