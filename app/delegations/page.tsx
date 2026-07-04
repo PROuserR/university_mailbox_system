@@ -666,23 +666,18 @@ export default function Page() {
             if (response.data)
                 if (response.data.success) {
 
-
                     toast.success(
                         "تم إلغاء التفويض"
                     );
-
 
                     setShowDelete(false);
 
                     setDeleteId(null);
 
-
                     await loadDelegations();
-
 
                 }
                 else {
-
 
                     toast.error(
                         response.data.message

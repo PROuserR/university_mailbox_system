@@ -213,6 +213,7 @@ export default function MailList() {
                                     deleteMailMutation.mutate(id)
                                 }
                                 isDeleting={deleteMailMutation.isPending}
+                                editable={true}
                             />
                         ))}
 
