@@ -5,14 +5,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faArrowRight,
     faPaperclip,
-    faBriefcase,
     faCalendarDays,
     faHashtag,
-    faUser,
-    faInbox,
-    faPaperPlane,
-    faFile,
-    faCircleInfo,
 } from "@fortawesome/free-solid-svg-icons";
 
 import MailFile from "./MailFile";
@@ -26,6 +20,7 @@ import formatDate from "@/utils/formatDate";
 import { Mail } from "@/types/api/Mail/Mail";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 type Props = {
     data: Mail;
@@ -36,6 +31,8 @@ export default function MailViewer({ data }: Props) {
         useShowMailDetailsStore();
 
     const [showMailDistribute, setShowMailDistribute] = useState(false);
+
+    const path = usePathname();
 
     const editor = useEditor({
         extensions: [StarterKit],
@@ -126,16 +123,19 @@ export default function MailViewer({ data }: Props) {
                 </div>
 
                 {/* ACTIONS */}
-                <div className="mt-5 flex gap-3">
-                    <button
-                        onClick={() =>
-                            setShowMailDistribute(!showMailDistribute)
-                        }
-                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow"
-                    >
-                        حالة التوزيع
-                    </button>
-                </div>
+                {path != "/distribution" &&
+                    <div className="mt-5 flex gap-3">
+                        <button
+                            onClick={() =>
+                                setShowMailDistribute(!showMailDistribute)
+                            }
+                            className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow"
+                        >
+                            حالة التوزيع
+                        </button>
+                    </div>
+                }
+
 
                 {/* DISTRIBUTE PANEL */}
                 <AnimatePresence>
