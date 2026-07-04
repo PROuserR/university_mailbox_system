@@ -39,6 +39,8 @@ export default function MailComposeOverlay() {
     const [mailType, setMailType] = useState<string>("incoming");
     const [isProfessional, setIsProfessional] = useState<boolean>(true);
     const [issuedDate, setIssuedDate] = useState(new Date().toISOString().split("T")[0]);
+    const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split("T")[0]);
+    const [sentDate, setSentDate] = useState(new Date().toISOString().split("T")[0]);
 
     const queryClient = useQueryClient();
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
@@ -156,7 +158,7 @@ export default function MailComposeOverlay() {
                     {/* Main Content Area */}
                     <main className="flex-1 flex overflow-hidden gap-0">
                         {/* Left Panel - Metadata (Primary) */}
-                        <aside className="w-1/3 border-r border-blue-100/30 bg-white/50 backdrop-blur-sm flex flex-col shrink-0 overflow-hidden">
+                        <aside className="w-2/3 border-r border-blue-100/30 bg-white/50 backdrop-blur-sm flex flex-col shrink-0 overflow-hidden">
                             {/* Metadata Header */}
                             <div className="p-6 border-b border-blue-100/30 bg-white/80">
                                 <h2 className="font-bold text-blue-900 flex items-center gap-3 text-base">
@@ -182,8 +184,8 @@ export default function MailComposeOverlay() {
                                                 key={option.value}
                                                 onClick={() => setMailType(option.value)}
                                                 className={`py-3 px-3 rounded-xl font-bold text-sm transition-all duration-200 ${mailType === option.value
-                                                        ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200"
-                                                        : "bg-blue-50/60 text-blue-600 hover:bg-blue-100/60 border border-blue-100"
+                                                    ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200"
+                                                    : "bg-blue-50/60 text-blue-600 hover:bg-blue-100/60 border border-blue-100"
                                                     }`}
                                             >
                                                 {option.label}
@@ -204,8 +206,8 @@ export default function MailComposeOverlay() {
                                                 key={String(option.value)}
                                                 onClick={() => setIsProfessional(option.value)}
                                                 className={`py-3 px-3 rounded-xl font-bold text-sm transition-all duration-200 ${isProfessional === option.value
-                                                        ? "bg-gradient-to-br from-yellow-400 to-yellow-500 text-blue-900 shadow-lg shadow-yellow-200"
-                                                        : "bg-yellow-50/60 text-yellow-700 hover:bg-yellow-100/60 border border-yellow-100"
+                                                    ? "bg-gradient-to-br from-yellow-400 to-yellow-500 text-blue-900 shadow-lg shadow-yellow-200"
+                                                    : "bg-yellow-50/60 text-yellow-700 hover:bg-yellow-100/60 border border-yellow-100"
                                                     }`}
                                             >
                                                 {option.label}
@@ -256,18 +258,74 @@ export default function MailComposeOverlay() {
                                     />
                                 </div>
 
-                                {/* Date Inputs */}
-                                <div className="space-y-3 pt-2">
-                                    <div className="space-y-2.5">
-                                        <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الإصدار</label>
-                                        <input
-                                            type="date"
-                                            value={issuedDate}
-                                            onChange={(e) => setIssuedDate(e.target.value)}
-                                            className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
-                                        />
+                                {mailType === "incoming" && <>
+                                    {/* Date Inputs */}
+                                    <div className="space-y-3 pt-2">
+                                        <div className="space-y-2.5">
+                                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الإصدار</label>
+                                            <input
+                                                type="date"
+                                                value={issuedDate}
+                                                onChange={(e) => setIssuedDate(e.target.value)}
+                                                className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
+
+                                    <div className="space-y-3 pt-2">
+                                        <div className="space-y-2.5">
+                                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الاستلام</label>
+                                            <input
+                                                type="date"
+                                                value={receivedDate}
+                                                onChange={(e) => setReceivedDate(e.target.value)}
+                                                className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </>}
+
+                                {mailType === "outgoing" && <>
+                                    {/* Date Inputs */}
+                                    <div className="space-y-3 pt-2">
+                                        <div className="space-y-2.5">
+                                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الإصدار</label>
+                                            <input
+                                                type="date"
+                                                value={issuedDate}
+                                                onChange={(e) => setIssuedDate(e.target.value)}
+                                                className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3 pt-2">
+                                        <div className="space-y-2.5">
+                                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الارسال</label>
+                                            <input
+                                                type="date"
+                                                value={sentDate}
+                                                onChange={(e) => setSentDate(e.target.value)}
+                                                className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </>}
+
+                                {mailType === "internal" && <>
+                                    {/* Date Inputs */}
+                                    <div className="space-y-3 pt-2">
+                                        <div className="space-y-2.5">
+                                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">تاريخ الإصدار</label>
+                                            <input
+                                                type="date"
+                                                value={issuedDate}
+                                                onChange={(e) => setIssuedDate(e.target.value)}
+                                                className="w-full bg-white border-2 border-blue-100 rounded-xl p-3.5 text-sm font-semibold text-blue-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all outline-none shadow-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </>}
                             </div>
 
                             {/* Metadata Footer - Action Buttons */}
@@ -300,7 +358,7 @@ export default function MailComposeOverlay() {
                         </aside>
 
                         {/* Right Panel - Content Editor (Secondary) */}
-                        <div className="w-2/3 flex-1 flex flex-col bg-white/40 backdrop-blur-sm overflow-hidden">
+                        <div className="w-1/3 flex-1 flex flex-col bg-white/40 backdrop-blur-sm overflow-hidden">
                             {/* Subject Input - Minimal */}
                             <div className="px-10 py-8 border-b border-blue-100/30 shrink-0">
                                 <input

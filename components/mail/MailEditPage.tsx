@@ -73,6 +73,12 @@ export default function MailEditPage({
     const [issuedDate, setIssuedDate] =
         useState("");
 
+    const [sentDate, setSentDate] =
+        useState("");
+
+    const [receivedDate, setReceivedDate] =
+        useState("");
+
     const [senderEntityId, setSenderEntityId] = useState<string>("");
 
     const [number, setNumber] = useState("");
@@ -108,6 +114,8 @@ export default function MailEditPage({
         setTitle(mail.title ?? "");
         setContent(mail.content ?? "");
         setIssuedDate(mail.issuedDate ?? "");
+        setSentDate(mail.sentDate ?? "");
+        setReceivedDate(mail.receivedDate ?? "");
         setSenderEntityId(
             mail.senderEntityId !== undefined && mail.senderEntityId !== null
                 ? String(mail.senderEntityId)
@@ -536,6 +544,60 @@ export default function MailEditPage({
                                     e
                                 ) =>
                                     setIssuedDate(
+                                        e
+                                            .target
+                                            .value
+                                    )
+                                }
+                                className="w-full p-3.5 rounded-xl border-2 border-blue-100 bg-white text-blue-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all font-semibold"
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">
+                                تاريخ الارسال
+                            </label>
+
+                            <input
+                                type="date"
+                                value={
+                                    sentDate
+                                        ? sentDate.split(
+                                            "T"
+                                        )[0]
+                                        : ""
+                                }
+                                onChange={(
+                                    e
+                                ) =>
+                                    setSentDate(
+                                        e
+                                            .target
+                                            .value
+                                    )
+                                }
+                                className="w-full p-3.5 rounded-xl border-2 border-blue-100 bg-white text-blue-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all font-semibold"
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">
+                                تاريخ الاستلام
+                            </label>
+
+                            <input
+                                type="date"
+                                value={
+                                    receivedDate
+                                        ? receivedDate.split(
+                                            "T"
+                                        )[0]
+                                        : ""
+                                }
+                                onChange={(
+                                    e
+                                ) =>
+                                    setReceivedDate(
                                         e
                                             .target
                                             .value

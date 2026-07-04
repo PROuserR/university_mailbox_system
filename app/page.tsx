@@ -16,13 +16,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!role) return; // Wait until role is loaded
 
-    if (role != "Dean") {
+    if (role === "User") {
       router.push("/distribution")
     }
-    if (role != "Employee") {
-      router.push("/distribution")
-    }
-
   }, [])
 
   return (

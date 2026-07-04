@@ -26,7 +26,7 @@ import VirtualKeyboard from "@/components/ui/VirtualKeyboard";
 
 export default function MailList() {
     const queryClient = useQueryClient();
-    
+
     const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } =
         useShowMailDetailsStore();
 
@@ -156,7 +156,7 @@ export default function MailList() {
                             {/* Keyboard Button */}
                             <button
                                 onClick={() => setKeyboardOpen(true)}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm bg-white border border-blue-200 transition"
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm bg-white border border-blue-200 transition"
                             >
                                 <FontAwesomeIcon
                                     icon={faKeyboard}
@@ -177,6 +177,8 @@ export default function MailList() {
                                     <option value="createdAt">التاريخ</option>
                                     <option value="title">العنوان</option>
                                     <option value="sender">المرسل</option>
+                                    <option value="number">الرقم</option>
+                                    <option value="status">الحالة</option>
                                 </select>
                                 <button
                                     onClick={() => setSortOrderDESC(!sortOrderDESC)}

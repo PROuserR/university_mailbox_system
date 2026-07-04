@@ -341,6 +341,7 @@ export default function MailList() {
     | "DistributedDate"
     | "CorrespondenceTitle"
     | "DistributorName"
+    | "number"
   >("DistributedDate");
 
 
@@ -732,6 +733,7 @@ export default function MailList() {
                         | "DistributedDate"
                         | "CorrespondenceTitle"
                         | "DistributorName"
+                        | "number"
                       )
                     }
 
@@ -757,13 +759,13 @@ export default function MailList() {
                       المرسل
                     </option>
 
+                    <option value="number">
+                      الرقم
+                    </option>
+
+                    <option value="status">الحالة</option>
+
                   </select>
-
-
-
-
-
-
                   <button
 
 
