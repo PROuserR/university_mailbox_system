@@ -94,8 +94,12 @@ export default function MailDistribute({
         if (editorData?.users) {
             setSelectedUsers(
                 editorData.users
-                    .filter((u) => u.isSelected)
-                    .map((u) => u.id)
+                    .filter(
+                        u =>
+                            u.isSelected &&
+                            !u.isPermanentReceiver
+                    )
+                    .map(u => u.id)
             );
         }
     }, [editorData]);
@@ -104,15 +108,29 @@ export default function MailDistribute({
     // FILTER USERS
     // =========================
 
-    const filteredUsers = useMemo(() => {
-        if (!editorData?.users) return [];
+    const permanentUsers = useMemo(() => {
+        return editorData?.users.filter(u => u.isPermanentReceiver) ?? [];
+    }, [editorData]);
 
-        return editorData.users.filter(
-            (user) =>
-                user.fullName.toLowerCase().includes(search.toLowerCase()) ||
-                user.email.toLowerCase().includes(search.toLowerCase())
-        );
-    }, [editorData, search]);
+    const currentUsers = useMemo(() => {
+        return editorData?.users.filter(
+            u =>
+                !u.isPermanentReceiver &&
+                selectedUsers.includes(u.id)
+        ) ?? [];
+    }, [editorData, selectedUsers]);
+
+    const availableUsers = useMemo(() => {
+        return editorData?.users.filter(
+            u =>
+                !u.isPermanentReceiver &&
+                !selectedUsers.includes(u.id) &&
+                (
+                    u.fullName.toLowerCase().includes(search.toLowerCase()) ||
+                    u.email.toLowerCase().includes(search.toLowerCase())
+                )
+        ) ?? [];
+    }, [editorData, selectedUsers, search]);
 
     // =========================
     // TOGGLE USER
@@ -216,7 +234,7 @@ export default function MailDistribute({
 
                     <div className="grid grid-cols-6 gap-8">
                         <AnimatePresence>
-                            {editorData.users
+                            {currentUsers
                                 .map((user, i) => (
                                     <motion.div
                                         key={user.id}
@@ -286,8 +304,7 @@ export default function MailDistribute({
 
                     <div className="flex  gap-3">
                         <AnimatePresence>
-                            {editorData.users
-                                .filter((u) => selectedUsers.includes(u.id) && u.isPermanentReceiver == true)
+                            {permanentUsers
                                 .map((user, i) => (
                                     <motion.div
                                         key={user.id}
@@ -317,14 +334,7 @@ export default function MailDistribute({
                                                     <span className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700">
                                                         {user.role}
                                                     </span>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => toggleUser(user.id)}
-                                                        className="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100"
-                                                    >
-                                                        <FontAwesomeIcon icon={faXmark} />
-                                                    </button>
+                                                    <FontAwesomeIcon icon={faLock} className="text-gray-400" />
                                                 </div>
                                             </div>
                                         </div>
@@ -389,7 +399,7 @@ export default function MailDistribute({
 
                                     <div className="max-h-[350px] overflow-y-auto">
 
-                                        {filteredUsers.map((user, i) => {
+                                        {availableUsers.map((user, i) => {
                                             const isSelected = selectedUsers.includes(user.id);
 
                                             return (
