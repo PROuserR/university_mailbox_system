@@ -56,6 +56,13 @@ interface Delegation {
 
 }
 
+interface User {
+    roles: Array<string>;
+    id: number
+    fullName: string;
+    // other fields...
+}
+
 
 
 interface ApiResponse<T> {
@@ -158,7 +165,17 @@ export default function Page() {
         useState(false);
 
 
+    const [users, setUsers] = useState<Array<User>>([])
 
+    const getUsers = async () => {
+        const req = await apiWrapper.get<ApiResponse<Array<User>>>("/users")
+        if (req.data)
+            setUsers(req.data.data)
+    }
+
+    useEffect(() => {
+        getUsers()
+    }, [])
 
 
 
@@ -1982,7 +1999,6 @@ export default function Page() {
                                     setShowDetails(false)
                                 }
 
-
                                 className="
                                     mt-6
                                     rounded-lg
@@ -2019,7 +2035,7 @@ export default function Page() {
 
                     <div className="
                         fixed
-                        inset-0
+                        -inset-8
                         z-50
                         flex
                         items-center
@@ -2027,7 +2043,6 @@ export default function Page() {
                         bg-black/40
                         p-4
                     ">
-
 
                         <div className="
                             w-full
@@ -2062,11 +2077,7 @@ export default function Page() {
 
                                     </label>
 
-
-                                    <input
-
-                                        type="number"
-
+                                    <select
                                         className="
                                             mt-1
                                             w-full
@@ -2075,17 +2086,19 @@ export default function Page() {
                                             px-4
                                             py-2
                                         "
-
-                                        value={delegateUserId}
-
                                         onChange={
                                             e =>
                                                 setDelegateUserId(
                                                     e.target.value
                                                 )
                                         }
+                                    >
+                                        {users.filter((user) => user.roles[0] === "Employee").map((user) => (
+                                            <option value={user.id} key={user.id}>{user.fullName}</option>
+                                        ))}
 
-                                    />
+
+                                    </select>
 
 
                                 </div>

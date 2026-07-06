@@ -3,7 +3,8 @@ import {
     faSignOutAlt,
     faTimes,
     faUserEdit,
-    faChartArea
+    faChartArea,
+    faUserAlt
 } from '@fortawesome/free-solid-svg-icons'
 import userSettingsOverlayStore from '@/store/userSettingsOverlayStore'
 import { useRouter } from "next/navigation";
@@ -38,13 +39,21 @@ export default function UserSettingsOverlay({ user }: Props) {
 
     const handleProfileNavigation = async () => {
         triggerUserSettings();
-        if (role === "Dean" || role == "Admin"){
+        if (role === "Dean" || role == "Admin") {
             router.push("/statistics");
         }
-        else{
-            router.push("/user-statistics");     
+        else {
+            router.push("/user-statistics");
         }
     }
+
+    const handleDelegationsPage = async () => {
+        triggerUserSettings();
+        router.push("/delegations");
+
+    }
+
+
 
     const getUserRoleInArabic = (userRole: string) => {
         switch (user.role) {
@@ -91,26 +100,54 @@ export default function UserSettingsOverlay({ user }: Props) {
                 <div className="flex flex-col gap-y-4 items-center w-full">
                     <button
                         onClick={handleStatisticsPageNavigation}
-                        className="flex w-2/3 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
+                        className="flex w-48 items-center justify-center  p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
                     >
-                        <FontAwesomeIcon icon={faChartArea} />
-                        <span> احصائيات </span>
+                        <div className='flex w-2/3 items-center justify-center'>
+                            <span> احصائيات </span>
+                        </div>
+                        <div className='flex w-1/3 items-center justify-center'>
+                            <FontAwesomeIcon icon={faChartArea} />
+                        </div>
+
+                    </button>
+
+                    <button
+                        onClick={handleDelegationsPage}
+                        className="flex w-48 items-center justify-center  p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
+                    >
+                        <div className='flex w-2/3 items-center justify-center'>
+                            <span> تفويض  </span>
+                        </div>
+                        <div className='flex w-1/3 items-center justify-center'>
+                            <FontAwesomeIcon icon={faUserAlt} />
+                        </div>
+
                     </button>
 
                     <button
                         onClick={handleSignout}
-                        className="flex w-2/3 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
+                        className="flex w-48 items-center justify-center  p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
                     >
-                        <FontAwesomeIcon icon={faSignOutAlt} />
-                        <span>تسجيل الخروج</span>
+                        <div className='flex w-2/3 items-center justify-center'>
+                            <span>تسجيل الخروج</span>
+                        </div>
+                        <div className='flex w-1/3 items-center justify-center'>
+                            <FontAwesomeIcon icon={faSignOutAlt} />
+                        </div>
+
                     </button>
 
                     <button
                         onClick={handleProfileNavigation}
-                        className="flex w-2/3 items-center justify-center gap-x-4 p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
+                        className="flex w-48 items-center justify-center  p-2 rounded-lg transition bg-yellow-500 hover:bg-yellow-600 text-black"
                     >
-                        <FontAwesomeIcon icon={faUserEdit} />
-                        <span> الملف الشخصي</span>
+                        <div className='flex w-2/3 items-center justify-center'>
+                            <span> الملف الشخصي</span>
+                        </div>
+                        <div className='flex w-1/3 items-center justify-center'>
+                            <FontAwesomeIcon icon={faUserEdit} />
+                        </div>
+
                     </button>
                 </div>
             </div>

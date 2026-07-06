@@ -715,18 +715,10 @@ export default function MailList() {
                                 py-1
                                 shadow-sm
                                 "
-
-
                 >
 
-
-
-
                   <select
-
-
                     value={sortBy}
-
                     onChange={(e) =>
                       setSortBy(
                         e.target.value as
@@ -736,16 +728,12 @@ export default function MailList() {
                         | "number"
                       )
                     }
-
-
-
                     className="
                                     text-sm
                                     bg-transparent
                                     outline-none
                                     text-gray-600
                                     "
-
                   >
                     <option value="DistributedDate">
                       التاريخ

@@ -41,6 +41,7 @@ type User = {
     email: string;
     role: string;
     isSelected?: boolean;
+    isPermanentReceiver: boolean
 };
 
 type DistributionEditorData = {
@@ -213,10 +214,9 @@ export default function MailDistribute({
                         </div>
                     </div>
 
-                    <div className="flex  gap-3">
+                    <div className="grid grid-cols-6 gap-8">
                         <AnimatePresence>
                             {editorData.users
-                                .filter((u) => selectedUsers.includes(u.id))
                                 .map((user, i) => (
                                     <motion.div
                                         key={user.id}
@@ -224,9 +224,9 @@ export default function MailDistribute({
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.8 }}
                                         transition={{ delay: i * 0.04 }}
-                                        className="group relative overflow-hidden rounded-3xl border border-blue-100 bg-white p-4 shadow-md transition hover:-translate-y-1 hover:shadow-xl text-right"
+                                        className="flex rounded-3xl border border-blue-100 bg-white p-4 shadow-md transition hover:-translate-y-1 hover:shadow-xl text-right"
                                     >
-                                        <div className="relative flex flex-row-reverse items-start gap-4">
+                                        <div className=" flex items-start gap-4 w-64">
 
                                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white font-bold">
                                                 {user.firstName.charAt(0)}
@@ -287,7 +287,7 @@ export default function MailDistribute({
                     <div className="flex  gap-3">
                         <AnimatePresence>
                             {editorData.users
-                                .filter((u) => selectedUsers.includes(u.id))
+                                .filter((u) => selectedUsers.includes(u.id) && u.isPermanentReceiver == true)
                                 .map((user, i) => (
                                     <motion.div
                                         key={user.id}

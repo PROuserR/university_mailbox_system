@@ -209,8 +209,6 @@ export default function Navbar() {
                     </motion.div>
                 )}
 
-
-
                 {/* Approvals  */}
                 {(role === "Dean" || role == "Admin") && (
                     <Link href="/approvals">
