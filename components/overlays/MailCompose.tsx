@@ -449,6 +449,7 @@ import { CorrespondenceMainType } from "@/types/api/correspondence.types";
 // =========================
 
 type CreateMailResponse = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any;
     message?: string;
 };
@@ -632,6 +633,7 @@ export default function MailComposeOverlay() {
             } else {
                 throw new Error(res.error || "فشل إرسال المراسلة");
             }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || error.message || "فشل إرسال المراسلة.";
             toast.error(errorMessage, { id: loadingToast });
