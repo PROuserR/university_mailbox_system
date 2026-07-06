@@ -1,3 +1,5 @@
+// components/mail/MailDistribute.tsx
+
 "use client";
 
 import {
@@ -5,11 +7,6 @@ import {
     useMemo,
     useState,
 } from "react";
-
-import {
-    useMutation,
-    useQuery,
-} from "@tanstack/react-query";
 
 import {
     motion,
@@ -26,82 +23,66 @@ import {
     faEnvelope,
     faUserCheck,
     faLock,
+    faUserPlus,
+    faUserMinus,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import { apiWrapper } from "@/utils/apiClient";
-
 import toast from "react-hot-toast";
 
-type User = {
-    id: number;
-    firstName: string;
-    lastName: string;
-    fullName: string;
-    email: string;
-    role: string;
-    isSelected?: boolean;
-    isPermanentReceiver: boolean
-};
-
-type DistributionEditorData = {
-    correspondenceId: number;
-    correspondenceNumber: string;
-    correspondenceTitle: string;
-    users: User[];
-};
+import { User } from "@/types/api/distribution.types";
+import { useDistributionEditor, useDistributeMutation } from "@/hooks/useDistribute";
 
 type Props = {
     correspondenceId: number;
+    onSuccess?: () => void;
+    onClose?: () => void;
 };
+
+// =========================
+// COMPONENT
+// =========================
 
 export default function MailDistribute({
     correspondenceId,
+    onSuccess,
+    onClose,
 }: Props) {
+    // =========================
+    // STATE
+    // =========================
+
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
     const [notes, setNotes] = useState("");
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
 
     // =========================
-    // GET DATA
+    // HOOKS
     // =========================
 
     const {
         data: editorData,
         isLoading,
         isError,
-    } = useQuery<DistributionEditorData>({
-        queryKey: ["distribution-editor", correspondenceId],
-        queryFn: async () => {
-            const res = await apiWrapper.get<{
-                data: DistributionEditorData;
-            }>(`Distributions/editor-data/${correspondenceId}`);
+        refetch,
+    } = useDistributionEditor(correspondenceId);
 
-            if (!res.success || !res.data) {
-                throw new Error("Failed to load distribution data");
-            }
-
-            return res.data.data;
-        },
-    });
+    const distributeMutation = useDistributeMutation(correspondenceId, onSuccess, onClose);
 
     // =========================
-    // INIT SELECTED USERS
+    // INIT SELECTED USERS (غير الدائمين فقط)
     // =========================
 
     useEffect(() => {
         if (editorData?.users) {
-            setSelectedUsers(
-                editorData.users
-                    .filter(
-                        u =>
-                            u.isSelected &&
-                            !u.isPermanentReceiver
-                    )
-                    .map(u => u.id)
-            );
+            const initialSelected = editorData.users
+                .filter(u => u.isSelected && !u.isPermanentReceiver)
+                .map(u => u.id);
+
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setSelectedUsers(initialSelected);
         }
     }, [editorData]);
 
@@ -115,9 +96,7 @@ export default function MailDistribute({
 
     const currentUsers = useMemo(() => {
         return editorData?.users.filter(
-            u =>
-                !u.isPermanentReceiver &&
-                selectedUsers.includes(u.id)
+            u => !u.isPermanentReceiver && selectedUsers.includes(u.id)
         ) ?? [];
     }, [editorData, selectedUsers]);
 
@@ -134,43 +113,20 @@ export default function MailDistribute({
     }, [editorData, selectedUsers, search]);
 
     // =========================
-    // TOGGLE USER
+    // TOGGLE USER (إضافة/إزالة)
     // =========================
 
-    const toggleUser = (id: number) => {
-        setSelectedUsers((prev) =>
-            prev.includes(id)
-                ? prev.filter((x) => x !== id)
-                : [...prev, id]
-        );
+    const addUser = (id: number) => {
+        setSelectedUsers((prev) => [...prev, id]);
+    };
+
+    const removeUser = (id: number) => {
+        setSelectedUsers((prev) => prev.filter((x) => x !== id));
     };
 
     // =========================
     // SUBMIT
     // =========================
-
-    const distributeMutation = useMutation({
-        mutationFn: async () => {
-            const res = await apiWrapper.post(
-                "Distributions/distribute",
-                {
-                    correspondenceId,
-                    receiverIds: selectedUsers,
-                    notes,
-                }
-            );
-
-            if (!res.success) throw new Error();
-
-            return res.data;
-        },
-        onSuccess: () => {
-            toast.success("تم حفظ التوزيع بنجاح");
-        },
-        onError: () => {
-            toast.error("فشل حفظ التوزيع");
-        },
-    });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -180,7 +136,7 @@ export default function MailDistribute({
             return;
         }
 
-        distributeMutation.mutate();
+        distributeMutation.mutate({ receiverIds: selectedUsers, notes });
     };
 
     // =========================
@@ -199,10 +155,20 @@ export default function MailDistribute({
     if (isError || !editorData) {
         return (
             <div className="rounded-3xl bg-red-50 px-6 py-5 text-red-500 text-right">
-                فشل تحميل بيانات التوزيع
+                <p>فشل تحميل بيانات التوزيع</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-2 rounded-lg bg-red-100 px-4 py-2 text-sm text-red-600 hover:bg-red-200"
+                >
+                    إعادة المحاولة
+                </button>
             </div>
         );
     }
+
+    // =========================
+    // RENDER
+    // =========================
 
     return (
         <motion.div
@@ -212,171 +178,162 @@ export default function MailDistribute({
         >
             <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
 
-                {/* CURRENT DISTRIBUTION */}
+                {/* ======================================== */}
+                {/* 1. المستخدمون الدائمون (Permanent) */}
+                {/* ======================================== */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="rounded-[2rem] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-6 shadow-lg flex flex-col w-full"
+                    className="rounded-[2rem] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-6 shadow-lg"
                 >
-                    <div className="mb-5 w-full text-right flex flex-row-reverse items-center justify-end gap-3">
+                    <div className="mb-5 flex flex-row-reverse items-center justify-end gap-3">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
-                            <FontAwesomeIcon icon={faUserCheck} />
+                            <FontAwesomeIcon icon={faLock} />
                         </div>
-
-                        <div className="text-right">
-                            <h2 className="text-lg font-bold text-gray-800">
-                                التوزيع الحالي
-                            </h2>
-                            <p className="text-sm text-gray-500">
-                                المستخدمون الموزع عليهم
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-6 gap-8">
-                        <AnimatePresence>
-                            {currentUsers
-                                .map((user, i) => (
-                                    <motion.div
-                                        key={user.id}
-                                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.8 }}
-                                        transition={{ delay: i * 0.04 }}
-                                        className="flex rounded-3xl border border-blue-100 bg-white p-4 shadow-md transition hover:-translate-y-1 hover:shadow-xl text-right"
-                                    >
-                                        <div className=" flex items-start gap-4 w-64">
-
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white font-bold">
-                                                {user.firstName.charAt(0)}
-                                            </div>
-
-                                            <div className="flex flex-col items-end justify-end text-right">
-                                                <span className="font-bold text-gray-800">
-                                                    {user.fullName}
-                                                </span>
-
-                                                <div className="mt-1 flex flex-row-reverse items-center gap-2 text-sm text-gray-500">
-                                                    <FontAwesomeIcon icon={faEnvelope} className="text-blue-500" />
-                                                    {user.email}
-                                                </div>
-
-                                                <div className="mt-2 flex flex-row-reverse items-center gap-2">
-                                                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700">
-                                                        {user.role}
-                                                    </span>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => toggleUser(user.id)}
-                                                        className="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100"
-                                                    >
-                                                        <FontAwesomeIcon icon={faXmark} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                        </AnimatePresence>
-                    </div>
-                </motion.div>
-
-                {/* PERMANANT DISTRIBUTION */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.97 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="rounded-[2rem] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-6 shadow-lg flex flex-col w-full"
-                >
-                    <div className="mb-5 w-full text-right flex flex-row-reverse items-center justify-end gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
-                            <FontAwesomeIcon icon={faUserCheck} />
-                        </div>
-
                         <div className="text-right">
                             <h2 className="text-lg font-bold text-gray-800">
                                 التوزيع الدائم
                             </h2>
                             <p className="text-sm text-gray-500">
-                                المستخدمون الموزع عليهم
+                                يتم التوزيع عليهم تلقائياً - لا يمكن التعديل
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex  gap-3">
-                        <AnimatePresence>
-                            {permanentUsers
-                                .map((user, i) => (
-                                    <motion.div
-                                        key={user.id}
-                                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.8 }}
-                                        transition={{ delay: i * 0.04 }}
-                                        className="group relative overflow-hidden rounded-3xl border border-blue-100 bg-white p-4 shadow-md transition hover:-translate-y-1 hover:shadow-xl text-right"
-                                    >
-                                        <div className="relative flex flex-row-reverse items-start gap-4">
-
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white font-bold">
-                                                {user.firstName.charAt(0)}
+                    {permanentUsers.length === 0 ? (
+                        <p className="text-sm text-gray-400">لا يوجد مستخدمون دائمون</p>
+                    ) : (
+                        <div className="flex flex-wrap gap-3">
+                            {permanentUsers.map((user) => (
+                                <motion.div
+                                    key={user.id}
+                                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    className="group relative overflow-hidden rounded-3xl border border-blue-100 bg-white p-4 shadow-md transition hover:-translate-y-1 hover:shadow-xl"
+                                >
+                                    <div className="relative flex flex-row-reverse items-start gap-4">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-gray-400 to-gray-500 text-white font-bold">
+                                            {user.firstName.charAt(0)}
+                                        </div>
+                                        <div className="flex flex-col items-end text-right">
+                                            <span className="font-bold text-gray-800">
+                                                {user.fullName}
+                                            </span>
+                                            <div className="mt-1 flex flex-row-reverse items-center gap-2 text-sm text-gray-500">
+                                                <FontAwesomeIcon icon={faEnvelope} className="text-blue-500" />
+                                                {user.email}
                                             </div>
-
-                                            <div className="flex flex-col items-end justify-end text-right">
-                                                <span className="font-bold text-gray-800">
-                                                    {user.fullName}
+                                            <div className="mt-2 flex flex-row-reverse items-center gap-2">
+                                                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700">
+                                                    {user.role}
                                                 </span>
-
-                                                <div className="mt-1 flex flex-row-reverse items-center gap-2 text-sm text-gray-500">
-                                                    <FontAwesomeIcon icon={faEnvelope} className="text-blue-500" />
-                                                    {user.email}
-                                                </div>
-
-                                                <div className="mt-2 flex flex-row-reverse items-center gap-2">
-                                                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700">
-                                                        {user.role}
-                                                    </span>
-                                                    <FontAwesomeIcon icon={faLock} className="text-gray-400" />
-                                                </div>
+                                                <FontAwesomeIcon icon={faLock} className="text-gray-400" />
+                                                <span className="text-xs text-gray-400">تلقائي</span>
                                             </div>
                                         </div>
-                                    </motion.div>
-                                ))}
-                        </AnimatePresence>
-                    </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    )}
                 </motion.div>
 
-                {/* SELECT USERS */}
+                {/* ======================================== */}
+                {/* 2. المستخدمون الحاليون (Selected) */}
+                {/* ======================================== */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="rounded-[2rem] border border-blue-100 bg-gradient-to-br from-yellow-50 to-white p-6 shadow-lg"
+                >
+                    <div className="mb-5 flex flex-row-reverse items-center justify-end gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-600">
+                            <FontAwesomeIcon icon={faUserCheck} />
+                        </div>
+                        <div className="text-right">
+                            <h2 className="text-lg font-bold text-gray-800">
+                                المستلمون الحاليون
+                            </h2>
+                            <p className="text-sm text-gray-500">
+                                {currentUsers.length} مستلم
+                            </p>
+                        </div>
+                    </div>
+
+                    {currentUsers.length === 0 ? (
+                        <p className="text-sm text-gray-400">لا يوجد مستلمون حالياً</p>
+                    ) : (
+                        <div className="flex flex-wrap gap-3">
+                            {currentUsers.map((user) => (
+                                <motion.div
+                                    key={user.id}
+                                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.8 }}
+                                    className="group relative overflow-hidden rounded-3xl border border-yellow-200 bg-white p-4 shadow-md transition hover:-translate-y-1 hover:shadow-xl"
+                                >
+                                    <div className="relative flex flex-row-reverse items-start gap-4">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-400 text-white font-bold">
+                                            {user.firstName.charAt(0)}
+                                        </div>
+                                        <div className="flex flex-col items-end text-right">
+                                            <span className="font-bold text-gray-800">
+                                                {user.fullName}
+                                            </span>
+                                            <div className="mt-1 flex flex-row-reverse items-center gap-2 text-sm text-gray-500">
+                                                <FontAwesomeIcon icon={faEnvelope} className="text-yellow-500" />
+                                                {user.email}
+                                            </div>
+                                            <div className="mt-2 flex flex-row-reverse items-center gap-2">
+                                                <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs text-yellow-700">
+                                                    {user.role}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeUser(user.id)}
+                                                    className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-500 transition hover:bg-red-100 hover:text-red-600"
+                                                    title="إزالة المستلم"
+                                                >
+                                                    <FontAwesomeIcon icon={faUserMinus} className="text-sm" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    )}
+                </motion.div>
+
+                {/* ======================================== */}
+                {/* 3. إضافة مستلمين (Available Users) */}
+                {/* ======================================== */}
                 <div className="flex flex-col gap-3">
                     <label className="flex flex-row-reverse items-center justify-end gap-2 text-sm font-bold text-gray-700">
                         <FontAwesomeIcon icon={faUserGroup} className="text-blue-600" />
-                        إدارة المستلمين
+                        إضافة مستلمين
                     </label>
 
                     <div className="relative">
-
                         <button
                             type="button"
                             onClick={() => setOpen(!open)}
-                            className="flex w-full flex-row-reverse items-center justify-end rounded-3xl border border-blue-100 bg-white px-6 py-4 shadow-lg text-right"
+                            className="flex w-full flex-row-reverse items-center justify-between rounded-3xl border border-blue-100 bg-white px-6 py-4 shadow-lg transition hover:shadow-xl"
                         >
                             <div className="flex flex-row-reverse items-center gap-3">
-
                                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
-                                    <FontAwesomeIcon icon={faUserGroup} />
+                                    <FontAwesomeIcon icon={faUserPlus} />
                                 </div>
-
                                 <div className="flex flex-col items-end text-right">
                                     <span className="font-semibold text-gray-800">
-                                        {selectedUsers.length} مستلم
+                                        {availableUsers.length} متاح للإضافة
                                     </span>
                                     <span className="text-sm text-gray-500">
-                                        اختر أو عدل المستلمين
+                                        اختر مستلمين لإضافتهم
                                     </span>
                                 </div>
-
                             </div>
-
-                            <motion.div animate={{ rotate: open ? 180 : 0 }} className="pr-8">
+                            <motion.div animate={{ rotate: open ? 180 : 0 }} className="pr-4">
                                 <FontAwesomeIcon icon={faChevronDown} />
                             </motion.div>
                         </button>
@@ -393,34 +350,33 @@ export default function MailDistribute({
                                         <input
                                             value={search}
                                             onChange={(e) => setSearch(e.target.value)}
-                                            placeholder="بحث..."
-                                            className="w-full rounded-2xl border border-blue-100 bg-blue-50/40 px-4 py-3 text-right"
+                                            placeholder="بحث عن مستلم..."
+                                            className="w-full rounded-2xl border border-blue-100 bg-blue-50/40 px-4 py-3 text-right outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
                                         />
                                     </div>
 
                                     <div className="max-h-[350px] overflow-y-auto">
-
-                                        {availableUsers.map((user, i) => {
-                                            const isSelected = selectedUsers.includes(user.id);
-
-                                            return (
+                                        {availableUsers.length === 0 ? (
+                                            <div className="py-8 text-center text-gray-400">
+                                                {search ? "لا توجد نتائج بحث" : "جميع المستخدمين تم اختيارهم"}
+                                            </div>
+                                        ) : (
+                                            availableUsers.map((user, i) => (
                                                 <motion.button
                                                     key={user.id}
                                                     type="button"
-                                                    onClick={() => toggleUser(user.id)}
+                                                    onClick={() => addUser(user.id)}
                                                     initial={{ opacity: 0, y: 10 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ delay: i * 0.02 }}
-                                                    className="flex w-full flex-row-reverse items-center justify-between border-b px-5 py-4 text-right hover:bg-blue-50"
+                                                    className="flex w-full flex-row-reverse items-center justify-between border-b px-5 py-4 text-right transition hover:bg-blue-50"
                                                 >
                                                     <div className="flex flex-row-reverse items-center gap-4">
-
                                                         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white">
                                                             {user.firstName.charAt(0)}
                                                         </div>
-
                                                         <div className="flex flex-col items-end text-right">
-                                                            <span className="font-semibold">
+                                                            <span className="font-semibold text-gray-800">
                                                                 {user.fullName}
                                                             </span>
                                                             <span className="text-sm text-gray-500">
@@ -428,16 +384,12 @@ export default function MailDistribute({
                                                             </span>
                                                         </div>
                                                     </div>
-
-                                                    {isSelected && (
-                                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white">
-                                                            <FontAwesomeIcon icon={faCheck} />
-                                                        </div>
-                                                    )}
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                                        <FontAwesomeIcon icon={faUserPlus} className="text-sm" />
+                                                    </div>
                                                 </motion.button>
-                                            );
-                                        })}
-
+                                            ))
+                                        )}
                                     </div>
                                 </motion.div>
                             )}
@@ -445,38 +397,53 @@ export default function MailDistribute({
                     </div>
                 </div>
 
-                {/* NOTES */}
+                {/* ======================================== */}
+                {/* 4. الملاحظات */}
+                {/* ======================================== */}
                 <div className="flex flex-col gap-3 text-right">
                     <label className="text-sm font-bold text-gray-700">
                         ملاحظات
                     </label>
-
                     <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        rows={4}
-                        className="resize-none rounded-[2rem] border border-blue-100 p-5 text-right"
-                        placeholder="أضف ملاحظات..."
+                        rows={3}
+                        className="resize-none rounded-[2rem] border border-blue-100 p-5 text-right outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+                        placeholder="أضف ملاحظات (اختياري)..."
                     />
                 </div>
 
-                {/* SUBMIT */}
-                <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    type="submit"
-                    disabled={distributeMutation.isPending}
-                    className="flex w-1/2 mx-auto items-center justify-center gap-3 rounded-[2rem] bg-blue-600 px-6 py-5 font-bold text-white shadow-xl"
-                >
-                    <FontAwesomeIcon
-                        icon={distributeMutation.isPending ? faSpinner : faPaperPlane}
-                        spin={distributeMutation.isPending}
-                    />
+                {/* ======================================== */}
+                {/* 5. أزرار الإجراءات */}
+                {/* ======================================== */}
+                <div className="flex gap-3">
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        type="submit"
+                        disabled={distributeMutation.isPending || selectedUsers.length === 0}
+                        className="flex flex-1 items-center justify-center gap-3 rounded-[2rem] bg-blue-600 px-6 py-4 font-bold text-white shadow-xl transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <FontAwesomeIcon
+                            icon={distributeMutation.isPending ? faSpinner : faPaperPlane}
+                            spin={distributeMutation.isPending}
+                        />
+                        {distributeMutation.isPending ? "جاري الحفظ..." : "حفظ التوزيع"}
+                    </motion.button>
 
-                    {distributeMutation.isPending
-                        ? "جاري الحفظ..."
-                        : "حفظ التوزيع"}
-                </motion.button>
+                    {onClose && (
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.97 }}
+                            type="button"
+                            onClick={onClose}
+                            className="flex items-center justify-center gap-3 rounded-[2rem] border border-gray-200 px-6 py-4 font-bold text-gray-600 transition hover:bg-gray-50"
+                        >
+                            <FontAwesomeIcon icon={faXmark} />
+                            إلغاء
+                        </motion.button>
+                    )}
+                </div>
 
             </form>
         </motion.div>
