@@ -27,11 +27,22 @@ import {
     faChevronUp,
     faUserCheck,
     faUserXmark,
+    faLock,
 } from "@fortawesome/free-solid-svg-icons";
 
+import useUserInfoStore from "@/store/userInfoStore";
+
 // ==============================
-// TYPES - مطابقة للـ DTOs
+// TYPES
 // ==============================
+
+// ✅ UserDelegationType من Backend
+enum UserDelegationType {
+    None = 0,
+    Approval = 1,
+    Rejection = 2,
+    Both = 3
+}
 
 interface Attachment {
     id: number;
@@ -81,11 +92,15 @@ interface GroupedResponse {
     items: PendingCorrespondence[];
 }
 
+type DelegationTypeString = "None" | "Approval" | "Rejection" | "Both";
+
 // ==============================
 // COMPONENT
 // ==============================
 
 export default function ApprovalsPage() {
+    const { role } = useUserInfoStore();
+    
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState("");
@@ -94,6 +109,37 @@ export default function ApprovalsPage() {
     const [selected, setSelected] = useState<number[]>([]);
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
     const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
+
+    const [delegationType, setDelegationType] = useState<DelegationTypeString>("None");
+    const [loadingDelegation, setLoadingDelegation] = useState(true);
+
+    // ==============================
+    // CHECK DELEGATION
+    // ==============================
+
+   const checkDelegation = async () => {
+    try {
+        setLoadingDelegation(true);
+        const response = await apiWrapper.get<ApiResult<DelegationTypeString>>(
+            "/Delegations/my-delegation-type"
+        );
+        
+        if (response.data?.isSuccess) {
+            setDelegationType(response.data.data);
+        } else {
+            setDelegationType("None");
+        }
+    } catch (error) {
+        console.error("Failed to check delegation:", error);
+        setDelegationType("None");
+    } finally {
+        setLoadingDelegation(false);
+    }
+};
+
+    useEffect(() => {
+        checkDelegation();
+    }, []);
 
     // ==============================
     // LOAD DATA
@@ -166,6 +212,20 @@ export default function ApprovalsPage() {
         });
     }, [items, search, filter]);
 
+    
+const canApprove = 
+    role === "Dean" || 
+    role === "Admin" || 
+    delegationType === "Approval" || 
+    delegationType === "Both";
+
+const canReject = 
+    role === "Dean" || 
+    role === "Admin" || 
+    delegationType === "Rejection" || 
+    delegationType === "Both";
+
+
     // ==============================
     // ACTIONS
     // ==============================
@@ -183,6 +243,10 @@ export default function ApprovalsPage() {
     };
 
     const handleApprove = async (distributionId: number) => {
+        if (!canApprove) {
+            toast.error("لا توجد صلاحية للاعتماد");
+            return;
+        }
         if (!window.confirm("اعتماد هذا التوزيع؟")) return;
 
         setProcessingIds((prev) => new Set(prev).add(distributionId));
@@ -202,6 +266,10 @@ export default function ApprovalsPage() {
     };
 
     const handleReject = async (distributionId: number) => {
+        if (!canReject) {
+            toast.error("لا توجد صلاحية للرفض");
+            return;
+        }
         if (!window.confirm("رفض هذا التوزيع؟")) return;
 
         setProcessingIds((prev) => new Set(prev).add(distributionId));
@@ -221,6 +289,10 @@ export default function ApprovalsPage() {
     };
 
     const handleApproveAll = async (correspondenceId: number) => {
+        if (!canApprove) {
+            toast.error("لا توجد صلاحية للاعتماد");
+            return;
+        }
         if (!window.confirm("اعتماد جميع المستلمين؟")) return;
 
         try {
@@ -235,6 +307,10 @@ export default function ApprovalsPage() {
     };
 
     const handleRejectAll = async (correspondenceId: number) => {
+        if (!canReject) {
+            toast.error("لا توجد صلاحية للرفض");
+            return;
+        }
         if (!window.confirm("رفض جميع المستلمين؟")) return;
 
         try {
@@ -249,6 +325,10 @@ export default function ApprovalsPage() {
     };
 
     const handleBatchApprove = async () => {
+        if (!canApprove) {
+            toast.error("لا توجد صلاحية للاعتماد");
+            return;
+        }
         if (selected.length === 0) return;
         if (!window.confirm(`اعتماد ${selected.length} توزيع؟`)) return;
 
@@ -265,6 +345,10 @@ export default function ApprovalsPage() {
     };
 
     const handleBatchReject = async () => {
+        if (!canReject) {
+            toast.error("لا توجد صلاحية للرفض");
+            return;
+        }
         if (selected.length === 0) return;
         if (!window.confirm(`رفض ${selected.length} توزيع؟`)) return;
 
@@ -332,7 +416,7 @@ export default function ApprovalsPage() {
     // RENDER
     // ==============================
 
-    if (loading) {
+    if (loading || loadingDelegation) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <FontAwesomeIcon icon={faSpinner} spin className="text-3xl text-blue-600" />
@@ -445,20 +529,30 @@ export default function ApprovalsPage() {
                             تم تحديد {selected.length} توزيع
                         </span>
                         <div className="flex gap-2">
-                            <button
-                                onClick={handleBatchApprove}
-                                className="px-4 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition"
-                            >
-                                <FontAwesomeIcon icon={faCheck} className="ml-1" />
-                                اعتماد المحدد
-                            </button>
-                            <button
-                                onClick={handleBatchReject}
-                                className="px-4 py-1.5 rounded-xl bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition"
-                            >
-                                <FontAwesomeIcon icon={faXmark} className="ml-1" />
-                                رفض المحدد
-                            </button>
+                            {canApprove && (
+                                <button
+                                    onClick={handleBatchApprove}
+                                    className="px-4 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition"
+                                >
+                                    <FontAwesomeIcon icon={faCheck} className="ml-1" />
+                                    اعتماد المحدد
+                                </button>
+                            )}
+                            {canReject && (
+                                <button
+                                    onClick={handleBatchReject}
+                                    className="px-4 py-1.5 rounded-xl bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition"
+                                >
+                                    <FontAwesomeIcon icon={faXmark} className="ml-1" />
+                                    رفض المحدد
+                                </button>
+                            )}
+                            {!canApprove && !canReject && (
+                                <div className="text-xs text-gray-400 flex items-center gap-1">
+                                    <FontAwesomeIcon icon={faLock} className="text-[10px]" />
+                                    لا توجد صلاحيات
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 )}
@@ -617,55 +711,85 @@ export default function ApprovalsPage() {
                                                                     )}
                                                                 </div>
 
+                                                                {/* ===== ✅ أزرار الإجراءات حسب الصلاحية ===== */}
                                                                 <div className="flex gap-1 flex-shrink-0">
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleApprove(receiver.distributionId);
-                                                                        }}
-                                                                        disabled={processingIds.has(receiver.distributionId)}
-                                                                        className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition flex items-center justify-center disabled:opacity-50"
-                                                                        title="اعتماد"
-                                                                    >
-                                                                        {processingIds.has(receiver.distributionId) ? (
-                                                                            <FontAwesomeIcon icon={faSpinner} spin className="text-[10px]" />
-                                                                        ) : (
-                                                                            <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
-                                                                        )}
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleReject(receiver.distributionId);
-                                                                        }}
-                                                                        disabled={processingIds.has(receiver.distributionId)}
-                                                                        className="w-7 h-7 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center disabled:opacity-50"
-                                                                        title="رفض"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
-                                                                    </button>
+                                                                    {canApprove ? (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleApprove(receiver.distributionId);
+                                                                            }}
+                                                                            disabled={processingIds.has(receiver.distributionId)}
+                                                                            className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition flex items-center justify-center disabled:opacity-50"
+                                                                            title="اعتماد"
+                                                                        >
+                                                                            {processingIds.has(receiver.distributionId) ? (
+                                                                                <FontAwesomeIcon icon={faSpinner} spin className="text-[10px]" />
+                                                                            ) : (
+                                                                                <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                                                                            )}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <div 
+                                                                            className="w-7 h-7 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed" 
+                                                                            title="لا توجد صلاحية للاعتماد"
+                                                                        >
+                                                                            <FontAwesomeIcon icon={faLock} className="text-[10px]" />
+                                                                        </div>
+                                                                    )}
+
+                                                                    {canReject ? (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleReject(receiver.distributionId);
+                                                                            }}
+                                                                            disabled={processingIds.has(receiver.distributionId)}
+                                                                            className="w-7 h-7 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center disabled:opacity-50"
+                                                                            title="رفض"
+                                                                        >
+                                                                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                                                        </button>
+                                                                    ) : (
+                                                                        <div 
+                                                                            className="w-7 h-7 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed" 
+                                                                            title="لا توجد صلاحية للرفض"
+                                                                        >
+                                                                            <FontAwesomeIcon icon={faLock} className="text-[10px]" />
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
 
-                                                {/* Bulk Actions for this correspondence */}
+                                                {/* ===== ✅ Bulk Actions حسب الصلاحية ===== */}
                                                 <div className="flex gap-2 pt-2 border-t border-slate-100">
-                                                    <button
-                                                        onClick={() => handleApproveAll(item.correspondenceId)}
-                                                        className="px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition flex items-center gap-1"
-                                                    >
-                                                        <FontAwesomeIcon icon={faUserCheck} className="text-[10px]" />
-                                                        اعتماد الكل
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleRejectAll(item.correspondenceId)}
-                                                        className="px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition flex items-center gap-1"
-                                                    >
-                                                        <FontAwesomeIcon icon={faUserXmark} className="text-[10px]" />
-                                                        رفض الكل
-                                                    </button>
+                                                    {canApprove && (
+                                                        <button
+                                                            onClick={() => handleApproveAll(item.correspondenceId)}
+                                                            className="px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition flex items-center gap-1"
+                                                        >
+                                                            <FontAwesomeIcon icon={faUserCheck} className="text-[10px]" />
+                                                            اعتماد الكل
+                                                        </button>
+                                                    )}
+                                                    {canReject && (
+                                                        <button
+                                                            onClick={() => handleRejectAll(item.correspondenceId)}
+                                                            className="px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition flex items-center gap-1"
+                                                        >
+                                                            <FontAwesomeIcon icon={faUserXmark} className="text-[10px]" />
+                                                            رفض الكل
+                                                        </button>
+                                                    )}
+                                                    {!canApprove && !canReject && (
+                                                        <div className="text-xs text-gray-400 flex items-center gap-1">
+                                                            <FontAwesomeIcon icon={faLock} className="text-[10px]" />
+                                                            لا توجد صلاحيات للاعتماد أو الرفض
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </motion.div>

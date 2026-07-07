@@ -263,10 +263,11 @@ export default function DelegationsPage() {
                 resetForm();
                 await loadDelegations();
             } else {
-                toast.error(response.data?.message || "فشل إنشاء التفويض");
+                toast.error(response.error || "فشل إنشاء التفويض");
             }
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || "فشل إنشاء التفويض");
+            const errorMessage = error?.response?.data?.message || error?.message || "فشل إنشاء التفويض";
+        toast.error(errorMessage);
         } finally {
             setSubmitting(false);
         }

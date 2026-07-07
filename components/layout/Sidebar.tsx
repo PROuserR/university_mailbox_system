@@ -98,7 +98,7 @@ export default function Sidebar() {
             <div className="flex-1 overflow-y-auto w-full">
                 {/* ===== Compose Button ===== */}
                 <button
-                    onClick={triggerMailCompose}
+                    onClick={() => router.push("/mail/create")}
                     className={`
                         w-full
                         bg-gradient-to-r from-blue-500 to-blue-600
