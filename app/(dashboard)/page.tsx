@@ -24,10 +24,10 @@ export default function DashboardPage() {
   return (
     <main className="flex flex-col h-fit w-full overflow-hidden gap-12">
       <div className="flex flex-row-reverse text-right">
-        {/* Fixed Sidebar */}
+        {/* Fixed Sidebar
         <aside className="h-[calc(100vh-4rem)] w-fit">
           <Sidebar />
-        </aside>
+        </aside> */}
         {/* Mail List */}
         <div className="w-full  mx-auto">
           <MailList />

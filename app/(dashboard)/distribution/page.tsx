@@ -1,3 +1,5 @@
+// app/(dashboard)/distribution/page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -357,7 +359,6 @@ export default function MailList() {
 
 
 
-
   const [
 
     keyboardOpen,
@@ -591,11 +592,9 @@ export default function MailList() {
                     w-full
                     "
 
-
+            dir="ltr"
 
           >
-
-
 
 
 
@@ -619,9 +618,12 @@ export default function MailList() {
                         "
 
 
+
+
+
+
+
             >
-
-
 
 
 
@@ -688,7 +690,6 @@ export default function MailList() {
 
 
                 </button>
-
 
 
 
@@ -879,7 +880,6 @@ export default function MailList() {
 
 
 
-
                 {role != "User" && <button
 
 
@@ -989,8 +989,6 @@ export default function MailList() {
 
 
 
-
-
             {/* MAIL LIST */}
 
 
@@ -1048,7 +1046,6 @@ export default function MailList() {
 
 
 
-
               <div ref={bottomRef} />
 
 
@@ -1061,18 +1058,13 @@ export default function MailList() {
 
 
 
-
           </motion.div>
 
 
 
 
 
-
-
           :
-
-
 
 
 
@@ -1122,6 +1114,7 @@ export default function MailList() {
                     w-full
                     "
 
+            dir="ltr"
 
 
 
@@ -1152,9 +1145,7 @@ export default function MailList() {
 
 
 
-
           </motion.div>
-
 
 
 
