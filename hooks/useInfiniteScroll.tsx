@@ -1,10 +1,14 @@
-import { useEffect, useRef } from "react";
+// hooks/useInfiniteScroll.ts
+
+import { useEffect, useRef, useCallback } from "react";
 
 type Props = {
-    onBottom: () => void;
+    onBottom: () => void | Promise<void>;
     isLoading?: boolean;
     hasMore?: boolean;
     dataLength: number;
+    threshold?: number;
+    rootMargin?: string;
 };
 
 export default function useSafeBottomTrigger({
@@ -12,14 +16,13 @@ export default function useSafeBottomTrigger({
     isLoading = false,
     hasMore = true,
     dataLength,
+    threshold = 0.8,
+    rootMargin = "50px",
 }: Props) {
     const bottomRef = useRef<HTMLDivElement | null>(null);
-
-    // 🔒 prevents triggering before first data load
     const isReadyRef = useRef(false);
-
-    // 🔒 prevents multiple rapid calls
     const loadingLockRef = useRef(false);
+    const observerRef = useRef<IntersectionObserver | null>(null);
 
     useEffect(() => {
         if (dataLength > 0) {
@@ -27,41 +30,61 @@ export default function useSafeBottomTrigger({
         }
     }, [dataLength]);
 
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                const isFullyVisible = entry.intersectionRatio === 1;
+    const handleIntersection = useCallback(
+        (entries: IntersectionObserverEntry[]) => {
+            const entry = entries[0];
+            if (!entry) return;
 
-                // 🚨 ALL SAFETY CHECKS
-                if (
-                    !isFullyVisible ||
-                    !isReadyRef.current ||
-                    isLoading ||
-                    loadingLockRef.current ||
-                    !hasMore
-                ) {
-                    return;
-                }
+            const isVisible = entry.intersectionRatio >= threshold;
 
-                loadingLockRef.current = true;
+            if (
+                !isVisible ||
+                !isReadyRef.current ||
+                isLoading ||
+                loadingLockRef.current ||
+                !hasMore
+            ) {
+                return;
+            }
 
-                Promise.resolve(onBottom()).finally(() => {
+            loadingLockRef.current = true;
+
+            const result = onBottom();
+            if (result instanceof Promise) {
+                result.finally(() => {
                     loadingLockRef.current = false;
                 });
-            },
-            {
-                root: null,
-                threshold: 1.0, // must be fully visible
+            } else {
+                loadingLockRef.current = false;
             }
-        );
+        },
+        [onBottom, isLoading, hasMore, threshold]
+    );
 
+    useEffect(() => {
         const el = bottomRef.current;
-        if (el) observer.observe(el);
+        if (!el) return;
+
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+            observerRef.current = null;
+        }
+
+        observerRef.current = new IntersectionObserver(handleIntersection, {
+            root: null,
+            threshold,
+            rootMargin,
+        });
+
+        observerRef.current.observe(el);
 
         return () => {
-            if (el) observer.unobserve(el);
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+                observerRef.current = null;
+            }
         };
-    }, [onBottom, isLoading, hasMore]);
+    }, [handleIntersection, threshold, rootMargin]);
 
     return bottomRef;
 }
