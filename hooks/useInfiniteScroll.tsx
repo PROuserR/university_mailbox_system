@@ -3,7 +3,8 @@
 import { useEffect, useRef, useCallback } from "react";
 
 type Props = {
-    onBottom: () => void | Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onBottom: () => any;
     isLoading?: boolean;
     hasMore?: boolean;
     dataLength: number;
