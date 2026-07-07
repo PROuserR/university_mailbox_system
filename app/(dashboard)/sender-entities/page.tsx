@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiWrapper } from "@/utils/apiClient";
 import { toast } from "react-hot-toast";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBuilding,
@@ -44,7 +45,8 @@ export default function SenderEntitiesPage() {
     const [editing, setEditing] = useState<SenderEntity | null>(null);
     const [name, setName] = useState("");
     const [processing, setProcessing] = useState(false);
-
+ const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
     async function loadEntities() {
         try {
             setLoading(true);
@@ -112,18 +114,28 @@ export default function SenderEntitiesPage() {
         }
     }
 
-    async function deleteEntity(id: number) {
-        if (!window.confirm("هل تريد حذف الجهة؟")) return;
+    const handleDeleteClick = (id: number) => {
+        setDeleteTargetId(id);
+        setDeleteModalOpen(true);
+    };
 
+    const confirmDelete = async () => {
+        if (!deleteTargetId) return;
         try {
-            await apiWrapper.delete(`/SenderEntities/${id}`);
+            await apiWrapper.delete(`/SenderEntities/${deleteTargetId}`);
             toast.success("تم الحذف بنجاح");
             loadEntities();
-        } catch (error) {
-            console.error(error);
+        } catch {
             toast.error("فشل الحذف");
         }
-    }
+        setDeleteModalOpen(false);
+        setDeleteTargetId(null);
+    };
+
+const handleCloseModal = () => {
+    setDeleteModalOpen(false);
+    setDeleteTargetId(null);
+};
 
     async function toggleStatus(item: SenderEntity) {
         try {
@@ -307,12 +319,15 @@ export default function SenderEntitiesPage() {
                                                 >
                                                     <FontAwesomeIcon icon={faPowerOff} className="text-[10px] sm:text-sm" />
                                                 </button>
-                                                <button
-                                                    onClick={() => deleteEntity(item.id)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center"
-                                                >
-                                                    <FontAwesomeIcon icon={faTrash} className="text-[10px] sm:text-sm" />
-                                                </button>
+                                                {/* زر الحذف */}
+            <button
+                onClick={() => handleDeleteClick(item.id)}
+                className="w-8 h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center"
+            >
+                <FontAwesomeIcon icon={faTrash} className="text-sm" />
+            </button>
+
+          
                                             </div>
                                         </td>
                                     </tr>
@@ -322,7 +337,17 @@ export default function SenderEntitiesPage() {
                     </div>
                 )}
             </div>
-
+  {/* ===== مودال التأكيد ===== */}
+            <ConfirmationModal
+    isOpen={deleteModalOpen}
+    onClose={handleCloseModal}
+    onConfirm={confirmDelete}
+    title="حذف الجهة المرسلة"
+    message="هل أنت متأكد من حذف هذه الجهة؟ لا يمكن التراجع عن هذا الإجراء."
+    confirmText="نعم، احذف"
+    cancelText="إلغاء"
+    variant="danger"
+/>
             {/* ===== MODAL ===== */}
             {modalOpen && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">

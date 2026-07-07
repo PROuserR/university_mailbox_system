@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/mail/MailList.tsx
 
 "use client";
@@ -16,7 +17,7 @@ import {
     faSortAmountUp,
     faSpinner,
     faInbox,
-    faPaperPlane,
+    faPaperPlane,faTrash
 } from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
 
@@ -30,6 +31,7 @@ import useInfiniteScroll from "@/hooks/useInfiniteScroll";
 import MailCard from "./MailCard";
 import MailListLoader from "@/components/ui/MailListLoader";
 import MailListError from "@/components/ui/MailListError";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
 export default function MailList() {
     const router = useRouter();
@@ -40,6 +42,9 @@ export default function MailList() {
 
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrderDESC, setSortOrderDESC] = useState(true);
+
+     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
     // =========================
     // FETCH MAILS
@@ -96,41 +101,82 @@ export default function MailList() {
     // =========================
     // DELETE MAIL
     // =========================
+ const handleDeleteClick = (id: string) => {
+        setDeleteTargetId(id);
+        setDeleteModalOpen(true);
+    };
 
-    const deleteMailMutation = useMutation({
-        mutationFn: async (id: string) => {
-            const res = await apiWrapper.delete(`Correspondences/${id}`);
+    // ✅ دالة تأكيد الحذف
+       const confirmDelete = async () => {
+        if (!deleteTargetId) return;
 
-            if (!res.success) {
-                toast.error("لا يمكن حذف البريد بعد توزيعه");
-                throw new Error("Failed to delete mail");
+        try {
+            const res = await apiWrapper.delete(`Correspondences/${deleteTargetId}`);
+            
+            if (res.success) {
+                // تحديث القائمة يدوياً
+                queryClient.setQueryData(
+                    ["mails", filter, seachInput, sortBy, sortOrderDESC],
+                    (oldData: any) => {
+                        if (!oldData) return oldData;
+                        return {
+                            ...oldData,
+                            pages: oldData.pages.map((page: MailPageResponse) => ({
+                                ...page,
+                                items: page.items.filter(
+                                    (mail: Mail) => String(mail.id) !== deleteTargetId
+                                ),
+                                totalCount: page.totalCount - 1,
+                            })),
+                        };
+                    }
+                );
+                toast.success("تم حذف البريد بنجاح");
+            } else {
+                toast.error(res.error || "لا يمكن حذف البريد بعد توزيعه");
             }
+        } catch (error) {
+            toast.error("فشل حذف البريد");
+        } finally {
+            setDeleteTargetId(null);
+            setDeleteModalOpen(false);
+        }
+    };
 
-            return id;
-        },
-        onSuccess: (_, deletedId) => {
-            queryClient.setQueryData(
-                ["mails", filter, seachInput, sortBy, sortOrderDESC],
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (oldData: any) => {
-                    if (!oldData) return oldData;
+    // const deleteMailMutation = useMutation({
+    //     mutationFn: async (id: string) => {
+    //         const res = await apiWrapper.delete(`Correspondences/${id}`);
 
-                    return {
-                        ...oldData,
-                        pages: oldData.pages.map((page: MailPageResponse) => ({
-                            ...page,
-                            items: page.items.filter(
-                                (mail: Mail) => String(mail.id) !== deletedId
-                            ),
-                            totalCount: page.totalCount - 1,
-                        })),
-                    };
-                }
-            );
+    //         if (!res.success) {
+    //             toast.error("لا يمكن حذف البريد بعد توزيعه");
+    //             throw new Error("Failed to delete mail");
+    //         }
 
-            toast.success("تم حذف البريد بنجاح");
-        },
-    });
+    //         return id;
+    //     },
+    //     onSuccess: (_, deletedId) => {
+    //         queryClient.setQueryData(
+    //             ["mails", filter, seachInput, sortBy, sortOrderDESC],
+    //             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    //             (oldData: any) => {
+    //                 if (!oldData) return oldData;
+
+    //                 return {
+    //                     ...oldData,
+    //                     pages: oldData.pages.map((page: MailPageResponse) => ({
+    //                         ...page,
+    //                         items: page.items.filter(
+    //                             (mail: Mail) => String(mail.id) !== deletedId
+    //                         ),
+    //                         totalCount: page.totalCount - 1,
+    //                     })),
+    //                 };
+    //             }
+    //         );
+
+    //         toast.success("تم حذف البريد بنجاح");
+    //     },
+    // });
 
     // =========================
     // OPEN MAIL
@@ -202,18 +248,31 @@ export default function MailList() {
                 ) : (
                     mailList.map((mail, index) => (
                         <MailCard
-                            key={mail.id}
-                            mail={mail}
-                            index={index}
-                            onClick={openMail}
-                            onEdit={editMail}
-                            onDelete={(id) => deleteMailMutation.mutate(id)}
-                            isDeleting={deleteMailMutation.isPending}
-                            editable={true}
-                        />
+                    key={mail.id}
+                    mail={mail}
+                    index={index}
+                    onClick={openMail}
+                    onEdit={editMail}
+                    onDelete={() => handleDeleteClick(String(mail.id))} // ✅ استخدام handleDeleteClick
+                    isDeleting={deleteTargetId === String(mail.id)}
+                    editable={true}
+                />
                     ))
                 )}
-
+  <ConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setDeleteTargetId(null);
+                }}
+                onConfirm={confirmDelete}
+                title="حذف المراسلة"
+                message="هل أنت متأكد من حذف هذه المراسلة؟ لا يمكن التراجع عن هذا الإجراء."
+                confirmText="نعم، احذف"
+                cancelText="إلغاء"
+                variant="danger"
+                icon={faTrash}
+            />
                 {/* عنصر التحميل اللانهائي */}
                 <div ref={bottomRef} className="py-2">
                     {isFetchingNextPage && (

@@ -9,7 +9,6 @@ import {
     useMemo,
     useState
 } from "react";
-
 import {
     faPlus,
     faEdit,
@@ -93,7 +92,9 @@ export default function UsersPage() {
     const [modalType, setModalType] = useState<"create" | "edit" | "resetPassword">("create");
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [processing, setProcessing] = useState(false);
-    
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
     // Form states - مطابقة للـ DTOs
     const [createForm, setCreateForm] = useState({
         firstName: "",

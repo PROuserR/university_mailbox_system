@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { apiWrapper } from "@/utils/apiClient";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
 import {
     faPlus,
@@ -38,6 +39,7 @@ interface ApiResponse<T> {
 }
 
 export default function DocumentTypesPage() {
+    
     const [documents, setDocuments] = useState<DocumentType[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -46,7 +48,9 @@ export default function DocumentTypesPage() {
     const [editing, setEditing] = useState<DocumentType | null>(null);
     const [name, setName] = useState("");
     const [processing, setProcessing] = useState(false);
-
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+     
     async function loadDocuments() {
         try {
             setLoading(true);
@@ -115,19 +119,6 @@ export default function DocumentTypesPage() {
         }
     }
 
-    async function deleteDocument(id: number) {
-        if (!window.confirm("هل تريد حذف نوع الوثيقة؟")) return;
-
-        try {
-            await apiWrapper.delete(`/DocumentTypes/${id}`);
-            toast.success("تم الحذف بنجاح");
-            loadDocuments();
-        } catch (error) {
-            console.error(error);
-            toast.error("فشل الحذف");
-        }
-    }
-
     async function toggleStatus(item: DocumentType) {
         try {
             const endpoint = item.isActive
@@ -158,6 +149,23 @@ export default function DocumentTypesPage() {
     function formatDate(date: string) {
         return new Date(date).toLocaleDateString();
     }
+
+    const handleDeleteClick = (id: number) => {
+        setDeleteTargetId(id);
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTargetId) return;
+        try {
+            await apiWrapper.delete(`/DocumentTypes/${deleteTargetId}`);
+            toast.success("تم الحذف بنجاح");
+            loadDocuments();
+        } catch (error) {
+            toast.error("فشل الحذف");
+        }
+        setDeleteTargetId(null);
+    };
 
     return (
         <div dir="rtl" className="min-h-screen bg-slate-50 p-3 sm:p-4">
@@ -311,11 +319,12 @@ export default function DocumentTypesPage() {
                                                     <FontAwesomeIcon icon={faPowerOff} className="text-[10px] sm:text-sm" />
                                                 </button>
                                                 <button
-                                                    onClick={() => deleteDocument(item.id)}
+                                                    onClick={() => handleDeleteClick(item.id)}
                                                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center"
                                                 >
                                                     <FontAwesomeIcon icon={faTrash} className="text-[10px] sm:text-sm" />
                                                 </button>
+                                                
                                             </div>
                                         </td>
                                     </tr>
@@ -325,7 +334,16 @@ export default function DocumentTypesPage() {
                     </div>
                 )}
             </div>
-
+<ConfirmationModal
+    isOpen={deleteModalOpen}
+    onClose={() => setDeleteModalOpen(false)}
+    onConfirm={confirmDelete}
+    title="تأكيد الحذف"
+    message="هل أنت متأكد من حذف هذا العنصر؟"
+    confirmText="نعم، احذف"
+    cancelText="إلغاء"
+    variant="danger"
+/>
             {/* ===== MODAL ===== */}
             {modalOpen && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">

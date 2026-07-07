@@ -34,6 +34,7 @@ import {
     apiWrapper,
     ApiResult
 } from "@/utils/apiClient";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
 // ==============================
 // TYPES
@@ -131,7 +132,8 @@ export default function DelegationsPage() {
     const [showDelete, setShowDelete] = useState(false);
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [submitting, setSubmitting] = useState(false);
-
+    const [revokeModalOpen, setRevokeModalOpen] = useState(false);
+    const [revokeTargetId, setRevokeTargetId] = useState<number | null>(null);
     // Form states
     const [delegateUserId, setDelegateUserId] = useState("");
     const [endDate, setEndDate] = useState("");
@@ -273,27 +275,27 @@ export default function DelegationsPage() {
         }
     }
 
-    // ==============================
-    // REVOKE DELEGATION
-    // ==============================
-    async function revokeDelegation() {
-        if (!deleteId) return;
+    const handleRevokeClick = (id: number) => {
+        setRevokeTargetId(id);
+        setRevokeModalOpen(true);
+    };
 
+    const confirmRevoke = async () => {
+        if (!revokeTargetId) return;
         try {
-            const response = await apiWrapper.delete<ApiResult<object>>(`/Delegations/${deleteId}`);
-
+            const response = await apiWrapper.delete<ApiResult<object>>(`/Delegations/${revokeTargetId}`);
             if (response.data?.isSuccess) {
-                toast.success("تم إلغاء التفويض");
-                setShowDelete(false);
-                setDeleteId(null);
+                toast.success("تم إلغاء التفويض بنجاح");
                 await loadDelegations();
             } else {
                 toast.error(response.data?.message || "فشل إلغاء التفويض");
             }
         } catch (error: any) {
-            toast.error(error?.message || "فشل إلغاء التفويض");
+            toast.error(error?.response?.data?.message || "فشل إلغاء التفويض");
         }
-    }
+        setRevokeTargetId(null);
+    };
+
 
     // ==============================
     // HELPERS
@@ -499,16 +501,29 @@ export default function DelegationsPage() {
                                                 >
                                                     <FontAwesomeIcon icon={faEye} className="text-[10px] sm:text-sm" />
                                                 </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setDeleteId(item.id);
-                                                        setShowDelete(true);
-                                                    }}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center"
-                                                    title="إلغاء"
-                                                >
-                                                    <FontAwesomeIcon icon={faTrash} className="text-[10px] sm:text-sm" />
-                                                </button>
+                                                {/* زر الإلغاء */}
+            <button
+                onClick={() => handleRevokeClick(item.id)}
+                className="w-8 h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center"
+            >
+                <FontAwesomeIcon icon={faTrash} className="text-sm" />
+            </button>
+
+            {/* ===== مودال التأكيد ===== */}
+            <ConfirmationModal
+                isOpen={revokeModalOpen}
+                onClose={() => {
+                    setRevokeModalOpen(false);
+                    setRevokeTargetId(null);
+                }}
+                onConfirm={confirmRevoke}
+                title="إلغاء التفويض"
+                message="هل أنت متأكد من إلغاء هذا التفويض؟."
+                confirmText="نعم، ألغِ"
+                cancelText="إلغاء"
+                variant="warning"
+                icon={faBan}
+            />
                                             </div>
                                         </td>
                                     </tr>
@@ -693,41 +708,7 @@ export default function DelegationsPage() {
                 </div>
             )}
 
-            {/* ===== DELETE MODAL ===== */}
-            {showDelete && (
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-md p-4 sm:p-6 shadow-xl">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-base sm:text-lg font-bold text-slate-800">إلغاء التفويض</h2>
-                            <button
-                                onClick={() => { setShowDelete(false); setDeleteId(null); }}
-                                className="text-slate-400 hover:text-red-500"
-                            >
-                                <FontAwesomeIcon icon={faXmark} className="text-lg" />
-                            </button>
-                        </div>
-
-                        <p className="text-sm text-slate-600">
-                            هل أنت متأكد من إلغاء هذا التفويض؟
-                        </p>
-
-                        <div className="flex gap-2 mt-4">
-                            <button
-                                onClick={() => { setShowDelete(false); setDeleteId(null); }}
-                                className="flex-1 border border-slate-200 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition"
-                            >
-                                إلغاء
-                            </button>
-                            <button
-                                onClick={revokeDelegation}
-                                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl font-semibold transition text-sm"
-                            >
-                                إلغاء التفويض
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            
         </div>
     );
 }
