@@ -248,7 +248,7 @@ export default function UsersPage() {
             setProcessing(true);
             
             // ✅ AdminResetUserPasswordRequest: UserId, NewPassword
-            await apiWrapper.post("/Users/admin/reset-user-password", {
+            await apiWrapper.post("/Users/reset-user-password", {
                 userId: resetPasswordForm.userId,
                 newPassword: resetPasswordForm.newPassword,
             });
