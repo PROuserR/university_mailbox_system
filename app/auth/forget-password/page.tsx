@@ -1,103 +1,124 @@
-'use client'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faArrowRight } from '@fortawesome/free-solid-svg-icons';
-import { useState } from 'react';
-import toast, { Toaster } from "react-hot-toast";
-import { useRouter } from "next/navigation";
-import { apiWrapper } from '@/utils/apiClient';
+// app/auth/forgot-password/page.tsx
 
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEnvelope, faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import Link from "next/link";
+import { apiWrapper, ApiResult } from "@/utils/apiClient";
 
 export default function ForgotPasswordPage() {
-    const [email, setEmail] = useState("");
     const router = useRouter();
+    const [email, setEmail] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const forgetPassword = async () => {
-        const userData = { "email": email };
-        const res = await apiWrapper.post("/auth/forgot-password", userData)
-        if (res.status === 200) {
-            toast.success("تم ارسال الكود بنجاح");
-            router.push("/");
+    const forgotPassword = async () => {
+        try {
+            const res = await apiWrapper.post<ApiResult<object>>("/auth/forgot-password", {
+                email: email
+            });
+
+            if (res.data?.isSuccess) {
+                toast.success("تم إرسال رمز التحقق إلى بريدك الإلكتروني");
+                // ✅ الانتقال إلى صفحة إعادة تعيين كلمة المرور مع البريد الإلكتروني
+                router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
+            } else {
+                toast.error(res.data?.message || "فشل إرسال رمز التحقق");
+            }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || "فشل إرسال رمز التحقق");
+        } finally {
+            setLoading(false);
         }
-    }
+    };
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        // Handle form submission logic (e.g., calling an API to send reset link)
-        forgetPassword();
+        
+        if (!email) {
+            toast.error("يرجى إدخال البريد الإلكتروني");
+            return;
+        }
 
+        setLoading(true);
+        await forgotPassword();
     };
 
     return (
-        // Main Container: Centers content on the screen
         <div
-            className="h-full w-full absolute left-0 top-0 flex items-center justify-center font-sans text-right overflow-y-hidden z-10">
-
-            {/* Gradient Overlay */}
+            dir="rtl"
+            className="h-full w-full absolute left-0 top-0 flex items-center justify-center font-sans text-right overflow-y-hidden z-10"
+        >
             <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900" />
 
-            <Toaster />
+            <Toaster position="top-center" />
 
-            {/* Card Wrapper: Defines the visible, contained element */}
-            <div className="relative z-20 w-full max-w-md px-4 py-6 bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col items-center">
-
-                {/* Header Section (Logo and Title) */}
-                <div className="text-center mb-16">
-                    <h1 className="text-3xl font-extrabold text-gray-800 mt-4">
+            <div className="relative z-20 w-[92%] max-w-sm px-4 py-5 bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col items-center">
+                {/* Header */}
+                <div className="w-full text-center mb-4">
+                    <h1 className="text-lg sm:text-xl font-bold text-gray-800">
                         استعادة كلمة المرور
                     </h1>
-                    <p className="text-gray-500 mt-1 text-base">
-                        يرجى إدخال بريدك الإلكتروني لاستقبال رابط إعادة تعيين كلمة المرور.
+                    <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
+                        أدخل بريدك الإلكتروني لاستقبال رمز التحقق
                     </p>
                 </div>
 
-                {/* The Form */}
-                <form onSubmit={handleSubmit} className="space-y-8 w-full">
-                    {/* Input Field: Email/Username */}
-                    <div>
-                        <div className="relative flex flex-row-reverse items-center">
-                            {/* Icon Placement */}
-                            <div className="absolute inset-y-0 right-4 pl-3 flex items-center pointer-events-none">
-                                <FontAwesomeIcon icon={faEnvelope} className="text-gray-400" />
-                            </div>
-
-                            {/* Input Element */}
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="البريد الإلكتروني"
-                                required
-                                className="block w-full pr-12 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 text-right"
-                            />
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="w-full space-y-3">
+                    <div className="relative group transition-all duration-300">
+                        <input
+                            id="email"
+                            type="email"
+                            placeholder="البريد الإلكتروني"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 pr-9 text-slate-700 text-xs sm:text-sm focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/10 transition-all duration-300 placeholder:text-gray-400"
+                            required
+                            disabled={loading}
+                            autoFocus
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors duration-300">
+                            <FontAwesomeIcon icon={faEnvelope} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </div>
                     </div>
 
-                    {/* Forgot Password Button (Primary Action) */}
                     <button
                         type="submit"
-                        className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out"
+                        disabled={loading}
+                        className="w-full bg-blue-900 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-2 text-xs sm:text-sm disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                        إرسال رابط إعادة التعيين
-                        <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+                        {loading ? (
+                            <>
+                                <svg className="animate-spin h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>جاري الإرسال...</span>
+                            </>
+                        ) : (
+                            <>
+                                <span>إرسال رمز التحقق</span>
+                                <FontAwesomeIcon icon={faArrowRight} className="w-3 h-3" />
+                            </>
+                        )}
                     </button>
                 </form>
 
-                {/* Footer Links */}
-                <div className="mt-8 text-center space-y-4">
-                    <div className="flex justify-center items-center text-sm text-gray-600">
-                        هل نسيت شيئًا آخر؟
-                        <a href="/support" className="ml-1 font-medium text-blue-600 hover:text-blue-800 cursor-pointer">
-                            مساعدة
-                        </a>
-                    </div>
-
-                    {/* If the user is on a truly lost screen, maybe link back to login */}
-                    <a href="/" className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer block">
-                        العودة إلى الصفحة الرئيسية
-                    </a>
-                </div>
+                {/* Footer */}
+                <footer className="w-full mt-4 pt-3 border-t border-gray-100 flex items-center justify-center">
+                    <Link
+                        href="/auth/login"
+                        className="text-[10px] sm:text-xs text-blue-600 hover:text-blue-800 transition"
+                    >
+                        العودة إلى تسجيل الدخول
+                    </Link>
+                </footer>
             </div>
         </div>
     );
-};
+}
