@@ -63,8 +63,7 @@ export default function LoginPage() {
     return (
         <div
             dir="rtl"
-            className="h-full w-full absolute left-0 top-0 flex items-center justify-center font-sans text-right overflow-y-hidden z-10"
-        >
+            className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900 p-4">
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900" />
 
