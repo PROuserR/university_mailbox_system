@@ -62,9 +62,10 @@ export default function LoginPage() {
 
     return (
         <div
-            dir="rtl"
-            className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900">
-            {/* Gradient Overlay */}
+    dir="rtl"
+    className="h-screen w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900"
+>
+    {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900" />
 
             {/* Main Card Container */}

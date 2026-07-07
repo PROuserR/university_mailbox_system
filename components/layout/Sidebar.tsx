@@ -98,40 +98,46 @@ export default function Sidebar() {
             <div className="flex-1 overflow-y-auto w-full">
                 {/* ===== Compose Button ===== */}
                 <button
-                    onClick={() => router.push("/mail/create")}
-                    className={`
-                        w-full
-                        bg-gradient-to-r from-blue-500 to-blue-600
-                        text-white
-                        py-2.5
-                        rounded-xl
-                        flex
-                        items-center
-                        justify-center
-                        gap-2
-                        mb-4
-                        hover:from-blue-600 hover:to-blue-700
-                        transition-all
-                        duration-200
-                        shadow-md hover:shadow-lg
-                        ${!isSidebarToggleShown ? "px-0" : "px-4"}
-                    `}
-                >
-                    <FontAwesomeIcon icon={faPlus} className="text-sm" />
-                    <AnimatePresence>
-                        {isSidebarToggleShown && (
-                            <motion.span
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                transition={{ duration: 0.2 }}
-                                className="text-sm font-medium whitespace-nowrap"
-                            >
-                                مراسلة جديدة
-                            </motion.span>
-                        )}
-                    </AnimatePresence>
-                </button>
+    onClick={() => {
+        // ✅ إغلاق الـ Sidebar في الموبايل
+        if (window.innerWidth < 768) {
+            triggerSidebar();
+        }
+        router.push("/mail/create");
+    }}
+    className={`
+        w-full
+        bg-gradient-to-r from-blue-500 to-blue-600
+        text-white
+        py-2.5
+        rounded-xl
+        flex
+        items-center
+        justify-center
+        gap-2
+        mb-4
+        hover:from-blue-600 hover:to-blue-700
+        transition-all
+        duration-200
+        shadow-md hover:shadow-lg
+        ${!isSidebarToggleShown ? "px-0" : "px-4"}
+    `}
+>
+    <FontAwesomeIcon icon={faPlus} className="text-sm" />
+    <AnimatePresence>
+        {isSidebarToggleShown && (
+            <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="text-sm font-medium whitespace-nowrap"
+            >
+                مراسلة جديدة
+            </motion.span>
+        )}
+    </AnimatePresence>
+</button>
 
                 {/* ===== Main Navigation ===== */}
                 <div className="space-y-1">
