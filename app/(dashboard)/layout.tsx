@@ -13,29 +13,33 @@ export default function DashboardLayout({
 }) {
     const pathname = usePathname();
 
-    // ✅ الـ Sidebar يظهر فقط في الصفحة الرئيسية (/)
-    const showSidebar = pathname === "/";
+    const showSidebar =
+        pathname === "/" ||
+        pathname === "/distribution-page" ||
+        pathname?.startsWith("/mail/");
 
     return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col h-screen">
             <header className="fixed top-0 left-0 z-40 w-full">
                 <Navbar />
             </header>
 
             {showSidebar ? (
-                <div className="flex flex-row pt-16" style={{ direction: 'ltr' }}>
-                    <main className="flex-1 min-w-0" style={{ direction: 'ltr' }}>
+                // ✅ RTL مع Sidebar على اليمين
+                <div className="flex flex-row-reverse flex-1 pt-16 overflow-hidden">
+                    {/* المحتوى */}
+                    <main className="flex-1 min-w-0 overflow-y-auto">
                         {children}
                     </main>
 
-                    {/* Sidebar - على اليسار (في LTR) */}
-                    <aside className="h-[calc(100vh-4rem)] w-fit shrink-0" style={{ direction: 'ltr' }}>
+                    {/* Sidebar على اليمين */}
+                    <aside className="h-[calc(100vh-4rem)] w-fit shrink-0 overflow-y-auto">
                         <Sidebar />
                     </aside>
                 </div>
             ) : (
-                <div className="pt-16">
-                    <main className="w-full" style={{ direction: 'rtl' }}>
+                <div className="flex-1 pt-16 overflow-hidden">
+                    <main className="w-full h-full overflow-y-auto">
                         {children}
                     </main>
                 </div>

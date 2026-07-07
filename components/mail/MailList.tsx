@@ -1,45 +1,49 @@
+// components/mail/MailList.tsx
+
 "use client";
 
-import useShowMailDetailsStore from "@/store/showMailDetails";
 import { useState } from "react";
-import { apiWrapper } from "@/utils/apiClient";
-import useSearchInputStore from "@/store/searchInputStore";
-import useInfiniteScroll from "@/hooks/useInfiniteScroll";
-import useMailFilterStore from "@/store/mailFilterStore";
+import { useRouter } from "next/navigation";
 import {
     useInfiniteQuery,
     useMutation,
     useQueryClient,
 } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    faSortAmountDown,
+    faSortAmountUp,
+    faSpinner,
+    faInbox,
+    faPaperPlane,
+} from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
-import { AnimatePresence, motion } from "framer-motion";
+
+import { apiWrapper } from "@/utils/apiClient";
 import { Mail } from "@/types/api/Mail/Mail";
 import { MailPageResponse } from "@/types/api/Mail/MailPageResponse";
-import MailViewer from "@/components/mail/MailViewer";
-import MailCard from "@/components/mail/MailCard";
+import useSearchInputStore from "@/store/searchInputStore";
+import useMailFilterStore from "@/store/mailFilterStore";
+import useInfiniteScroll from "@/hooks/useInfiniteScroll";
+
+import MailCard from "./MailCard";
 import MailListLoader from "@/components/ui/MailListLoader";
 import MailListError from "@/components/ui/MailListError";
-import MailEditPage from "./MailEditPage";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faKeyboard, faSortAmountDown, faSortAmountUp } from "@fortawesome/free-solid-svg-icons";
-import VirtualKeyboard from "@/components/ui/VirtualKeyboard";
 
 export default function MailList() {
+    const router = useRouter();
     const queryClient = useQueryClient();
-
-    const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } =
-        useShowMailDetailsStore();
-
-    const [selectedMailData, setSelectedMailData] = useState<Mail>();
-    const [editingMail, setEditingMail] = useState<Mail | null>(null);
-    const [keyboardOpen, setKeyboardOpen] = useState(false);
 
     const { seachInput } = useSearchInputStore();
     const { filter } = useMailFilterStore();
 
-    // New Sort State
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrderDESC, setSortOrderDESC] = useState(true);
+
+    // =========================
+    // FETCH MAILS
+    // =========================
 
     const fetchMails = async (pageParam: number): Promise<MailPageResponse> => {
         const res = await apiWrapper.get<{ data: MailPageResponse }>(
@@ -62,6 +66,37 @@ export default function MailList() {
         return res.data.data;
     };
 
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        isError,
+        refetch,
+    } = useInfiniteQuery<MailPageResponse>({
+        queryKey: ["mails", filter, seachInput, sortBy, sortOrderDESC],
+        queryFn: ({ pageParam = 1 }) => fetchMails(pageParam as number),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage, allPages) => {
+            const loaded = allPages.flatMap((p) => p.items).length;
+            return loaded < lastPage.totalCount ? allPages.length + 1 : undefined;
+        },
+    });
+
+    const mailList = data?.pages.flatMap((page) => page.items) ?? [];
+
+    const bottomRef = useInfiniteScroll({
+        onBottom: fetchNextPage,
+        isLoading: isFetchingNextPage,
+        hasMore: !!hasNextPage,
+        dataLength: mailList.length,
+    });
+
+    // =========================
+    // DELETE MAIL
+    // =========================
+
     const deleteMailMutation = useMutation({
         mutationFn: async (id: string) => {
             const res = await apiWrapper.delete(`Correspondences/${id}`);
@@ -73,10 +108,10 @@ export default function MailList() {
 
             return id;
         },
-
         onSuccess: (_, deletedId) => {
             queryClient.setQueryData(
                 ["mails", filter, seachInput, sortBy, sortOrderDESC],
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (oldData: any) => {
                     if (!oldData) return oldData;
 
@@ -97,145 +132,98 @@ export default function MailList() {
         },
     });
 
-    const {
-        data,
-        fetchNextPage,
-        hasNextPage,
-        isFetchingNextPage,
-        isLoading,
-        isError,
-    } = useInfiniteQuery<MailPageResponse>({
-        queryKey: ["mails", filter, seachInput, sortBy, sortOrderDESC],
-        queryFn: ({ pageParam = 1 }) => fetchMails(pageParam as number),
-        initialPageParam: 1,
-        getNextPageParam: (lastPage, allPages) => {
-            const loaded = allPages.flatMap((p) => p.items).length;
-            return loaded < lastPage.totalCount ? allPages.length + 1 : undefined;
-        },
-    });
+    // =========================
+    // OPEN MAIL
+    // =========================
 
-    const mailList = data?.pages.flatMap((page) => page.items) ?? [];
-
-    const bottomRef = useInfiniteScroll({
-        onBottom: fetchNextPage,
-        isLoading: isFetchingNextPage,
-        hasMore: !!hasNextPage,
-        dataLength: mailList.length,
-    });
-
-    const showMailDetails = (mailData: Mail) => {
-        setSelectedMailData(mailData);
-        triggerMailDetailsStoreShown();
+    const openMail = (mail: Mail) => {
+        router.push(`/mail/${mail.id}`);
     };
 
+    // =========================
+    // EDIT MAIL
+    // =========================
+
+    const editMail = (mail: Mail) => {
+        router.push(`/mail/${mail.id}/edit`);
+    };
+
+    // =========================
+    // RENDER
+    // =========================
+
     if (isLoading) return <MailListLoader />;
-    if (isError) return <MailListError />;
+    if (isError) return <MailListError onRetry={() => refetch()} />;
 
     return (
-        <AnimatePresence mode="wait">
-            {editingMail ? (
-                <MailEditPage
-                    mail={editingMail}
-                    filter={filter}
-                    searchInput={seachInput}
-                    onBack={() => setEditingMail(null)}
-                    onSuccess={() => setEditingMail(null)}
-                />
-            ) : !isMailDetailsStoreShown ? (
-                <motion.div
-                    key="mail-list"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="flex flex-col h-full w-full"
-                >
-                    {/* TOP BAR */}
-                    <div className="flex items-center justify-between border-b border-blue-100 px-4 py-3">
-                        <div className="flex items-center gap-2">
-                            {/* Keyboard Button */}
-                            <button
-                                onClick={() => setKeyboardOpen(true)}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm bg-white border border-blue-200 transition"
-                            >
-                                <FontAwesomeIcon
-                                    icon={faKeyboard}
-                                    className="text-blue-600"
-                                />
-                                <span className="text-sm text-gray-600">
-                                    لوحة المفاتيح
-                                </span>
-                            </button>
-
-                            {/* Sort Dropdown */}
-                            <div className="flex items-center gap-1 bg-white border border-blue-200 rounded-lg px-2 py-1 shadow-sm">
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) => setSortBy(e.target.value)}
-                                    className="text-sm text-gray-600 bg-transparent outline-none cursor-pointer"
-                                >
-                                    <option value="createdAt">التاريخ</option>
-                                    <option value="title">العنوان</option>
-                                    <option value="sender">المرسل</option>
-                                    <option value="number">الرقم</option>
-                                    <option value="status">الحالة</option>
-                                </select>
-                                <button
-                                    onClick={() => setSortOrderDESC(!sortOrderDESC)}
-                                    className="text-blue-600 hover:text-blue-800 transition p-1"
-                                    title={sortOrderDESC ? "تنازلي" : "تصاعدي"}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={sortOrderDESC ? faSortAmountDown : faSortAmountUp}
-                                    />
-                                </button>
-                            </div>
-                        </div>
-
-                        <h2 className="text-blue-700 font-semibold text-sm">
-                            قائمة البريد
-                        </h2>
-
-                        <VirtualKeyboard
-                            open={keyboardOpen}
-                            onClose={() => setKeyboardOpen(false)}
-                        />
+        <div className="flex flex-col h-full w-full bg-gray-50">
+            {/* ===== شريط الفلترة والترتيب ===== */}
+            <div className="bg-white border-b border-gray-200 px-4 py-2 sticky top-0 z-10">
+                <div className="flex items-center justify-between gap-2">
+                    {/* نوع العرض */}
+                    <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <FontAwesomeIcon icon={faInbox} className="text-blue-500" />
+                        <span>{filter || "الكل"}</span>
+                        <span className="text-gray-300 mx-1">|</span>
+                        <span className="font-medium text-gray-700">{mailList.length}</span>
                     </div>
 
-                    {/* MAIL LIST */}
-                    <div className="flex flex-col gap-y-2 p-4 flex-1 overflow-y-auto">
-                        {mailList.map((mail, index) => (
-                            <MailCard
-                                key={mail.id}
-                                mail={mail}
-                                index={index}
-                                onClick={showMailDetails}
-                                onEdit={(mail) => setEditingMail(mail)}
-                                onDelete={(id) =>
-                                    deleteMailMutation.mutate(id)
-                                }
-                                isDeleting={deleteMailMutation.isPending}
-                                editable={true}
+                    {/* الترتيب */}
+                    <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="text-sm bg-transparent outline-none text-gray-600 cursor-pointer"
+                        >
+                            <option value="createdAt">التاريخ</option>
+                            <option value="title">العنوان</option>
+                            <option value="number">الرقم</option>
+                        </select>
+                        <button
+                            onClick={() => setSortOrderDESC(!sortOrderDESC)}
+                            className="text-blue-600 p-1 hover:bg-blue-50 rounded transition"
+                        >
+                            <FontAwesomeIcon
+                                icon={sortOrderDESC ? faSortAmountDown : faSortAmountUp}
                             />
-                        ))}
-
-                        <div ref={bottomRef} />
+                        </button>
                     </div>
-                </motion.div>
-            ) : (
-                <motion.div
-                    key="mail-viewer"
-                    initial={{ opacity: 0, x: 40 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -40 }}
-                    transition={{ duration: 0.3 }}
-                    className="p-4 w-full"
-                >
-                    {selectedMailData && (
-                        <MailViewer data={selectedMailData} />
+                </div>
+            </div>
+
+            {/* ===== قائمة البريد ===== */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {mailList.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                        <div className="text-6xl mb-4">📭</div>
+                        <p className="text-lg font-medium">لا توجد رسائل</p>
+                        <p className="text-sm">حاول تغيير فلترة البحث</p>
+                    </div>
+                ) : (
+                    mailList.map((mail, index) => (
+                        <MailCard
+                            key={mail.id}
+                            mail={mail}
+                            index={index}
+                            onClick={openMail}
+                            onEdit={editMail}
+                            onDelete={(id) => deleteMailMutation.mutate(id)}
+                            isDeleting={deleteMailMutation.isPending}
+                            editable={true}
+                        />
+                    ))
+                )}
+
+                {/* عنصر التحميل اللانهائي */}
+                <div ref={bottomRef} className="py-2">
+                    {isFetchingNextPage && (
+                        <div className="flex justify-center items-center gap-2 text-blue-600 py-2">
+                            <FontAwesomeIcon icon={faSpinner} spin />
+                            <span className="text-sm">جاري تحميل المزيد...</span>
+                        </div>
                     )}
-                </motion.div>
-            )}
-        </AnimatePresence>
+                </div>
+            </div>
+        </div>
     );
 }

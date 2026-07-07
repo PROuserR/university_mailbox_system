@@ -1,5 +1,8 @@
+// components/layout/Sidebar.tsx
+
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import MailCompose from "@/components/overlays/MailCompose";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -22,20 +25,19 @@ import useSidebarToggleStore from "@/store/sidebarToggleStore";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Sidebar() {
-    const { isMailComposeShown, triggerMailCompose } =
-        useMailComposeStore();
-
+    const router = useRouter();
+    const pathname = usePathname();
+    const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
     const { filter, setFilter } = useMailFilterStore();
+    const { isSidebarToggleShown } = useSidebarToggleStore();
 
-    const { isSidebarToggleShown } =
-        useSidebarToggleStore();
+    // ✅ التحقق إذا كنا في صفحة بريد (نحتاج للانتقال إلى الرئيسية)
+    const isMailPage = pathname?.startsWith("/mail/") || pathname === "/distribution-page";
 
     const fetchMailsCount = async (): Promise<MailCounts> => {
         const res = await apiWrapper.get<{
             data: MailCounts;
-        }>(
-            "/Correspondences/statistics/counts-by-type"
-        );
+        }>("/Correspondences/statistics/counts-by-type");
 
         if (!res.success || !res.data) {
             throw new Error("Failed to fetch mails");
@@ -55,13 +57,22 @@ export default function Sidebar() {
         queryFn: fetchMailsCount,
     });
 
+    // ✅ دالة معالجة الضغط على عنصر الـ Sidebar
+    const handleSidebarClick = (filterValue: string) => {
+        if (isMailPage) {
+            // إذا كنا في صفحة بريد، ننتقل إلى الصفحة الرئيسية مع الفلترة
+            router.push(`/?filter=${filterValue}`);
+        } else {
+            // إذا كنا في الصفحة الرئيسية، نطبق الفلترة مباشرة
+            setFilter(filterValue);
+        }
+    };
+
     return (
         <motion.aside
             dir="rtl"
             animate={{
-                width: isSidebarToggleShown
-                    ? 288 // w-72
-                    : 80, // w-20
+                width: isSidebarToggleShown ? 288 : 80,
             }}
             transition={{
                 duration: 0.35,
@@ -87,25 +98,13 @@ export default function Sidebar() {
                     onClick={triggerMailCompose}
                 >
                     <FontAwesomeIcon icon={faPlus} />
-
                     <AnimatePresence>
                         {isSidebarToggleShown && (
                             <motion.span
-                                initial={{
-                                    opacity: 0,
-                                    x: 10,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    x: 0,
-                                }}
-                                exit={{
-                                    opacity: 0,
-                                    x: 10,
-                                }}
-                                transition={{
-                                    duration: 0.2,
-                                }}
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 10 }}
+                                transition={{ duration: 0.2 }}
                             >
                                 انشاء بريد
                             </motion.span>
@@ -117,181 +116,73 @@ export default function Sidebar() {
                 <div className="flex flex-col gap-y-2 justify-center">
                     <SidebarItem
                         icon={faEnvelope}
-                        label={
-                            isSidebarToggleShown
-                                ? "صندوق البريد"
-                                : ""
-                        }
-                        onClick={() =>
-                            setFilter("")
-                        }
-                        active={filter === ""}
-                        count={
-                            isSidebarToggleShown
-                                ? data.totalCount
-                                : undefined
-                        }
+                        label={isSidebarToggleShown ? "صندوق البريد" : ""}
+                        onClick={() => handleSidebarClick("")}
+                        active={!isMailPage && filter === ""}
+                        count={isSidebarToggleShown ? data.totalCount : undefined}
                     />
 
                     <SidebarItem
                         icon={faInbox}
-                        label={
-                            isSidebarToggleShown
-                                ? "الوارد"
-                                : ""
-                        }
-                        onClick={() =>
-                            setFilter("Incoming")
-                        }
-                        active={
-                            filter === "Incoming"
-                        }
-                        count={
-                            isSidebarToggleShown
-                                ? data.incomingCount
-                                : undefined
-                        }
+                        label={isSidebarToggleShown ? "الوارد" : ""}
+                        onClick={() => handleSidebarClick("Incoming")}
+                        active={!isMailPage && filter === "Incoming"}
+                        count={isSidebarToggleShown ? data.incomingCount : undefined}
                     />
 
                     <SidebarItem
                         icon={faPaperPlane}
-                        label={
-                            isSidebarToggleShown
-                                ? "الصادر"
-                                : ""
-                        }
-                        onClick={() =>
-                            setFilter("Outgoing")
-                        }
-                        active={
-                            filter === "Outgoing"
-                        }
-                        count={
-                            isSidebarToggleShown
-                                ? data.outgoingCount
-                                : undefined
-                        }
+                        label={isSidebarToggleShown ? "الصادر" : ""}
+                        onClick={() => handleSidebarClick("Outgoing")}
+                        active={!isMailPage && filter === "Outgoing"}
+                        count={isSidebarToggleShown ? data.outgoingCount : undefined}
                     />
 
                     <SidebarItem
                         icon={faFile}
-                        label={
-                            isSidebarToggleShown
-                                ? "الداخلي"
-                                : ""
-                        }
-                        onClick={() =>
-                            setFilter("Internal")
-                        }
-                        active={
-                            filter === "Internal"
-                        }
-                        count={
-                            isSidebarToggleShown
-                                ? data.internalCount
-                                : undefined
-                        }
+                        label={isSidebarToggleShown ? "الداخلي" : ""}
+                        onClick={() => handleSidebarClick("Internal")}
+                        active={!isMailPage && filter === "Internal"}
+                        count={isSidebarToggleShown ? data.internalCount : undefined}
                     />
 
                     <SidebarItem
                         icon={faBriefcase}
-                        label={
-                            isSidebarToggleShown
-                                ? "المهني"
-                                : ""
-                        }
-                        onClick={() =>
-                            setFilter(
-                                "Professional"
-                            )
-                        }
-                        active={
-                            filter ===
-                            "Professional"
-                        }
-                        count={
-                            isSidebarToggleShown
-                                ? data.professionalCount
-                                : undefined
-                        }
+                        label={isSidebarToggleShown ? "المهني" : ""}
+                        onClick={() => handleSidebarClick("Professional")}
+                        active={!isMailPage && filter === "Professional"}
+                        count={isSidebarToggleShown ? data.professionalCount : undefined}
                     />
                 </div>
 
                 {/* Divider */}
-                <div
-                    className={`my-6 border-t ${isSidebarToggleShown
-                            ? ""
-                            : "border-blue-600"
-                        }`}
-                />
+                <div className={`my-6 border-t ${isSidebarToggleShown ? "" : "border-blue-600"}`} />
 
                 {/* Folders */}
                 <AnimatePresence>
                     {isSidebarToggleShown ? (
                         <motion.div
-                            initial={{
-                                opacity: 0,
-                                x: 20,
-                            }}
-                            animate={{
-                                opacity: 1,
-                                x: 0,
-                            }}
-                            exit={{
-                                opacity: 0,
-                                x: 20,
-                            }}
-                            transition={{
-                                duration: 0.25,
-                            }}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.25 }}
                         >
                             <div className="flex w-60 items-center justify-between text-sm text-gray-500 mb-2">
-                                <span>
-                                    المجلدات
-                                </span>
-
-                                <FontAwesomeIcon
-                                    icon={faPlus}
-                                    className="cursor-pointer"
-                                />
+                                <span>المجلدات</span>
+                                <FontAwesomeIcon icon={faPlus} className="cursor-pointer" />
                             </div>
-
                             <div className="space-y-2">
-                                <SidebarItem
-                                    icon={faFolder}
-                                    label="الإعلانات"
-                                />
-
-                                <SidebarItem
-                                    icon={faFolder}
-                                    label="الدورات"
-                                    count={12}
-                                />
-
-                                <SidebarItem
-                                    icon={faFolder}
-                                    label="المشاريع"
-                                    count={3}
-                                />
-
-                                <SidebarItem
-                                    icon={faFolder}
-                                    label="إداري"
-                                    count={4}
-                                />
+                                <SidebarItem icon={faFolder} label="الإعلانات" />
+                                <SidebarItem icon={faFolder} label="الدورات" count={12} />
+                                <SidebarItem icon={faFolder} label="المشاريع" count={3} />
+                                <SidebarItem icon={faFolder} label="إداري" count={4} />
                             </div>
                         </motion.div>
                     ) : (
                         <motion.div
-                            initial={{
-                                opacity: 0,
-                            }}
-                            animate={{
-                                opacity: 1,
-                            }}
-                            exit={{
-                                opacity: 0,
-                            }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             className="flex flex-col"
                         >
                             <FontAwesomeIcon
@@ -307,34 +198,17 @@ export default function Sidebar() {
             <AnimatePresence>
                 {isSidebarToggleShown && (
                     <motion.div
-                        initial={{
-                            opacity: 0,
-                            y: 10,
-                        }}
-                        animate={{
-                            opacity: 1,
-                            y: 0,
-                        }}
-                        exit={{
-                            opacity: 0,
-                            y: 10,
-                        }}
-                        transition={{
-                            duration: 0.25,
-                        }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.25 }}
                         className="p-4 rounded-lg"
                     >
-                        <p className="text-gray-500 mb-1">
-                            التخزين
-                        </p>
-
+                        <p className="text-gray-500 mb-1">التخزين</p>
                         <div className="w-full bg-gray-300 h-2 rounded-full">
                             <div className="bg-gradient-to-r from-blue-600 to-blue-200 h-2 rounded-full w-[24%]" />
                         </div>
-
-                        <p className="text-xs text-gray-400 mt-1">
-                            2.4GB من 10GB
-                        </p>
+                        <p className="text-xs text-gray-400 mt-1">2.4GB من 10GB</p>
                     </motion.div>
                 )}
             </AnimatePresence>

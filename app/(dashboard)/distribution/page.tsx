@@ -4,16 +4,11 @@
 
 import { useState } from "react";
 
-import {
-  useInfiniteQuery
-} from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { apiWrapper } from "@/utils/apiClient";
 
-import {
-  AnimatePresence,
-  motion
-} from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import useShowMailDetailsStore from "@/store/showMailDetails";
 import useInfiniteScroll from "@/hooks/useInfiniteScroll";
 import MailCard from "@/components/mail/MailCard";
@@ -21,8 +16,6 @@ import MailViewer from "@/components/mail/MailViewer";
 import MailListLoader from "@/components/ui/MailListLoader";
 import MailListError from "@/components/ui/MailListError";
 import { Mail } from "@/types/api/Mail/Mail";
-import VirtualKeyboard from "@/components/ui/VirtualKeyboard";
-
 
 import {
   faKeyboard,
@@ -30,20 +23,14 @@ import {
   faPaperPlane,
   faSortAmountDown,
   faSortAmountUp,
-
 } from "@fortawesome/free-solid-svg-icons";
-
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useUserInfoStore from "@/store/userInfoStore";
 
-
-
 // ================= TYPES =================
 
-
 interface Attachment {
-
   id: number;
 
   fileName: string;
@@ -61,35 +48,22 @@ interface Attachment {
   uploadedBy: string;
 
   downloadUrl: string | null;
-
 }
 
-
-
 interface DistributionMail {
-
-
   id: number;
-
 
   distributedDate: string;
 
-
   status: string;
-
 
   readAt: string | null;
 
-
   isRead: boolean;
-
 
   isAutoDistributed: boolean;
 
-
   notes: string | null;
-
-
 
   // inbox fields
 
@@ -98,8 +72,6 @@ interface DistributionMail {
   distributorEmail?: string;
 
   distributorRole?: string;
-
-
 
   // outbox fields
 
@@ -111,56 +83,34 @@ interface DistributionMail {
 
   receiverRole?: string;
 
-
-
   correspondenceId: number;
-
 
   correspondenceNumber: string;
 
-
   correspondenceTitle: string;
-
 
   correspondenceContent: string | null;
 
-
-
   mainType: string;
-
 
   isProfessional: boolean;
 
-
   documentType: string;
-
 
   senderEntity: string | null;
 
-
   senderReference: string | null;
-
-
 
   issuedDate: string | null;
 
-
   receivedDate: string | null;
-
 
   sentDate: string | null;
 
-
-
   attachments: Attachment[];
-
 }
 
-
-
-
 interface PageResponse {
-
   items: DistributionMail[];
 
   totalCount: number;
@@ -174,262 +124,112 @@ interface PageResponse {
   hasPreviousPage: boolean;
 
   hasNextPage: boolean;
-
 }
-
 
 // Normalize data for MailCard
 
-const normalizeMail = (
-  mail: DistributionMail
-): any => {
-
+const normalizeMail = (mail: DistributionMail): any => {
   return {
-
     // existing MailCard fields
 
     id: mail.id,
 
-    number:
-      mail.correspondenceNumber,
+    number: mail.correspondenceNumber,
 
+    title: mail.correspondenceTitle,
 
-    title:
-      mail.correspondenceTitle,
+    content: mail.correspondenceContent ?? "",
 
+    createdAt: mail.distributedDate,
 
-    content:
-      mail.correspondenceContent ?? "",
+    sender: mail.distributorName ?? mail.receiverName ?? "غير معروف",
 
-
-
-    createdAt:
-      mail.distributedDate,
-
-
-
-    sender:
-      mail.distributorName ??
-      mail.receiverName ??
-      "غير معروف",
-
-
-
-    documentType:
-      mail.documentType,
-
-
+    documentType: mail.documentType,
 
     // required old Mail fields
 
-    documentTypeId:
-      0,
+    documentTypeId: 0,
 
+    senderEntityId: 0,
 
-    senderEntityId:
-      0,
+    totalReceivers: 1,
 
+    senderEntity: mail.senderEntity ?? "",
 
-    totalReceivers:
-      1,
+    isProfessional: mail.isProfessional,
 
+    mainType: mail.mainType,
 
-    senderEntity:
-      mail.senderEntity ?? "",
+    status: mail.status,
 
+    isRead: mail.isRead,
 
-    isProfessional:
-      mail.isProfessional,
+    readAt: mail.readAt,
 
-
-
-    mainType:
-      mail.mainType,
-
-
-
-    status:
-      mail.status,
-
-
-
-    isRead:
-      mail.isRead,
-
-
-
-    readAt:
-      mail.readAt,
-
-
-
-    attachments:
-      mail.attachments ?? [],
-
-
+    attachments: mail.attachments ?? [],
 
     // keep original API object
 
-    correspondenceId:
-      mail.correspondenceId,
+    correspondenceId: mail.correspondenceId,
 
+    correspondenceNumber: mail.correspondenceNumber,
 
-    correspondenceNumber:
-      mail.correspondenceNumber,
+    correspondenceTitle: mail.correspondenceTitle,
 
+    correspondenceContent: mail.correspondenceContent,
 
-    correspondenceTitle:
-      mail.correspondenceTitle,
+    distributedDate: mail.distributedDate,
 
+    issuedDate: mail.issuedDate,
 
-    correspondenceContent:
-      mail.correspondenceContent,
+    receivedDate: mail.receivedDate,
 
-
-    distributedDate:
-      mail.distributedDate,
-
-
-    issuedDate:
-      mail.issuedDate,
-
-
-    receivedDate:
-      mail.receivedDate,
-
-
-    sentDate:
-      mail.sentDate,
-
+    sentDate: mail.sentDate,
   };
-
 };
 
 export default function MailList() {
+  const { role } = useUserInfoStore();
 
   const {
-    role,
-  } = useUserInfoStore();
-
-  const {
-
     isMailDetailsStoreShown,
 
-    triggerMailDetailsStoreShown
-
-
+    triggerMailDetailsStoreShown,
   } = useShowMailDetailsStore();
 
-
-
-
-  const [
-
-    folder,
-
-    setFolder
-
-  ] = useState<
-    "inbox" | "outbox"
-
-  >(
-    "inbox"
-  );
-
-
-
+  const [folder, setFolder] = useState<"inbox" | "outbox">("inbox");
 
   const [sortBy, setSortBy] = useState<
-    | "DistributedDate"
-    | "CorrespondenceTitle"
-    | "DistributorName"
-    | "number"
+    "DistributedDate" | "CorrespondenceTitle" | "DistributorName" | "number"
   >("DistributedDate");
 
+  const [sortDescending, setSortDescending] = useState(true);
 
+  const [selectedMailData, setSelectedMailData] = useState<Mail>();
 
-  const [
-
-    sortDescending,
-
-    setSortDescending
-
-  ] = useState(true);
-
-
-
-
-  const [
-
-    keyboardOpen,
-
-    setKeyboardOpen
-
-  ] = useState(false);
-
-
-  const [selectedMailData, setSelectedMailData]
-    = useState<Mail>();
-
-
-
-  const fetchMails = async (
-
-    page: number
-
-  ): Promise<PageResponse> => {
-
-
+  const fetchMails = async (page: number): Promise<PageResponse> => {
     const endpoint =
-
       folder === "inbox"
-
-        ?
-
-        "/Distributions/my-inbox"
-
-        :
-
-        "/Distributions/my-outbox";
-
-
+        ? "/Distributions/my-inbox"
+        : "/Distributions/my-outbox";
 
     const res = await apiWrapper.get<{
-      data: PageResponse
-    }>(
-      endpoint,
-      {
-        page,
-        pageSize: 10,
-        sortBy,
-        sortDescending
-      }
-    );
+      data: PageResponse;
+    }>(endpoint, {
+      page,
+      pageSize: 10,
+      sortBy,
+      sortDescending,
+    });
 
-
-
-    if (
-      !res.success ||
-      !res.data
-    ) {
-
-      throw new Error(
-        "Failed loading mails"
-      );
-
+    if (!res.success || !res.data) {
+      throw new Error("Failed loading mails");
     }
 
-
-
     return res.data.data;
-
-
   };
 
-
-
   const {
-
     data,
 
     fetchNextPage,
@@ -440,174 +240,67 @@ export default function MailList() {
 
     isLoading,
 
-    isError
-
-
+    isError,
   } = useInfiniteQuery<PageResponse>({
+    queryKey: ["distribution-mails", folder, sortBy, sortDescending],
 
-
-
-    queryKey: [
-      "distribution-mails",
-      folder,
-      sortBy,
-      sortDescending
-    ],
-
-
-
-    queryFn: ({
-
-      pageParam = 1
-
-    }) =>
-
-      fetchMails(
-
-        pageParam as number
-
-      ),
-
-
-
+    queryFn: ({ pageParam = 1 }) => fetchMails(pageParam as number),
 
     initialPageParam: 1,
 
-
-
-
     getNextPageParam: (lastPage) => {
-
-
-      return lastPage.hasNextPage
-
-        ?
-
-        lastPage.pageNumber + 1
-
-        :
-
-        undefined;
-
-
-    }
-
-
+      return lastPage.hasNextPage ? lastPage.pageNumber + 1 : undefined;
+    },
   });
 
-
-  const mails =
-    data?.pages.flatMap(
-      page => page.items
-    ) ?? [];
+  const mails = data?.pages.flatMap((page) => page.items) ?? [];
 
   const bottomRef = useInfiniteScroll({
-
-
     onBottom: fetchNextPage,
-
 
     isLoading: isFetchingNextPage,
 
-
     hasMore: !!hasNextPage,
 
-
-    dataLength: mails.length
-
-
+    dataLength: mails.length,
   });
 
   const openMail = (mail: Mail) => {
-
     setSelectedMailData(mail);
 
     triggerMailDetailsStoreShown();
-
   };
 
+  if (isLoading) return <MailListLoader />;
 
-  if (isLoading)
-
-    return <MailListLoader />;
-
-
-
-  if (isError)
-
-    return <MailListError />;
-
-
-
-
-
-
+  if (isError) return <MailListError />;
 
   return (
-
-
-
     <AnimatePresence mode="wait">
-
-
-
-      {
-
-        !isMailDetailsStoreShown
-
-
-
-          ?
-
-
-
-          <motion.div
-
-
-            key="mail-list"
-
-
-            initial={{
-              opacity: 0
-            }}
-
-
-
-            animate={{
-              opacity: 1
-            }}
-
-
-
-            exit={{
-              opacity: 0
-            }}
-
-
-
-            className="
+      {!isMailDetailsStoreShown ? (
+        <motion.div
+          key="mail-list"
+          initial={{
+            opacity: 0,
+          }}
+          animate={{
+            opacity: 1,
+          }}
+          exit={{
+            opacity: 0,
+          }}
+          className="
                     flex
                     flex-col
                     h-full
                     w-full
                     "
+          dir="rtl"
+        >
+          {/* HEADER */}
 
-            dir="ltr"
-
-          >
-
-
-
-
-
-            {/* HEADER */}
-
-
-
-            <div
-
-
-              className="
+          <div
+            className="
                         flex
                         justify-between
                         items-center
@@ -616,95 +309,18 @@ export default function MailList() {
                         px-4
                         py-3
                         "
-
-
-
-
-
-
-
-            >
-
-
-
-
-
-              <div className="
+          >
+            <div
+              className="
                             flex
                             items-center
                             gap-2
-                        ">
+                        "
+            >
+              {/* SORT */}
 
-
-
-
-                {/* Keyboard */}
-
-
-
-                <button
-
-
-                  onClick={() => setKeyboardOpen(true)}
-
-
-                  className="
-                                flex
-                                gap-2
-                                items-center
-                                px-3
-                                py-2
-                                bg-white
-                                border
-                                border-blue-200
-                                rounded-lg
-                                shadow-sm
-                                "
-
-
-                >
-
-
-
-                  <FontAwesomeIcon
-
-                    icon={faKeyboard}
-
-                    className="
-                                    text-blue-600
-                                    "
-
-                  />
-
-
-
-                  <span className="
-                                    text-sm
-                                    text-gray-600
-                                ">
-
-                    لوحة المفاتيح
-
-                  </span>
-
-
-
-                </button>
-
-
-
-
-
-
-
-                {/* SORT */}
-
-
-
-                <div
-
-
-                  className="
+              <div
+                className="
                                 flex
                                 items-center
                                 gap-1
@@ -716,177 +332,84 @@ export default function MailList() {
                                 py-1
                                 shadow-sm
                                 "
-                >
-
-                  <select
-                    value={sortBy}
-                    onChange={(e) =>
-                      setSortBy(
-                        e.target.value as
+              >
+                <select
+                  value={sortBy}
+                  onChange={(e) =>
+                    setSortBy(
+                      e.target.value as
                         | "DistributedDate"
                         | "CorrespondenceTitle"
                         | "DistributorName"
                         | "number"
-                      )
-                    }
-                    className="
+                    )
+                  }
+                  className="
                                     text-sm
                                     bg-transparent
                                     outline-none
                                     text-gray-600
                                     "
-                  >
-                    <option value="DistributedDate">
-                      التاريخ
-                    </option>
+                >
+                  <option value="DistributedDate">التاريخ</option>
 
-                    <option value="CorrespondenceTitle">
-                      العنوان
-                    </option>
+                  <option value="CorrespondenceTitle">العنوان</option>
 
-                    <option value="DistributorName">
-                      المرسل
-                    </option>
+                  <option value="DistributorName">المرسل</option>
 
-                    <option value="number">
-                      الرقم
-                    </option>
+                  <option value="number">الرقم</option>
 
-                    <option value="status">الحالة</option>
-
-                  </select>
-                  <button
-
-
-                    onClick={() =>
-
-
-                      setSortDescending(
-
-                        !sortDescending
-
-                      )
-
-                    }
-
-
-
-                    className="
+                  <option value="status">الحالة</option>
+                </select>
+                <button
+                  onClick={() => setSortDescending(!sortDescending)}
+                  className="
                                     text-blue-600
                                     p-1
                                     "
-
-                  >
-
-
-
-                    <FontAwesomeIcon
-
-                      icon={
-
-                        sortDescending
-
-                          ?
-
-                          faSortAmountDown
-
-                          :
-
-                          faSortAmountUp
-
-                      }
-
-                    />
-
-
-
-                  </button>
-
-
-
-
-
-                </div>
-
-
-
-
-
+                >
+                  <FontAwesomeIcon
+                    icon={sortDescending ? faSortAmountDown : faSortAmountUp}
+                  />
+                </button>
               </div>
+            </div>
 
+            {/* FOLDER TABS */}
 
-
-
-
-              {/* FOLDER TABS */}
-
-
-              <div className="
+            <div
+              className="
                             flex
                             gap-2
                             bg-blue-50
                             rounded-xl
                             p-1
-                        ">
+                        "
+            >
+              <button
+                onClick={() => setFolder("inbox")}
+                className={`
+                                px-4
+                                py-2
+                                rounded-lg
+                                text-sm
+                                transition
 
+                                ${
+                                  folder === "inbox"
+                                    ? "bg-blue-600 text-white"
+                                    : "text-blue-700"
+                                }
 
+                                `}
+              >
+                <FontAwesomeIcon icon={faInbox} className="ml-1" />
+                الوارد
+              </button>
+
+              {role != "User" && (
                 <button
-
-
-                  onClick={() => setFolder("inbox")}
-
-
-
-                  className={`
-                                px-4
-                                py-2
-                                rounded-lg
-                                text-sm
-                                transition
-
-                                ${folder === "inbox"
-
-                      ?
-
-                      "bg-blue-600 text-white"
-
-                      :
-
-                      "text-blue-700"
-
-                    }
-
-                                `}
-
-
-                >
-
-
-                  <FontAwesomeIcon
-
-                    icon={faInbox}
-
-                    className="ml-1"
-
-                  />
-
-
-                  الوارد
-
-
-                </button>
-
-
-
-
-
-                {role != "User" && <button
-
-
                   onClick={() => setFolder("outbox")}
-
-
-
                   className={`
 
                                 px-4
@@ -896,107 +419,36 @@ export default function MailList() {
                                 transition
 
 
-                                ${folder === "outbox"
-
-                      ?
-
-                      "bg-blue-600 text-white"
-
-                      :
-
-                      "text-blue-700"
-
-                    }
+                                ${
+                                  folder === "outbox"
+                                    ? "bg-blue-600 text-white"
+                                    : "text-blue-700"
+                                }
 
 
                                 `}
-
-
                 >
-                  <FontAwesomeIcon
-
-                    icon={faPaperPlane}
-
-                    className="ml-1"
-
-                  />
-
-
-
+                  <FontAwesomeIcon icon={faPaperPlane} className="ml-1" />
                   الصادر
+                </button>
+              )}
+            </div>
 
-
-
-                </button>}
-              </div>
-
-
-
-
-
-
-
-              <h2 className="
+            <h2
+              className="
                             text-blue-700
                             font-semibold
                             text-sm
-                        ">
+                        "
+            >
+              {folder === "inbox" ? "البريد الوارد" : "البريد الصادر"}
+            </h2>
+          </div>
 
+          {/* MAIL LIST */}
 
-                {
-
-                  folder === "inbox"
-
-                    ?
-
-                    "البريد الوارد"
-
-                    :
-
-                    "البريد الصادر"
-
-                }
-
-
-              </h2>
-
-
-
-
-            </div>
-
-
-
-
-
-
-
-            <VirtualKeyboard
-
-
-              open={keyboardOpen}
-
-
-              onClose={() => setKeyboardOpen(false)}
-
-
-            />
-
-
-
-
-
-
-
-
-            {/* MAIL LIST */}
-
-
-
-            <div
-
-
-              className="
+          <div
+            className="
                         flex
                         flex-col
                         gap-2
@@ -1004,164 +456,57 @@ export default function MailList() {
                         flex-1
                         overflow-y-auto
                         "
-
-
-            >
-
-
-
-              {
-
-                mails.map(
-
-                  (mail, index) => (
-
-                    <MailCard
-
-                      key={mail.id}
-
-                      mail={normalizeMail(mail)}
-
-                      index={index}
-
-                      onClick={openMail}
-
-                      onEdit={() => { }}
-
-                      onDelete={() => { }}
-
-                      editable={false}
-                    />
-
-
-                  )
-
-
-                )
-
-
-              }
-
-
-
-
-
-              <div ref={bottomRef} />
-
-
-
-
-
-            </div>
-
-
-
-
-
-          </motion.div>
-
-
-
-
-
-          :
-
-
-
-
-
-          <motion.div
-
-
-
-            key="mail-viewer"
-
-
-
-            initial={{
-
-              opacity: 0,
-
-              x: 40
-
-            }}
-
-
-
-            animate={{
-
-              opacity: 1,
-
-              x: 0
-
-            }}
-
-
-
-            exit={{
-
-              opacity: 0,
-
-              x: -40
-
-            }}
-
-
-
-
-            className="
+          >
+            {mails.map((mail, index) => (
+              <MailCard
+                key={mail.id}
+                mail={normalizeMail(mail)}
+                index={index}
+                onClick={openMail}
+                onEdit={() => {}}
+                onDelete={() => {}}
+                editable={false}
+              />
+            ))}
+
+            <div ref={bottomRef} />
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="mail-viewer"
+          initial={{
+            opacity: 0,
+
+            x: 40,
+          }}
+          animate={{
+            opacity: 1,
+
+            x: 0,
+          }}
+          exit={{
+            opacity: 0,
+
+            x: -40,
+          }}
+          className="
                     p-4
                     w-full
                     "
-
-            dir="ltr"
-
-
-
-          >
-
-
-
-
-            {
-
-
-              selectedMailData &&
-
-
-
-              <MailViewer
-
-
-                data={selectedMailData}
-
-
-
-              />
-
-
-            }
-
-
-
-
-          </motion.div>
-
-
-
-
-
-      }
-
-
-
-
+          dir="rtl"
+        >
+          {selectedMailData && (
+            <MailViewer
+              data={selectedMailData}
+              hideActions={true}
+              onBack={() => {
+                triggerMailDetailsStoreShown();
+              }}
+            />
+          )}
+        </motion.div>
+      )}
     </AnimatePresence>
-
-
-
   );
-
-
-
 }

@@ -1,3 +1,4 @@
+import { Attachment } from "../Attachment";
 export type Mail = {
     id: number;
     number: string;

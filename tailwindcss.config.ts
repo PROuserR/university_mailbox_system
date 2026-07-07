@@ -1,7 +1,19 @@
-module.exports = {
-    content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
-    theme: {
-        extend: {},
-    },
-    plugins: [require('@tailwindcss/typography')],
+// tailwind.config.ts
+
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/(dashboard)/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/auth/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
 };
+
+export default config;
