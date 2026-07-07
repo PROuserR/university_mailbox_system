@@ -1,16 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/set-state-in-effect */
+// app/(dashboard)/approvals/page.tsx
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { apiWrapper } from "@/utils/apiClient";
+import { apiWrapper, ApiResult } from "@/utils/apiClient";
 import { toast } from "react-hot-toast";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import {
     faClipboardCheck,
     faClock,
     faSearch,
-    faFilter,
     faRotate,
     faUsers,
     faFileLines,
@@ -19,2064 +22,660 @@ import {
     faXmark,
     faEye,
     faBolt,
+    faSpinner,
+    faChevronDown,
+    faChevronUp,
+    faUserCheck,
+    faUserXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
+// ==============================
+// TYPES - مطابقة للـ DTOs
+// ==============================
 
 interface Attachment {
-
     id: number;
-
     fileName: string;
-
     filePath: string;
-
     fileSize: number;
-
     mimeType: string;
-
     isPrimary: boolean;
-
+    uploadedAt: string;
+    uploadedBy: string;
+    downloadUrl: string | null;
 }
 
-
-interface Distribution {
-
-    id: number;
-
-    distributedDate: string;
-
-    status: string;
-
+interface PendingReceiver {
+    distributionId: number;
     receiverId: number;
-
     receiverName: string;
-
-    receiverRole: string;
-
     receiverEmail: string;
-
-    isAutoDistributed?: boolean;
-
+    receiverRole: string | null;
+    notes: string | null;
+    isAutoDistributed: boolean;
+    distributedDate: string;
+    rejectionReason: string | null;
 }
-
 
 interface PendingCorrespondence {
-
     correspondenceId: number;
-
     correspondenceNumber: string;
-
     correspondenceTitle: string;
-
     correspondenceContent: string;
-
-    senderEntity: string;
-
-    documentType: string;
-
     mainType: string;
-
     isProfessional: boolean;
-
-    issuedDate: string;
-
-    receivedDate: string;
-
+    documentType: string | null;
+    senderEntity: string | null;
+    senderReference: string | null;
+    issuedDate: string | null;
+    receivedDate: string | null;
+    sentDate: string | null;
+    distributedDate: string;
+    distributedBy: string;
     distributorName: string;
-
     attachments: Attachment[];
-
-    pendingReceivers: Distribution[];
-
-
+    pendingReceivers: PendingReceiver[];
 }
-
 
 interface GroupedResponse {
-
     items: PendingCorrespondence[];
-
 }
 
+// ==============================
+// COMPONENT
+// ==============================
 
-interface ApiResponse<T> {
-
-    isSuccess: boolean;
-
-    data: T;
-
-    message: string;
-
-}
-
-
-
-export default function ApprovalCenterPage() {
-
-
+export default function ApprovalsPage() {
     const [loading, setLoading] = useState(true);
-
-
+    const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState("");
+    const [filter, setFilter] = useState<"all" | "incoming" | "outgoing">("all");
+    const [items, setItems] = useState<PendingCorrespondence[]>([]);
+    const [selected, setSelected] = useState<number[]>([]);
+    const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+    const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
 
-
-
-    const [filter, setFilter] =
-        useState<
-            "all" | "incoming" | "outgoing"
-        >("all");
-
-
-
-    // Stores distribution IDs
-    const [selected, setSelected] =
-        useState<number[]>([]);
-
-
-
-    const [items, setItems] =
-        useState<PendingCorrespondence[]>([]);
-
-
+    // ==============================
+    // LOAD DATA
+    // ==============================
 
     const loadData = async () => {
         try {
             setLoading(true);
-            const response =
-                await apiWrapper.get<ApiResponse<GroupedResponse>>(
-                    "/Distributions/pending-approval/grouped"
-                );
-
-
-
-            if (response.success) {
-                if (response.data)
-                    setItems(
-                        response.data.data.items ?? []
-                    );
-            }
-            else {
-
-                if (response.data)
-                    toast.error(
-                        response.data.message ||
-                        "فشل تحميل البيانات"
-                    );
-
-
-            }
-
-
-
-        }
-        catch {
-
-
-            toast.error(
-                "فشل تحميل التوزيعات"
+            const response = await apiWrapper.get<ApiResult<GroupedResponse>>(
+                "/Distributions/pending-approval/grouped"
             );
 
-
-        }
-        finally {
-
-
+            if (response.data?.isSuccess) {
+                setItems(response.data.data?.items ?? []);
+            } else {
+                toast.error(response.data?.message || "فشل تحميل البيانات");
+            }
+        } catch {
+            toast.error("فشل تحميل التوزيعات");
+        } finally {
             setLoading(false);
-
-
         }
-
-
     };
 
+    useEffect(() => {
+        loadData();
+    }, []);
 
+    // ==============================
+    // STATISTICS
+    // ==============================
 
-    const approveDistribution = async (
-        id: number
-    ) => {
+    const statistics = useMemo(() => {
+        const totalReceivers = items.reduce(
+            (sum, item) => sum + item.pendingReceivers.length,
+            0
+        );
+        const autoDistributed = items.reduce(
+            (sum, item) =>
+                sum + item.pendingReceivers.filter((r) => r.isAutoDistributed).length,
+            0
+        );
 
+        return {
+            totalCorrespondences: items.length,
+            totalReceivers,
+            autoDistributed,
+            manualDistributed: totalReceivers - autoDistributed,
+        };
+    }, [items]);
 
-        if (
-            !window.confirm(
-                "اعتماد هذا التوزيع؟"
-            )
-        )
-            return;
+    // ==============================
+    // FILTER
+    // ==============================
 
+    const filteredItems = useMemo(() => {
+        const searchValue = search.toLowerCase();
 
+        return items.filter((item) => {
+            const matchesSearch =
+                item.correspondenceTitle?.toLowerCase().includes(searchValue) ||
+                item.correspondenceNumber?.toLowerCase().includes(searchValue) ||
+                item.senderEntity?.toLowerCase().includes(searchValue);
 
+            const matchesFilter =
+                filter === "all" ||
+                item.mainType?.toLowerCase().includes(filter);
+
+            return matchesSearch && matchesFilter;
+        });
+    }, [items, search, filter]);
+
+    // ==============================
+    // ACTIONS
+    // ==============================
+
+    const toggleCard = (id: number) => {
+        setExpandedCards((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
+
+    const handleApprove = async (distributionId: number) => {
+        if (!window.confirm("اعتماد هذا التوزيع؟")) return;
+
+        setProcessingIds((prev) => new Set(prev).add(distributionId));
         try {
-
-
-            await apiWrapper.post(
-                `/Distributions/${id}/approve`
-            );
-
-
-
-            toast.success(
-                "تم اعتماد التوزيع"
-            );
-
-
-
+            await apiWrapper.post(`/Distributions/${distributionId}/approve`);
+            toast.success("تم اعتماد التوزيع");
             await loadData();
-
-
-
+        } catch {
+            toast.error("فشل اعتماد التوزيع");
+        } finally {
+            setProcessingIds((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(distributionId);
+                return newSet;
+            });
         }
-        catch {
-
-
-            toast.error(
-                "فشل اعتماد التوزيع"
-            );
-
-
-        }
-
-
     };
 
+    const handleReject = async (distributionId: number) => {
+        if (!window.confirm("رفض هذا التوزيع؟")) return;
 
-
-    const rejectDistribution = async (
-        id: number
-    ) => {
-
-
-        if (
-            !window.confirm(
-                "رفض هذا التوزيع؟"
-            )
-        )
-            return;
-
-
-
+        setProcessingIds((prev) => new Set(prev).add(distributionId));
         try {
-
-
-            await apiWrapper.post(
-                `/Distributions/${id}/reject`
-            );
-
-
-
-            toast.success(
-                "تم رفض التوزيع"
-            );
-
-
-
+            await apiWrapper.post(`/Distributions/${distributionId}/reject`);
+            toast.success("تم رفض التوزيع");
             await loadData();
-
-
-
+        } catch {
+            toast.error("فشل رفض التوزيع");
+        } finally {
+            setProcessingIds((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(distributionId);
+                return newSet;
+            });
         }
-        catch {
-
-
-            toast.error(
-                "فشل رفض التوزيع"
-            );
-
-
-        }
-
-
     };
 
-
-
-    const approveAll = async (
-        correspondenceId: number
-    ) => {
-
-
-
-        if (
-            !window.confirm(
-                "اعتماد جميع المستلمين؟"
-            )
-        )
-            return;
-
-
+    const handleApproveAll = async (correspondenceId: number) => {
+        if (!window.confirm("اعتماد جميع المستلمين؟")) return;
 
         try {
-
-
             await apiWrapper.post(
                 `/Distributions/correspondence/${correspondenceId}/approve-all`
             );
-
-
-
-            toast.success(
-                "تم اعتماد جميع المستلمين"
-            );
-
-
-
+            toast.success("تم اعتماد جميع المستلمين");
             await loadData();
-
-
-
+        } catch {
+            toast.error("فشل العملية");
         }
-        catch {
-
-
-            toast.error(
-                "فشل العملية"
-            );
-
-
-        }
-
-
     };
 
-
-
-    const rejectAll = async (
-        correspondenceId: number
-    ) => {
-
-
-
-        if (
-            !window.confirm(
-                "رفض جميع المستلمين؟"
-            )
-        )
-            return;
-
-
+    const handleRejectAll = async (correspondenceId: number) => {
+        if (!window.confirm("رفض جميع المستلمين؟")) return;
 
         try {
-
-
             await apiWrapper.post(
                 `/Distributions/correspondence/${correspondenceId}/reject-all`
             );
-
-
-
-            toast.success(
-                "تم رفض جميع المستلمين"
-            );
-
-
-
+            toast.success("تم رفض جميع المستلمين");
             await loadData();
-
-
-
+        } catch {
+            toast.error("فشل العملية");
         }
-        catch {
-
-
-            toast.error(
-                "فشل العملية"
-            );
-
-
-        }
-
-
     };
 
-
-
-    const approveBatch = async () => {
-
-
-
-        if (
-            selected.length === 0
-        )
-            return;
-
-
-
-        if (
-            !window.confirm(
-                `اعتماد ${selected.length} توزيع؟`
-            )
-        )
-            return;
-
-
+    const handleBatchApprove = async () => {
+        if (selected.length === 0) return;
+        if (!window.confirm(`اعتماد ${selected.length} توزيع؟`)) return;
 
         try {
-
-
-            await apiWrapper.post(
-                "/Distributions/batch/approve",
-                {
-                    distributionIds: selected,
-                }
-            );
-
-
-
-            toast.success(
-                "تم اعتماد المحدد"
-            );
-
-
-
+            await apiWrapper.post("/Distributions/batch/approve", {
+                distributionIds: selected,
+            });
+            toast.success("تم اعتماد المحدد");
             setSelected([]);
-
-
-
             await loadData();
-
-
-
+        } catch {
+            toast.error("فشل العملية");
         }
-        catch {
-
-
-            toast.error(
-                "فشل العملية"
-            );
-
-
-        }
-
-
     };
 
-
-
-    const rejectBatch = async () => {
-
-
-
-        if (
-            selected.length === 0
-        )
-            return;
-
-
-
-        if (
-            !window.confirm(
-                `رفض ${selected.length} توزيع؟`
-            )
-        )
-            return;
-
-
+    const handleBatchReject = async () => {
+        if (selected.length === 0) return;
+        if (!window.confirm(`رفض ${selected.length} توزيع؟`)) return;
 
         try {
-
-
-            await apiWrapper.post(
-                "/Distributions/batch/reject",
-                {
-                    distributionIds: selected,
-                }
-            );
-
-
-
-            toast.success(
-                "تم رفض المحدد"
-            );
-
-
-
+            await apiWrapper.post("/Distributions/batch/reject", {
+                distributionIds: selected,
+            });
+            toast.success("تم رفض المحدد");
             setSelected([]);
-
-
-
             await loadData();
-
-
-
+        } catch {
+            toast.error("فشل العملية");
         }
-        catch {
-
-
-            toast.error(
-                "فشل العملية"
-            );
-
-
-        }
-
-
     };
 
+    const toggleSelectAll = (correspondenceId: number) => {
+        const item = items.find((i) => i.correspondenceId === correspondenceId);
+        if (!item) return;
 
+        const ids = item.pendingReceivers.map((r) => r.distributionId);
+        const allSelected = ids.every((id) => selected.includes(id));
 
-    useEffect(() => {
+        if (allSelected) {
+            setSelected((prev) => prev.filter((id) => !ids.includes(id)));
+        } else {
+            setSelected((prev) => Array.from(new Set([...prev, ...ids])));
+        }
+    };
 
+    // ==============================
+    // HELPERS
+    // ==============================
 
-        loadData();
+    const getMainTypeLabel = (type: string) => {
+        switch (type?.toLowerCase()) {
+            case "incoming": return "وارد";
+            case "outgoing": return "صادر";
+            case "internal": return "داخلي";
+            default: return type || "غير محدد";
+        }
+    };
 
+    const getMainTypeColor = (type: string) => {
+        switch (type?.toLowerCase()) {
+            case "incoming": return "bg-emerald-100 text-emerald-700";
+            case "outgoing": return "bg-blue-100 text-blue-700";
+            case "internal": return "bg-purple-100 text-purple-700";
+            default: return "bg-gray-100 text-gray-700";
+        }
+    };
 
-    }, []);
+    const formatDate = (date: string | null) => {
+        if (!date) return "—";
+        return new Date(date).toLocaleDateString("ar-SA");
+    };
 
+    const isAllSelected = (correspondenceId: number) => {
+        const item = items.find((i) => i.correspondenceId === correspondenceId);
+        if (!item) return false;
+        const ids = item.pendingReceivers.map((r) => r.distributionId);
+        return ids.length > 0 && ids.every((id) => selected.includes(id));
+    };
 
-
-
-    const filtered =
-        useMemo(() => {
-
-
-            const searchValue =
-                search.toLowerCase();
-
-
-
-            return items.filter(
-                (item) => {
-
-
-
-                    const matchesSearch =
-
-                        item.correspondenceTitle
-                            ?.toLowerCase()
-                            .includes(searchValue)
-
-                        ||
-
-                        item.correspondenceNumber
-                            ?.toLowerCase()
-                            .includes(searchValue)
-
-                        ||
-
-                        item.senderEntity
-                            ?.toLowerCase()
-                            .includes(searchValue);
-
-
-
-                    const matchesFilter =
-
-                        filter === "all"
-
-                        ||
-
-                        item.mainType
-                            ?.toLowerCase()
-                            .includes(filter);
-
-
-
-                    return (
-                        matchesSearch &&
-                        matchesFilter
-                    );
-
-
-                }
-            );
-
-
-        }, [items, search, filter]);
-
-
-
-
-    const totalReceivers =
-        useMemo(() => {
-
-
-            return items.reduce(
-                (sum, item) =>
-                    sum +
-                    item.pendingReceivers.length,
-                0
-            );
-
-
-        }, [items]);
-
-
-
-
-    const autoDistributed =
-        useMemo(() => {
-
-
-            return items.reduce(
-                (sum, item) =>
-                    sum +
-                    item.pendingReceivers.filter(
-                        receiver =>
-                            receiver.isAutoDistributed
-                    ).length,
-                0
-            );
-
-
-        }, [items]);
-
-
-
-    const manualDistributed =
-        totalReceivers -
-        autoDistributed;
-
-
+    // ==============================
+    // RENDER
+    // ==============================
 
     if (loading) {
-
         return (
-            <div
-                dir="rtl"
-                className="flex min-h-screen items-center justify-center text-xl font-bold"
-            >
-                جاري تحميل مركز الاعتماد...
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <FontAwesomeIcon icon={faSpinner} spin className="text-3xl text-blue-600" />
+                <span className="mr-3 text-blue-600 text-sm">جاري تحميل مركز الاعتماد...</span>
             </div>
         );
-
-
     }
+
     return (
-        <div
-            dir="rtl"
-            className="
-                min-h-screen
-                bg-gradient-to-br
-                from-blue-50
-                via-yellow-50
-                to-white
-                p-8
-            "
-        >
-
-            <div
-                className="
-                    w-full
-                    space-y-8
-                "
-            >
-
-
-                {/* HERO */}
-
-                <motion.div
-
-                    initial={{
-                        opacity: 0,
-                        y: -30,
-                    }}
-
-                    animate={{
-                        opacity: 1,
-                        y: 0,
-                    }}
-
-                    className="
-                        rounded-[32px]
-                        border
-                        border-blue-200/70
-                        bg-white/90
-                        p-8
-                        shadow-2xl
-                        backdrop-blur-sm
-                    "
-
-                >
-
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            justify-between
-                        "
-                    >
-
-
-                        <div
-                            className="
-                                flex
-                                items-center
-                                gap-4
-                            "
-                        >
-
-                            <div
-                                className="
-                                    flex
-                                    h-16
-                                    w-16
-                                    items-center
-                                    justify-center
-                                    rounded-3xl
-                                    bg-gradient-to-br
-                                    from-blue-500
-                                    to-blue-400
-                                    text-white
-                                    shadow-lg
-                                "
-                            >
-
-                                <FontAwesomeIcon
-                                    icon={faClipboardCheck}
-                                    className="text-2xl"
-                                />
-
-                            </div>
-
-
-                            <div>
-
-
-                                <h1
-                                    className="
-                                        text-4xl
-                                        font-black
-                                        text-slate-800
-                                    "
-                                >
-
-                                    مركز اعتماد التوزيعات
-
-                                </h1>
-
-
-                                <p
-                                    className="
-                                        mt-2
-                                        text-slate-500
-                                    "
-                                >
-
-                                    مراجعة واعتماد أو رفض التوزيعات
-                                    المعلقة بطريقة احترافية.
-
-                                </p>
-
-
-                            </div>
-
-
-                        </div>
-
-
-
-                        <button
-
-                            onClick={loadData}
-
-                            className="
-                                rounded-2xl
-                                bg-yellow-400
-                                px-5
-                                py-3
-                                font-bold
-                                shadow-lg
-                                transition
-                                hover:scale-105
-                            "
-
-                        >
-
-                            <FontAwesomeIcon
-                                icon={faRotate}
-                                className="ml-2"
-                            />
-
-                            تحديث
-
-                        </button>
-
-
+        <div dir="rtl" className="min-h-screen bg-slate-50 p-3 sm:p-4">
+            {/* ===== HEADER ===== */}
+            <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-3 sm:p-4 mb-3 sm:mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-base sm:text-lg flex-shrink-0">
+                        <FontAwesomeIcon icon={faClipboardCheck} />
                     </div>
-
-
-                </motion.div>
-
-
-
-
-                {/* STATS */}
-
-
-                <div
-                    className="
-                        grid
-                        gap-5
-                        lg:grid-cols-4
-                    "
-                >
-
-
-                    <StatCard
-                        title="التوزيعات المعلقة"
-                        value={totalReceivers}
-                        icon={faClock}
-                        color="blue"
-                    />
-
-
-                    <StatCard
-                        title="عدد المراسلات"
-                        value={items.length}
-                        icon={faFileLines}
-                        color="yellow"
-                    />
-
-
-                    <StatCard
-                        title="توزيع تلقائي"
-                        value={autoDistributed}
-                        icon={faBolt}
-                        color="emerald"
-                    />
-
-
-                    <StatCard
-                        title="توزيع يدوي"
-                        value={manualDistributed}
-                        icon={faUsers}
-                        color="purple"
-                    />
-
-
+                    <div>
+                        <h1 className="text-base sm:text-lg font-bold text-slate-800">مركز اعتماد التوزيعات</h1>
+                        <p className="text-[11px] sm:text-xs text-slate-500">مراجعة واعتماد أو رفض التوزيعات المعلقة</p>
+                    </div>
                 </div>
 
-
-
-
-                {/* TOOLBAR */}
-
-
-                <div
-                    className="
-                        rounded-3xl
-                        border
-                        border-blue-100
-                        bg-white/90
-                        p-6
-                        shadow-xl
-                    "
+                <button
+                    onClick={() => { setRefreshing(true); loadData().finally(() => setRefreshing(false)); }}
+                    disabled={refreshing}
+                    className="bg-white border border-blue-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50 transition disabled:opacity-50 flex items-center gap-1.5"
                 >
+                    <FontAwesomeIcon icon={faRotate} className={refreshing ? "animate-spin" : ""} />
+                    تحديث
+                </button>
+            </div>
 
+            {/* ===== STATS ===== */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm bg-white rounded-2xl border border-blue-100 p-2.5 sm:p-3 shadow-sm">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-slate-400 text-[10px] sm:text-xs">📊</span>
+                    <span className="text-slate-600 text-[11px] sm:text-xs">الإحصائيات:</span>
+                </div>
+                <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+                    <span className="text-slate-500">التوزيعات المعلقة:</span>
+                    <span className="font-semibold text-slate-800">{statistics.totalReceivers}</span>
+                </div>
+                <div className="w-px h-3 sm:h-4 bg-slate-200" />
+                <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+                    <span className="text-slate-500">المراسلات:</span>
+                    <span className="font-semibold text-slate-800">{statistics.totalCorrespondences}</span>
+                </div>
+                <div className="w-px h-3 sm:h-4 bg-slate-200" />
+                <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+                    <span className="text-emerald-500 text-[8px] sm:text-[10px]">●</span>
+                    <span className="text-slate-500">توزيع تلقائي:</span>
+                    <span className="font-semibold text-emerald-600">{statistics.autoDistributed}</span>
+                </div>
+                <div className="w-px h-3 sm:h-4 bg-slate-200" />
+                <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+                    <span className="text-purple-500 text-[8px] sm:text-[10px]">●</span>
+                    <span className="text-slate-500">توزيع يدوي:</span>
+                    <span className="font-semibold text-purple-600">{statistics.manualDistributed}</span>
+                </div>
+            </div>
 
-                    <div
-                        className="
-                            flex
-                            flex-col
-                            gap-5
-                            lg:flex-row
-                            lg:items-center
-                            lg:justify-between
-                        "
-                    >
-
-
-
-                        <div
-                            className="
-                                relative
-                                w-full
-                                max-w-lg
-                            "
-                        >
-
-
-                            <FontAwesomeIcon
-
-                                icon={faSearch}
-
-                                className="
-                                    absolute
-                                    right-4
-                                    top-1/2
-                                    -translate-y-1/2
-                                    text-slate-400
-                                "
-
-                            />
-
-
-
-                            <input
-
-                                value={search}
-
-                                onChange={(e) =>
-                                    setSearch(
-                                        e.target.value
-                                    )
-                                }
-
-                                placeholder="
-                                    ابحث برقم أو عنوان المراسلة...
-                                "
-
-                                className="
-                                    w-full
-                                    rounded-2xl
-                                    border
-                                    border-blue-200
-                                    bg-white
-                                    p-3
-                                    pr-10
-                                    outline-none
-                                    focus:border-blue-400
-                                    focus:ring-4
-                                    focus:ring-blue-100
-                                "
-
-                            />
-
-
-                        </div>
-
-
-
-
-                        <div
-                            className="
-                                flex
-                                flex-wrap
-                                gap-3
-                            "
-                        >
-
-
-                            {[
-                                {
-                                    key: "all",
-                                    label: "الكل",
-                                },
-                                {
-                                    key: "incoming",
-                                    label: "الوارد",
-                                },
-                                {
-                                    key: "outgoing",
-                                    label: "الصادر",
-                                },
-                            ].map((item) => (
-
-
-                                <button
-
-                                    key={item.key}
-
-                                    onClick={() =>
-                                        setFilter(
-                                            item.key as
-                                            "all" |
-                                            "incoming" |
-                                            "outgoing"
-                                        )
-                                    }
-
-
-                                    className={`
-
-                                        rounded-2xl
-                                        px-5
-                                        py-3
-                                        font-semibold
-                                        transition-all
-
-                                        ${filter === item.key
-
-                                            ?
-
-                                            `bg-gradient-to-r
-                                    from-blue-500
-                                    to-blue-400
-                                    text-white
-                                    shadow-lg
-                                            `
-
-                                            :
-
-                                            `
-                            bg-blue-50
-                            text-slate-700
-                            hover:bg-yellow-100
-                            `
-
-                                        }
-
-                                    `}
-
-                                >
-
-                                    <FontAwesomeIcon
-                                        icon={faFilter}
-                                        className="ml-2"
-                                    />
-
-
-                                    {item.label}
-
-
-                                </button>
-
-
-                            ))}
-
-
-                        </div>
-
-
-
+            {/* ===== TOOLBAR ===== */}
+            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-3 sm:p-4 mb-3 sm:mb-4">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-between">
+                    <div className="relative flex-1">
+                        <FontAwesomeIcon
+                            icon={faSearch}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px] sm:text-sm"
+                        />
+                        <input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="ابحث برقم أو عنوان المراسلة..."
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 sm:py-2 pr-8 sm:pr-10 pl-3 text-xs sm:text-sm outline-none focus:border-blue-400"
+                        />
                     </div>
 
-
+                    <div className="flex gap-1.5 flex-wrap">
+                        {[
+                            { key: "all", label: "الكل" },
+                            { key: "incoming", label: "الوارد" },
+                            { key: "outgoing", label: "الصادر" },
+                        ].map((item) => (
+                            <button
+                                key={item.key}
+                                onClick={() => setFilter(item.key as any)}
+                                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-medium transition ${
+                                    filter === item.key
+                                        ? "bg-blue-500 text-white"
+                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                }`}
+                            >
+                                {item.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
+            </div>
 
-
-
-
-
-                {/* BATCH ACTIONS */}
-
-
-                {
-                    selected.length > 0 && (
-
-                        <motion.div
-
-                            initial={{
-                                opacity: 0,
-                                y: -20,
-                            }}
-
-                            animate={{
-                                opacity: 1,
-                                y: 0,
-                            }}
-
-                            className="
-                                rounded-3xl
-                                border
-                                border-yellow-200
-                                bg-yellow-50
-                                p-5
-                                shadow-lg
-                            "
-
-                        >
-
-
-                            <div
-                                className="
-                                    flex
-                                    items-center
-                                    justify-between
-                                "
+            {/* ===== BATCH ACTIONS ===== */}
+            <AnimatePresence>
+                {selected.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="bg-yellow-50 border border-yellow-200 rounded-2xl p-3 sm:p-4 mb-3 sm:mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
+                    >
+                        <span className="text-sm font-medium text-slate-700">
+                            تم تحديد {selected.length} توزيع
+                        </span>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleBatchApprove}
+                                className="px-4 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition"
                             >
+                                <FontAwesomeIcon icon={faCheck} className="ml-1" />
+                                اعتماد المحدد
+                            </button>
+                            <button
+                                onClick={handleBatchReject}
+                                className="px-4 py-1.5 rounded-xl bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition"
+                            >
+                                <FontAwesomeIcon icon={faXmark} className="ml-1" />
+                                رفض المحدد
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
+            {/* ===== CARDS ===== */}
+            <div className="space-y-3">
+                {filteredItems.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-dashed border-blue-200 py-12 text-center shadow-sm">
+                        <FontAwesomeIcon icon={faClipboardCheck} className="text-4xl text-blue-300 mb-3" />
+                        <h2 className="text-lg font-bold text-slate-600">لا توجد توزيعات بانتظار الاعتماد</h2>
+                    </div>
+                ) : (
+                    filteredItems.map((item) => {
+                        const isExpanded = expandedCards.has(item.correspondenceId);
+                        const allSelected = isAllSelected(item.correspondenceId);
 
-                                <h3
-                                    className="
-                                        font-bold
-                                        text-slate-700
-                                    "
-                                >
-
-                                    تم تحديد {selected.length} توزيع
-
-                                </h3>
-
-
-
+                        return (
+                            <motion.div
+                                key={item.correspondenceId}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden"
+                            >
+                                {/* ===== CARD HEADER ===== */}
                                 <div
-                                    className="
-                                        flex
-                                        gap-3
-                                    "
+                                    className="px-4 py-3 bg-gradient-to-r from-blue-50 to-white cursor-pointer hover:bg-blue-100/50 transition flex items-center justify-between"
+                                    onClick={() => toggleCard(item.correspondenceId)}
                                 >
-
-
-                                    <button
-
-                                        onClick={approveBatch}
-
-                                        className="
-                                            rounded-2xl
-                                            bg-emerald-500
-                                            px-5
-                                            py-3
-                                            text-white
-                                            shadow-lg
-                                        "
-
-                                    >
-
-                                        <FontAwesomeIcon
-                                            icon={faCheck}
-                                            className="ml-2"
-                                        />
-
-                                        اعتماد المحدد
-
-                                    </button>
-
-
-
-                                    <button
-
-                                        onClick={rejectBatch}
-
-                                        className="
-                                            rounded-2xl
-                                            bg-red-500
-                                            px-5
-                                            py-3
-                                            text-white
-                                            shadow-lg
-                                        "
-
-                                    >
-
-                                        <FontAwesomeIcon
-                                            icon={faXmark}
-                                            className="ml-2"
-                                        />
-
-                                        رفض المحدد
-
-                                    </button>
-
-
-
-                                </div>
-
-
-                            </div>
-
-
-                        </motion.div>
-
-
-                    )
-                }
-
-
-
-
-                {/* CARDS START */}
-
-                <div className="grid gap-6">
-
-
-                    {
-                        filtered.length === 0 && (
-
-                            <div
-                                className="
-                                    rounded-3xl
-                                    border
-                                    border-dashed
-                                    border-blue-200
-                                    bg-white
-                                    py-20
-                                    text-center
-                                    shadow-lg
-                                "
-                            >
-
-                                <FontAwesomeIcon
-                                    icon={faClipboardCheck}
-                                    className="
-                                        mb-4
-                                        text-5xl
-                                        text-blue-300
-                                    "
-                                />
-
-
-                                <h2
-                                    className="
-                                        text-2xl
-                                        font-bold
-                                    "
-                                >
-
-                                    لا توجد توزيعات بانتظار الاعتماد
-
-                                </h2>
-
-
-                            </div>
-
-                        )
-                    }
-                    {filtered.map((item) => (
-
-                        <motion.div
-
-                            key={item.correspondenceId}
-
-                            whileHover={{
-                                y: -4,
-                            }}
-
-                            className="
-                                overflow-hidden
-                                rounded-[30px]
-                                border
-                                border-blue-100
-                                bg-white/95
-                                shadow-xl
-                            "
-
-                        >
-
-
-                            {/* HEADER */}
-
-                            <div
-                                className="
-                                    bg-gradient-to-r
-                                    from-blue-600
-                                    via-blue-500
-                                    to-yellow-400
-                                    p-6
-                                    text-white
-                                "
-                            >
-
-
-                                <div
-                                    className="
-                                        flex
-                                        items-start
-                                        justify-between
-                                    "
-                                >
-
-
-                                    <div>
-
-
-                                        <h2
-                                            className="
-                                                text-2xl
-                                                font-bold
-                                            "
-                                        >
-
-                                            {item.correspondenceTitle}
-
-                                        </h2>
-
-
-                                        <p className="mt-2">
-
-                                            رقم المراسلة:
-                                            {" "}
-                                            {item.correspondenceNumber}
-
-                                        </p>
-
-
-                                    </div>
-
-
-
-                                    <div>
-
-                                        <input
-
-                                            type="checkbox"
-
-                                            checked={
-                                                item.pendingReceivers.length > 0 &&
-                                                item.pendingReceivers.every(
-                                                    receiver =>
-                                                        selected.includes(
-                                                            receiver.receiverId
-                                                        )
-                                                )
-                                            }
-
-
-                                            onChange={(e) => {
-
-
-                                                const ids =
-                                                    item.pendingReceivers.map(
-                                                        receiver =>
-                                                            receiver.receiverId
-                                                    );
-
-
-
-                                                if (e.target.checked) {
-
-
-                                                    setSelected(
-                                                        Array.from(
-                                                            new Set(
-                                                                [
-                                                                    ...selected,
-                                                                    ...ids
-                                                                ]
-                                                            )
-                                                        )
-                                                    );
-
-
-                                                }
-                                                else {
-
-
-                                                    setSelected(
-                                                        selected.filter(
-                                                            id =>
-                                                                !ids.includes(id)
-                                                        )
-                                                    );
-
-
-                                                }
-
-
-                                            }}
-
-
-                                            className="h-6 w-6"
-
-                                        />
-
-
-                                    </div>
-
-
-                                </div>
-
-
-                            </div>
-
-
-
-
-                            {/* BODY */}
-
-
-                            <div
-                                className="
-                                    grid
-                                    gap-8
-                                    p-8
-                                    lg:grid-cols-3
-                                "
-                            >
-
-
-
-                                {/* INFORMATION */}
-
-
-                                <div>
-
-
-                                    <h3
-                                        className="
-                                            mb-4
-                                            font-bold
-                                            text-slate-700
-                                        "
-                                    >
-
-                                        معلومات المراسلة
-
-                                    </h3>
-
-
-
-                                    <div className="space-y-3">
-
-
-                                        <InfoRow
-
-                                            label="الجهة المرسلة"
-
-                                            value={
-                                                item.senderEntity
-                                            }
-
-                                        />
-
-
-                                        <InfoRow
-
-                                            label="نوع الوثيقة"
-
-                                            value={
-                                                item.documentType
-                                            }
-
-                                        />
-
-
-                                        <InfoRow
-
-                                            label="نوع المراسلة"
-
-                                            value={
-                                                item.mainType
-                                            }
-
-                                        />
-
-
-                                        <InfoRow
-
-                                            label="الموزع"
-
-                                            value={
-                                                item.distributorName
-                                            }
-
-                                        />
-
-
-                                    </div>
-
-
-                                </div>
-
-
-
-
-
-                                {/* RECEIVERS */}
-
-
-                                <div>
-
-
-                                    <h3
-                                        className="
-                                            mb-4
-                                            font-bold
-                                        "
-                                    >
-
-                                        المستلمون
-
-                                    </h3>
-
-
-
-                                    <div className="space-y-3">
-
-
-                                        {
-                                            item.pendingReceivers.map(
-                                                receiver => (
-
-                                                    <div
-                                                        key={
-                                                            receiver.receiverId
-                                                        }
-
-                                                        className="
-                                                            flex
-                                                            items-center
-                                                            justify-between
-                                                            rounded-2xl
-                                                            bg-blue-50
-                                                            p-3
-                                                        "
-
-                                                    >
-
-
-                                                        <div>
-
-
-                                                            <h4 className="font-semibold">
-
-                                                                {
-                                                                    receiver.receiverName
-                                                                }
-
-                                                            </h4>
-
-
-                                                            <p
-                                                                className="
-                                                                    text-xs
-                                                                    text-slate-500
-                                                                "
-                                                            >
-
-                                                                {
-                                                                    receiver.receiverRole
-                                                                }
-
-                                                            </p>
-
-
-                                                        </div>
-
-
-
-                                                        <button
-
-                                                            className="
-                                                                rounded-xl
-                                                                bg-white
-                                                                p-3
-                                                                shadow
-                                                            "
-
-                                                        >
-
-                                                            <FontAwesomeIcon
-                                                                icon={faEye}
-                                                            />
-
-
-                                                        </button>
-
-
-
-                                                    </div>
-
-
-                                                )
-                                            )
-                                        }
-
-
-                                    </div>
-
-
-                                </div>
-
-
-
-
-
-
-                                {/* ACTIONS */}
-
-
-                                <div>
-
-
-                                    <h3
-                                        className="
-                                            mb-4
-                                            font-bold
-                                            text-slate-700
-                                        "
-                                    >
-
-                                        إجراءات الاعتماد
-
-                                    </h3>
-
-
-
-                                    <div
-                                        className="
-                                            rounded-2xl
-                                            bg-slate-50
-                                            p-4
-                                        "
-                                    >
-
-
-                                        <div
-                                            className="
-                                                mb-3
-                                                flex
-                                                items-center
-                                                gap-2
-                                            "
-                                        >
-
-                                            <FontAwesomeIcon
-                                                icon={faPaperclip}
-                                            />
-
-                                            <span className="font-semibold">
-
-                                                المرفقات
-
-                                            </span>
-
-
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h3 className="text-sm font-bold text-slate-800 truncate">
+                                                {item.correspondenceTitle}
+                                            </h3>
+                                            <span className="text-xs text-slate-400">#{item.correspondenceNumber}</span>
                                         </div>
-
-
-
-                                        {
-
-                                            item.attachments.length === 0
-
-                                                ?
-
-                                                <p className="text-sm text-slate-400">
-
-                                                    لا توجد مرفقات
-
-                                                </p>
-
-                                                :
-
-                                                item.attachments.map(
-                                                    file => (
-
-                                                        <div
-
-                                                            key={
-                                                                file.id
-                                                            }
-
-                                                            className="
-                                                            rounded-xl
-                                                            bg-white
-                                                            p-3
-                                                            mb-2
-                                                        "
-
-                                                        >
-
-                                                            <FontAwesomeIcon
-                                                                icon={faPaperclip}
-                                                                className="ml-2"
-                                                            />
-
-                                                            {file.fileName}
-
-                                                        </div>
-
-                                                    )
-                                                )
-
-                                        }
-
-
+                                        <div className="flex items-center gap-2 text-[10px] sm:text-xs text-slate-500 mt-0.5 flex-wrap">
+                                            <span>الموزع: {item.distributorName}</span>
+                                            <span className="text-slate-300">|</span>
+                                            <span className={`px-1.5 py-0.5 rounded-full ${getMainTypeColor(item.mainType)}`}>
+                                                {getMainTypeLabel(item.mainType)}
+                                            </span>
+                                            {item.isProfessional && (
+                                                <span className="px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700">مهني</span>
+                                            )}
+                                            <span className="text-slate-400 text-[10px]">{formatDate(item.distributedDate)}</span>
+                                        </div>
                                     </div>
 
-
-
-
-
-                                    <div
-                                        className="
-                                            mt-6
-                                            grid
-                                            gap-3
-                                        "
-                                    >
-
-
-                                        <button
-
-                                            onClick={() =>
-                                                approveAll(
-                                                    item.correspondenceId
-                                                )
-                                            }
-
-                                            className="
-                                                rounded-2xl
-                                                bg-emerald-500
-                                                px-5
-                                                py-4
-                                                font-bold
-                                                text-white
-                                            "
-
-                                        >
-
-                                            <FontAwesomeIcon
-                                                icon={faCheck}
-                                                className="ml-2"
-                                            />
-
-                                            اعتماد جميع المستلمين
-
-                                        </button>
-
-
-
-                                        <button
-
-                                            onClick={() =>
-                                                rejectAll(
-                                                    item.correspondenceId
-                                                )
-                                            }
-
-                                            className="
-                                                rounded-2xl
-                                                bg-red-500
-                                                px-5
-                                                py-4
-                                                font-bold
-                                                text-white
-                                            "
-
-                                        >
-
-                                            <FontAwesomeIcon
-                                                icon={faXmark}
-                                                className="ml-2"
-                                            />
-
-                                            رفض جميع المستلمين
-
-                                        </button>
-
-
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                                            {item.pendingReceivers.length} مستلم
+                                        </span>
+                                        <FontAwesomeIcon
+                                            icon={isExpanded ? faChevronUp : faChevronDown}
+                                            className="text-slate-400 text-sm"
+                                        />
                                     </div>
-
-
-
                                 </div>
 
-
-                            </div>
-
-
-
-
-
-                            {/* INDIVIDUAL ACTIONS */}
-
-
-                            <div
-                                className="
-                                    border-t
-                                    border-blue-100
-                                    bg-blue-50/40
-                                    p-6
-                                "
-                            >
-
-
-                                <h3 className="mb-5 font-bold">
-
-                                    إجراءات المستلمين
-
-                                </h3>
-
-
-
-                                <div className="space-y-3">
-
-
-                                    {
-                                        item.pendingReceivers.map(
-                                            receiver => (
-
-                                                <div
-
-                                                    key={
-                                                        receiver.receiverId
-                                                    }
-
-                                                    className="
-                                                        flex
-                                                        items-center
-                                                        justify-between
-                                                        rounded-2xl
-                                                        bg-white
-                                                        p-4
-                                                        shadow
-                                                    "
-
-                                                >
-
-
-                                                    <div>
-
-                                                        <h4 className="font-semibold">
-
-                                                            {
-                                                                receiver.receiverName
-                                                            }
-
-                                                        </h4>
-
-
-                                                        <p className="text-sm text-slate-500">
-
-                                                            {
-                                                                receiver.receiverEmail
-                                                            }
-
-                                                        </p>
-
-
-                                                    </div>
-
-
-
-
-                                                    <div className="flex gap-3">
-
-
-                                                        <button
-
-                                                            onClick={() =>
-                                                                approveDistribution(
-                                                                    receiver.receiverId
-                                                                )
-                                                            }
-
-                                                            className="
-                                                                rounded-xl
-                                                                bg-emerald-100
-                                                                px-4
-                                                                py-2
-                                                                text-emerald-700
-                                                            "
-
-                                                        >
-
-                                                            <FontAwesomeIcon
-                                                                icon={faCheck}
-                                                            />
-
-                                                        </button>
-
-
-
-
-                                                        <button
-
-                                                            onClick={() =>
-                                                                rejectDistribution(
-                                                                    receiver.receiverId
-                                                                )
-                                                            }
-
-                                                            className="
-                                                                rounded-xl
-                                                                bg-red-100
-                                                                px-4
-                                                                py-2
-                                                                text-red-700
-                                                            "
-
-                                                        >
-
-                                                            <FontAwesomeIcon
-                                                                icon={faXmark}
-                                                            />
-
-                                                        </button>
-
-
-
-                                                    </div>
-
-
+                                {/* ===== CARD BODY ===== */}
+                                <AnimatePresence>
+                                    {isExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.25 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="p-4 border-t border-blue-100 space-y-4">
+                                                {/* Correspondence Info */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
+                                                    {item.senderEntity && (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-slate-500">الجهة المرسلة:</span>
+                                                            <span className="font-medium">{item.senderEntity}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.documentType && (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-slate-500">نوع الوثيقة:</span>
+                                                            <span className="font-medium">{item.documentType}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.senderReference && (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-slate-500">مرجع المرسل:</span>
+                                                            <span className="font-medium">{item.senderReference}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
 
-                                            )
-                                        )
-                                    }
+                                                {/* Attachments */}
+                                                {item.attachments.length > 0 && (
+                                                    <div className="flex items-center gap-2 text-xs">
+                                                        <FontAwesomeIcon icon={faPaperclip} className="text-slate-400" />
+                                                        <span className="text-slate-500">المرفقات:</span>
+                                                        <div className="flex gap-1 flex-wrap">
+                                                            {item.attachments.map((att) => (
+                                                                <span key={att.id} className="bg-slate-100 px-2 py-0.5 rounded text-[10px]">
+                                                                    {att.fileName}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
 
+                                                {/* Receivers List */}
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs font-medium text-slate-600">المستلمون</span>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleSelectAll(item.correspondenceId);
+                                                            }}
+                                                            className="text-xs text-blue-500 hover:text-blue-600"
+                                                        >
+                                                            {allSelected ? "إلغاء الكل" : "تحديد الكل"}
+                                                        </button>
+                                                    </div>
 
-                                </div>
+                                                    <div className="space-y-1.5">
+                                                        {item.pendingReceivers.map((receiver) => (
+                                                            <div
+                                                                key={receiver.distributionId}
+                                                                className="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition text-xs sm:text-sm"
+                                                            >
+                                                                <div className="flex items-center gap-3 min-w-0">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selected.includes(receiver.distributionId)}
+                                                                        onChange={() => {
+                                                                            setSelected((prev) =>
+                                                                                prev.includes(receiver.distributionId)
+                                                                                    ? prev.filter((id) => id !== receiver.distributionId)
+                                                                                    : [...prev, receiver.distributionId]
+                                                                            );
+                                                                        }}
+                                                                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    />
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-medium text-slate-800 truncate">
+                                                                            {receiver.receiverName}
+                                                                        </p>
+                                                                        <p className="text-[10px] text-slate-500 truncate">
+                                                                            {receiver.receiverEmail}
+                                                                        </p>
+                                                                    </div>
+                                                                    {receiver.isAutoDistributed && (
+                                                                        <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                                                            تلقائي
+                                                                        </span>
+                                                                    )}
+                                                                </div>
 
+                                                                <div className="flex gap-1 flex-shrink-0">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleApprove(receiver.distributionId);
+                                                                        }}
+                                                                        disabled={processingIds.has(receiver.distributionId)}
+                                                                        className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition flex items-center justify-center disabled:opacity-50"
+                                                                        title="اعتماد"
+                                                                    >
+                                                                        {processingIds.has(receiver.distributionId) ? (
+                                                                            <FontAwesomeIcon icon={faSpinner} spin className="text-[10px]" />
+                                                                        ) : (
+                                                                            <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleReject(receiver.distributionId);
+                                                                        }}
+                                                                        disabled={processingIds.has(receiver.distributionId)}
+                                                                        className="w-7 h-7 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center disabled:opacity-50"
+                                                                        title="رفض"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
 
-                            </div>
-
-
-                        </motion.div>
-
-                    ))}
-
-
-
-                </div>
-
-
+                                                {/* Bulk Actions for this correspondence */}
+                                                <div className="flex gap-2 pt-2 border-t border-slate-100">
+                                                    <button
+                                                        onClick={() => handleApproveAll(item.correspondenceId)}
+                                                        className="px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition flex items-center gap-1"
+                                                    >
+                                                        <FontAwesomeIcon icon={faUserCheck} className="text-[10px]" />
+                                                        اعتماد الكل
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRejectAll(item.correspondenceId)}
+                                                        className="px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition flex items-center gap-1"
+                                                    >
+                                                        <FontAwesomeIcon icon={faUserXmark} className="text-[10px]" />
+                                                        رفض الكل
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        );
+                    })
+                )}
             </div>
-
-
-        </div >
-
-
-    );
-
-}
-
-
-
-
-function InfoRow({
-
-    label,
-
-    value,
-
-}: {
-
-    label: string;
-
-    value: string;
-
-}) {
-
-
-    return (
-
-        <div
-            className="
-                flex
-                justify-between
-                rounded-xl
-                bg-slate-50
-                p-3
-            "
-        >
-
-            <span className="text-slate-500">
-
-                {label}
-
-            </span>
-
-
-            <span className="font-semibold">
-
-                {value}
-
-            </span>
-
-
         </div>
-
     );
-
-}
-
-
-
-
-
-function StatCard({
-
-    title,
-
-    value,
-
-    icon,
-
-    color,
-
-}: {
-
-    title: string;
-
-    value: number;
-
-    icon: any;
-
-    color:
-    "blue" |
-    "yellow" |
-    "emerald" |
-    "purple";
-
-}) {
-
-
-    const colors = {
-
-        blue:
-            "from-blue-600 to-blue-400",
-
-        yellow:
-            "from-yellow-500 to-yellow-400",
-
-        emerald:
-            "from-emerald-600 to-emerald-400",
-
-        purple:
-            "from-purple-600 to-purple-400",
-
-    };
-
-
-
-    return (
-
-        <motion.div
-
-            whileHover={{
-                y: -5,
-            }}
-
-            className="
-                rounded-[28px]
-                bg-white
-                p-6
-                shadow-xl
-            "
-
-        >
-
-
-            <div
-                className="
-                    flex
-                    justify-between
-                    items-center
-                "
-            >
-
-                <div
-                    className={`
-                        rounded-2xl
-                        bg-gradient-to-br
-                        ${colors[color]}
-                        p-4
-                        text-white
-                    `}
-                >
-
-                    <FontAwesomeIcon
-                        icon={icon}
-                    />
-
-                </div>
-
-
-
-                <span className="font-semibold">
-
-                    {title}
-
-                </span>
-
-
-            </div>
-
-
-
-            <h2 className="mt-6 text-5xl font-black">
-
-                {value}
-
-            </h2>
-
-
-
-        </motion.div>
-
-    );
-
 }
