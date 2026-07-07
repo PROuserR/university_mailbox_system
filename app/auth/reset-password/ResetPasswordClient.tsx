@@ -83,8 +83,8 @@ export default function ResetPasswordClient() {
 
     return (
         <div
-            dir="rtl"
-         className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900 p-4">
+            dir="rtl" 
+            className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900">
             <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900" />
 
             <Toaster position="top-center" />
