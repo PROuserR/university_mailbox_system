@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import useUIModeStore from "@/store/uiModeStore";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -26,7 +27,7 @@ import {
     faUserSlash,
     faPen,
     faXmark,
-    faCheck,
+    faCheck,faPalette
 } from "@fortawesome/free-solid-svg-icons";
 
 import { apiWrapper, ApiResult } from "@/utils/apiClient";
@@ -65,7 +66,7 @@ export default function ProfilePage() {
     const [userLanguage, setUserLanguage] = useState<string>("ar");
     const [imageUrl, setImageUrl] = useState<string>("");
     const [imageLoading, setImageLoading] = useState(true);
-
+    const { uiMode, toggleUIMode } = useUIModeStore();
     // ✅ وضع التعديل
     const [isEditing, setIsEditing] = useState(false);
 
@@ -586,6 +587,43 @@ export default function ProfilePage() {
                     </span>
                 </div>
             </div>
+
+            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5 mt-4">
+    <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+        <FontAwesomeIcon icon={faPalette} className="text-blue-500" />
+        واجهة المستخدم
+    </h3>
+
+    <div className="flex gap-3">
+        <button
+            onClick={() => {
+                if (uiMode !== 'classic') toggleUIMode();
+            }}
+            className={`flex-1 py-3 rounded-xl font-medium transition ${
+                uiMode === 'classic'
+                    ? "bg-blue-500 text-white shadow-md"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+        >
+            🏛️ كلاسيكي
+        </button>
+        <button
+            onClick={() => {
+                if (uiMode !== 'modern') toggleUIMode();
+            }}
+            className={`flex-1 py-3 rounded-xl font-medium transition ${
+                uiMode === 'modern'
+                    ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+        >
+            ✨ حديث
+        </button>
+    </div>
+    <p className="text-[10px] text-slate-400 mt-2 text-center">
+        {uiMode === 'classic' ? 'التصميم الكلاسيكي' : 'التصميم الحديث'}
+    </p>
+</div>
         </div>
     );
 }

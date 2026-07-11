@@ -12,6 +12,20 @@ export enum CorrespondenceMainType {
     Internal = 3
 }
 
+export type CorrespondenceMainTypeString = 'Incoming' | 'Outgoing' | 'Internal';
+
+export const getMainTypeString = (type: CorrespondenceMainType): CorrespondenceMainTypeString => {
+    switch (type) {
+        case CorrespondenceMainType.Incoming:
+            return 'Incoming';
+        case CorrespondenceMainType.Outgoing:
+            return 'Outgoing';
+        case CorrespondenceMainType.Internal:
+            return 'Internal';
+        default:
+            return 'Incoming';
+    }
+};
 // =========================
 // DTOs من Backend
 // =========================
@@ -68,3 +82,28 @@ export type ApiResult<T> = {
     errors: string[] | null;
     statusCode: number;
 };
+
+export interface CorrespondenceSearchDto {
+  number?: string;
+  mainType?: CorrespondenceMainType;
+  isProfessional?: boolean;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrderDESC?: boolean;
+  documentTypeId?: number;
+  senderEntityId?: number;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface CorrespondenceSearchParams {
+  mainType?: CorrespondenceMainType;
+  isProfessional?: boolean;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrderDESC?: boolean;
+}

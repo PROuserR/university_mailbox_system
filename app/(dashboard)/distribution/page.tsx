@@ -2,12 +2,9 @@
 
 "use client";
 
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-
 import { apiWrapper } from "@/utils/apiClient";
-
 import { AnimatePresence, motion } from "framer-motion";
 import useShowMailDetailsStore from "@/store/showMailDetails";
 import useInfiniteScroll from "@/hooks/useInfiniteScroll";
@@ -16,7 +13,6 @@ import MailViewer from "@/components/mail/MailViewer";
 import MailListLoader from "@/components/ui/MailListLoader";
 import MailListError from "@/components/ui/MailListError";
 import { Mail } from "@/types/api/Mail/Mail";
-
 import {
     faInbox,
     faPaperPlane,
@@ -24,10 +20,10 @@ import {
     faSortAmountUp,
     faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
-
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useUserInfoStore from "@/store/userInfoStore";
-import useSearchInputStore from "@/store/searchInputStore"; // ✅ إضافة
+import { useSearchStore } from "@/store/searchStore";
+import { useCleanupFilters } from "@/hooks/useCleanupFilters";
 
 // ================= TYPES =================
 
@@ -51,18 +47,13 @@ interface DistributionMail {
     isRead: boolean;
     isAutoDistributed: boolean;
     notes: string | null;
-
-    // inbox fields
     distributorName?: string;
     distributorEmail?: string;
     distributorRole?: string;
-
-    // outbox fields
     receiverId?: number;
     receiverName?: string;
     receiverEmail?: string;
     receiverRole?: string;
-
     correspondenceId: number;
     correspondenceNumber: string;
     correspondenceTitle: string;
@@ -124,8 +115,9 @@ const normalizeMail = (mail: DistributionMail): any => {
 // ================= COMPONENT =================
 
 export default function DistributionPage() {
+    useCleanupFilters();
     const { role } = useUserInfoStore();
-    const { seachInput } = useSearchInputStore(); // ✅ جلب قيمة البحث
+    const { searchQuery } = useSearchStore(); // ✅ استخدام searchQuery
 
     const {
         isMailDetailsStoreShown,
@@ -154,7 +146,7 @@ export default function DistributionPage() {
             pageSize: 10,
             sortBy,
             sortDescending,
-            search: seachInput || undefined, // ✅ إضافة البحث
+            search: searchQuery || undefined, // ✅ استخدام searchQuery
         });
 
         if (!res.success || !res.data) {
@@ -172,7 +164,7 @@ export default function DistributionPage() {
         isLoading,
         isError,
     } = useInfiniteQuery<PageResponse>({
-        queryKey: ["distribution-mails", folder, sortBy, sortDescending, seachInput], // ✅ إضافة search إلى queryKey
+        queryKey: ["distribution-mails", folder, sortBy, sortDescending, searchQuery], // ✅ استخدام searchQuery
         queryFn: ({ pageParam = 1 }) => fetchMails(pageParam as number),
         initialPageParam: 1,
         getNextPageParam: (lastPage) => {
@@ -195,6 +187,14 @@ export default function DistributionPage() {
         setSelectedMailData(mail);
         triggerMailDetailsStoreShown();
     };
+
+    // ================= CLEANUP ON UNMOUNT =================
+    useEffect(() => {
+        return () => {
+            // ✅ تنظيف عند الخروج من الصفحة
+            // لا نقوم بمسح searchQuery لأن المستخدم قد يعود للصفحة
+        };
+    }, []);
 
     // ================= LOADING / ERROR =================
 
@@ -296,11 +296,11 @@ export default function DistributionPage() {
                             <div className="flex flex-col items-center justify-center h-full text-gray-400">
                                 <div className="text-5xl mb-3">📭</div>
                                 <p className="text-base font-medium">
-                                    {seachInput ? "لا توجد نتائج للبحث" : "لا توجد رسائل"}
+                                    {searchQuery ? "لا توجد نتائج للبحث" : "لا توجد رسائل"}
                                 </p>
                                 <p className="text-sm">
-                                    {seachInput
-                                        ? `"${seachInput}"`
+                                    {searchQuery
+                                        ? `"${searchQuery}"`
                                         : folder === "inbox"
                                         ? "الوارد"
                                         : "الصادر"}

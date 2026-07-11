@@ -3,89 +3,119 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
-    getCorrespondenceById,
-    updateCorrespondence,
-    getDocumentTypes,
-    getSenderEntities,
+  getCorrespondenceById,
+  updateCorrespondence,
+  getDocumentTypes,
+  getSenderEntities,
+  getCorrespondencesPaged,
+  deleteCorrespondence,
 } from "@/services/correspondence.service";
-import { UpdateCorrespondencePayload } from "@/types/api/correspondence.types";
+import {
+  UpdateCorrespondencePayload,
+  CorrespondenceResponse,
+} from "@/types/api/correspondence.types";
+import type { CorrespondenceSearchDto } from "@/types/api/correspondence.types";
 
-// =========================
-// Hook لجلب مراسلة
-// =========================
 
-export const useCorrespondence = (id: number) => {
-    return useQuery({
-        queryKey: ["correspondence", id],
-        queryFn: () => getCorrespondenceById(id),
-        enabled: !!id,
-    });
+export const useCorrespondences = (searchDto: CorrespondenceSearchDto) => {
+  return useQuery({
+    queryKey: ["correspondences", searchDto],
+    queryFn: () => getCorrespondencesPaged(searchDto),
+    staleTime:500,  
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+  });
 };
 
-// =========================
-// Hook لتحديث مراسلة
-// =========================
+
+
+export const useCorrespondence = (id: number | null) => {
+  return useQuery({
+    queryKey: ["correspondence", id],
+    queryFn: () => getCorrespondenceById(id!),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+
 
 export const useUpdateCorrespondence = (
-    id: number,
-    onSuccess?: () => void
+  id: number,
+  onSuccess?: () => void
 ) => {
-    const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: (payload: {
-            data: UpdateCorrespondencePayload;
-            files?: File[];
-            primaryFile?: File;
-        }) => {
-            return updateCorrespondence(
-                id,
-                payload.data,
-                payload.files,
-                payload.primaryFile
-            );
-        },
-        onSuccess: () => {
-            toast.success("تم تحديث المراسلة بنجاح");
+  return useMutation({
+    mutationFn: (payload: {
+      data: UpdateCorrespondencePayload;
+      files?: File[];
+      primaryFile?: File;
+    }) => {
+      return updateCorrespondence(
+        id,
+        payload.data,
+        payload.files,
+        payload.primaryFile
+      );
+    },
+    onSuccess: () => {
+      toast.success("تم تحديث المراسلة بنجاح");
 
-            queryClient.invalidateQueries({
-                queryKey: ["correspondence", id],
-            });
-            queryClient.invalidateQueries({
-                queryKey: ["mails"],
-            });
-            queryClient.invalidateQueries({
-                queryKey: ["mailsCount"],
-            });
+      queryClient.invalidateQueries({
+        queryKey: ["correspondence", id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["correspondences"],
+      });
 
-            if (onSuccess) onSuccess();
-        },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل تحديث المراسلة");
-        },
-    });
+      if (onSuccess) onSuccess();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "فشل تحديث المراسلة");
+    },
+  });
 };
 
-// =========================
-// Hook لجلب أنواع المستندات
-// =========================
+
+export const useDeleteCorrespondence = (
+  onSuccess?: () => void
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => deleteCorrespondence(id),
+    onSuccess: () => {
+      toast.success("تم حذف المراسلة بنجاح");
+
+      queryClient.invalidateQueries({
+        queryKey: ["correspondences"],
+      });
+
+      if (onSuccess) onSuccess();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "فشل حذف المراسلة");
+    },
+  });
+};
+
+
 
 export const useDocumentTypes = () => {
-    return useQuery({
-        queryKey: ["document-types"],
-        queryFn: () => getDocumentTypes(),
-        staleTime: 5 * 60 * 1000, // 5 دقائق
-    });
+  return useQuery({
+    queryKey: ["document-types"],
+    queryFn: () => getDocumentTypes(),
+    staleTime: 5 * 60 * 1000,
+  });
 };
 
-// =========================
-// Hook لجلب الجهات المرسلة
-// =========================
+
 
 export const useSenderEntities = () => {
-    return useQuery({
-        queryKey: ["sender-entities"],
-        queryFn: () => getSenderEntities(),
-        staleTime: 5 * 60 * 1000, // 5 دقائق
-    });
+  return useQuery({
+    queryKey: ["sender-entities"],
+    queryFn: () => getSenderEntities(),
+    staleTime: 5 * 60 * 1000,
+  });
 };

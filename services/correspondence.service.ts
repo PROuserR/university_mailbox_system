@@ -1,22 +1,46 @@
 // src/services/correspondence.service.ts
 
-import { apiWrapper } from "@/utils/apiClient";
+import { apiWrapper, ApiResult } from "@/utils/apiClient";
 import {
   CorrespondenceResponse,
   UpdateCorrespondencePayload,
-  ApiResult,
+  CorrespondenceMainType,
 } from "@/types/api/correspondence.types";
 import {
   DocumentType,
   DocumentTypeResponse,
 } from "@/types/api/DocumentTypesResponse";
 import { SenderEntity, SenderEntityResponse } from "@/types/api/SenderEntity";
+import type { CorrespondenceSearchDto } from "@/types/api/correspondence.types";
+import type { PagedResponse } from "@/types/api/PagedResponse";
 
 const BASE_URL = "Correspondences";
 
-// =========================
-// جلب مراسلة بواسطة ID
-// =========================
+
+
+export const getCorrespondencesPaged = async (
+  searchDto: CorrespondenceSearchDto
+): Promise<PagedResponse<CorrespondenceResponse>> => {
+  const res = await apiWrapper.get<ApiResult<PagedResponse<CorrespondenceResponse>>>(
+    `${BASE_URL}/paged`,
+    searchDto
+  );
+
+  if (!res.success) {
+    throw new Error(res.error || "فشل تحميل المراسلات");
+  }
+
+  if (!res.data) {
+    throw new Error("لم يتم استلام بيانات من الخادم");
+  }
+
+  if (!res.data.isSuccess) {
+    throw new Error(res.data.message || "فشل تحميل المراسلات");
+  }
+
+  return res.data.data;
+};
+
 
 export const getCorrespondenceById = async (
   id: number
@@ -25,20 +49,21 @@ export const getCorrespondenceById = async (
     `${BASE_URL}/${id}`
   );
 
-  if (!res.success || !res.data) {
-    throw new Error(res.error || "Failed to load correspondence");
+  if (!res.success) {
+    throw new Error(res.error || "فشل تحميل المراسلة");
+  }
+
+  if (!res.data) {
+    throw new Error("لم يتم استلام بيانات من الخادم");
   }
 
   if (!res.data.isSuccess) {
-    throw new Error(res.data.message || "Failed to load correspondence");
+    throw new Error(res.data.message || "فشل تحميل المراسلة");
   }
 
   return res.data.data;
 };
 
-// =========================
-// تحديث مراسلة
-// =========================
 
 export const updateCorrespondence = async (
   id: number,
@@ -90,22 +115,67 @@ export const updateCorrespondence = async (
     formData
   );
 
-  if (!res.success || !res.data) {
-    throw new Error(
-      res.error || res.data?.message || "Failed to update correspondence"
-    );
+  if (!res.success) {
+    throw new Error(res.error || "فشل تحديث المراسلة");
+  }
+
+  if (!res.data) {
+    throw new Error("لم يتم استلام بيانات من الخادم");
   }
 
   if (!res.data.isSuccess) {
-    throw new Error(res.data.message || "Failed to update correspondence");
+    throw new Error(res.data.message || "فشل تحديث المراسلة");
   }
 
   return res.data.data;
 };
 
-// =========================
-// جلب أنواع المستندات النشطة (باستخدام الملف الموجود)
-// =========================
+
+export const downloadAttachment = async (
+  attachmentId: number,
+  signal?: AbortSignal
+): Promise<Blob> => {
+  const config = {
+    responseType: "blob" as const,
+    signal,
+  };
+
+  const res = await apiWrapper.get<Blob>(
+    `/Attachments/${attachmentId}/download`,
+    undefined,
+    config
+  );
+
+  if (!res.success) {
+    throw new Error(res.error || "فشل تحميل المرفق");
+  }
+
+  if (!res.data) {
+    throw new Error("لم يتم استلام الملف من الخادم");
+  }
+
+  return res.data;
+};
+
+
+export const deleteCorrespondence = async (id: number): Promise<void> => {
+  const res = await apiWrapper.delete<ApiResult<void>>(
+    `${BASE_URL}/${id}`
+  );
+
+  if (!res.success) {
+    throw new Error(res.error || "فشل حذف المراسلة");
+  }
+
+  if (!res.data) {
+    throw new Error("لم يتم استلام رد من الخادم");
+  }
+
+  if (!res.data.isSuccess) {
+    throw new Error(res.data.message || "فشل حذف المراسلة");
+  }
+};
+
 
 export const getDocumentTypes = async (): Promise<DocumentType[]> => {
   const res = await apiWrapper.get<DocumentTypeResponse>(
@@ -119,9 +189,6 @@ export const getDocumentTypes = async (): Promise<DocumentType[]> => {
   return res.data.data;
 };
 
-// =========================
-// جلب الجهات المرسلة النشطة (باستخدام الملف الموجود)
-// =========================
 
 export const getSenderEntities = async (): Promise<SenderEntity[]> => {
   const res = await apiWrapper.get<SenderEntityResponse>(

@@ -1,6 +1,7 @@
+// // components/layout/Navbar.tsx
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
-// components/layout/Navbar.tsx
 
 "use client";
 
@@ -19,18 +20,27 @@ import {
     faBars,
     faXmark,
     faHome,
+    faEnvelope,
+    faPalette,
+    faInbox,
+    faPaperPlane,
+    faFolder,
+    faUsers,
+    faBuilding,
+    faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
 import UserSettingsOverlay from "../overlays/UserSettings";
 import userSettingsOverlayStore from "@/store/userSettingsOverlayStore";
-import useSearchInputStore from "@/store/searchInputStore";
 import useUserInfoStore from "@/store/userInfoStore";
+import useUIModeStore from "@/store/uiModeStore";
 import NotificationsDropdown from "../dropdown/NotificationsDropdown";
 import useSidebarToggleStore from "@/store/sidebarToggleStore";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { apiWrapper } from "@/utils/apiClient";
+import { useSearchStore } from "@/store/searchStore";
 
 // ==============================
 // ✅ NavButton Component
@@ -47,7 +57,6 @@ interface NavButtonProps {
 
 function NavButton({ icon, label, href, onClick, className = "", isActive = false }: NavButtonProps) {
     const router = useRouter();
-
     const handleClick = () => {
         if (onClick) {
             onClick();
@@ -128,23 +137,113 @@ export default function Navbar() {
     const router = useRouter();
     const pathname = usePathname();
     const menuRef = useRef<HTMLDivElement>(null);
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const { isUserSettingsShown, triggerUserSettings } = userSettingsOverlayStore();
     const { email, firstname, lastname, role } = useUserInfoStore();
-    const { setSearchInput } = useSearchInputStore();
+    const { uiMode, toggleUIMode } = useUIModeStore();
     const { isSidebarToggleShown, triggerSidebar } = useSidebarToggleStore();
+
+    const { searchQuery, setSearchQuery, clearSearch } = useSearchStore();
 
     const [searchValue, setSearchValue] = useState("");
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // ✅ البحث مع تأخير
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setSearchInput(searchValue);
-        }, 500);
+    const isAuthPage = pathname?.startsWith("/auth");
 
-        return () => clearTimeout(timer);
-    }, [searchValue, setSearchInput]);
+    // ✅ صلاحيات المستخدم
+    const isUser = role === "User";
+    const isEmployee = role === "Employee";
+    const isDean = role === "Dean";
+    const isAdmin = role === "Admin";
+    const isDeanOrAdmin = isDean || isAdmin;
+
+    // ✅ تحديد أزرار الـ Navbar حسب الدور
+    const getNavButtons = () => {
+        const commonButtons: { icon: any; href: string; label: string }[] = [];
+
+        // المستخدم (User)
+        if (isUser) {
+            return [
+                { icon: faInbox, href: "/distribution", label: "الوارد" },
+                { icon: faChartBar, href: "/user-statistics", label: "الإحصائيات" },
+            ];
+        }
+
+        // الموظف (Employee)
+        if (isEmployee) {
+            return [
+                { icon: faInbox, href: "/distribution", label: "الوارد" },
+                { icon: faPaperPlane, href: "/distribution?type=outbox", label: "الصادر" },
+                { icon: faFolder, href: "/correspondences", label: "المراسلات" },
+                { icon: faChartBar, href: "/user-statistics", label: "الإحصائيات" },
+            ];
+        }
+
+        // العميد والأدمن (Dean, Admin)
+        if (isDeanOrAdmin) {
+            return [
+                { icon: faInbox, href: "/distribution", label: "الوارد" },
+                { icon: faPaperPlane, href: "/distribution?type=outbox", label: "الصادر" },
+                { icon: faFolder, href: "/correspondences", label: "المراسلات" },
+                { icon: faUsers, href: "/users", label: "المستخدمين" },
+                { icon: faBuilding, href: "/sender-entities", label: "الجهات المرسلة" },
+                { icon: faFile, href: "/document-types", label: "أنواع الوثائق" },
+                { icon: faCheck, href: "/approvals", label: "الموافقات" },
+                { icon: faChartBar, href: "/statistics", label: "الإحصائيات" },
+            ];
+        }
+
+        return commonButtons;
+    };
+
+    const showSidebarToggle = () => {
+        if (uiMode === "modern") {
+            return !isAuthPage;
+        }
+        return pathname === "/";
+    };
+
+    const showMobileMenuButton = () => {
+        if (uiMode === "modern") {
+            return false;
+        }
+        return true;
+    };
+
+    useEffect(() => {
+        setSearchValue(searchQuery);
+    }, [searchQuery]);
+
+    const cleanText = (text: string): string => {
+        return text.replace(/\s+/g, ' ').trim();
+    };
+
+    const handleSearchChange = useCallback((value: string) => {
+        const cleanedValue = cleanText(value);
+        setSearchValue(cleanedValue);
+
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
+        if (cleanedValue === "") {
+            clearSearch();
+            return;
+        }
+
+        debounceTimeoutRef.current = setTimeout(() => {
+            setSearchQuery(cleanedValue);
+        }, 500);
+    }, [setSearchQuery, clearSearch]);
+
+    useEffect(() => {
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // ✅ إغلاق الموبايل عند تغيير الصفحة
     useEffect(() => {
@@ -155,7 +254,6 @@ export default function Navbar() {
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                // ✅ التحقق من أن الضغط ليس على زر القائمة
                 const target = event.target as HTMLElement;
                 if (!target.closest('[data-menu-toggle]')) {
                     setIsMobileMenuOpen(false);
@@ -185,8 +283,11 @@ export default function Navbar() {
         };
     }, [isMobileMenuOpen]);
 
-    // ✅ أزرار الـ Navbar (تظهر فقط للـ Dean و Admin)
-    const showAdminButtons = role === "Dean" || role === "Admin";
+    // ✅ في التصميم الحديث: إخفاء أزرار التنقل من الـ Navbar
+    const showNavButtons = uiMode === "classic";
+
+    // ✅ أزرار الـ Navbar حسب الدور (تظهر فقط في الكلاسيكي)
+    const navButtons = getNavButtons();
 
     // ✅ تسجيل الخروج
     const handleLogout = async () => {
@@ -203,8 +304,7 @@ export default function Navbar() {
             >
                 {/* ===== LEFT (RTL) - Logo + Toggle ===== */}
                 <div className="flex items-center gap-2 sm:gap-4">
-                    {/* Toggle Sidebar (only on home) */}
-                    {pathname === "/" && (
+                    {showSidebarToggle() && (
                         <motion.button
                             whileHover={{ scale: 1.15 }}
                             whileTap={{ scale: 0.95 }}
@@ -215,7 +315,6 @@ export default function Navbar() {
                         </motion.button>
                     )}
 
-                    {/* Logo */}
                     <Link href="/" className="flex items-center gap-2">
                         <motion.div
                             whileHover={{ scale: 1.05 }}
@@ -243,19 +342,26 @@ export default function Navbar() {
                             type="text"
                             placeholder="بحث في البريد..."
                             value={searchValue}
-                            onChange={(e) => setSearchValue(e.target.value)}
+                            onChange={(e) => handleSearchChange(e.target.value)}
                             className="w-full bg-white/80 border border-blue-200/50 rounded-xl px-4 py-2 pr-10 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200/50 transition"
                         />
                         <FontAwesomeIcon
                             icon={faSearch}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
                         />
+                        {searchValue && (
+                            <button
+                                onClick={() => handleSearchChange("")}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                            >
+                                <FontAwesomeIcon icon={faXmark} className="text-sm" />
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 {/* ===== RIGHT (RTL) - Actions ===== */}
                 <div className="flex items-center gap-1 sm:gap-2">
-                    {/* Mobile Search Toggle */}
                     <button
                         onClick={() => {
                             const searchInput = document.getElementById("mobile-search");
@@ -271,49 +377,59 @@ export default function Navbar() {
                         <FontAwesomeIcon icon={faSearch} className="text-sm" />
                     </button>
 
-                    {/* Mobile Menu Toggle */}
-                    <button
-                        data-menu-toggle
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="lg:hidden w-9 h-9 rounded-xl bg-white/80 border border-blue-200/50 flex items-center justify-center text-blue-600 hover:bg-blue-50 transition relative"
-                    >
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={isMobileMenuOpen ? "close" : "open"}
-                                initial={{ rotate: -90, opacity: 0 }}
-                                animate={{ rotate: 0, opacity: 1 }}
-                                exit={{ rotate: 90, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                <FontAwesomeIcon
-                                    icon={isMobileMenuOpen ? faXmark : faBars}
-                                    className="text-sm"
+                    {/* ✅ أزرار الـ Navbar حسب الدور (تظهر فقط في الكلاسيكي) */}
+                    {showNavButtons && (
+                        <div className="hidden lg:flex items-center gap-1">
+                            {navButtons.map((btn) => (
+                                <NavIconButton
+                                    key={btn.href}
+                                    icon={btn.icon}
+                                    href={btn.href}
+                                    label={btn.label}
                                 />
-                            </motion.div>
-                        </AnimatePresence>
-                    </button>
+                            ))}
+                        </div>
+                    )}
 
-                    {/* Desktop Buttons */}
-                    <div className="hidden lg:flex items-center gap-1">
-                        {showAdminButtons && (
-                            <NavIconButton icon={faFile} href="/document-types" label="أنواع الوثائق" />
-                        )}
-                        {showAdminButtons && (
-                            <NavIconButton icon={faMessage} href="/sender-entities" label="الجهات المرسلة" />
-                        )}
-                        {showAdminButtons && (
-                            <NavIconButton icon={faUserEdit} href="/users" label="المستخدمين" />
-                        )}
-                        {showAdminButtons && (
-                            <NavIconButton icon={faCheck} href="/approvals" label="الموافقات" />
-                        )}
-                        <NavIconButton icon={faShare} href="/distribution" label="التوزيع" />
-                    </div>
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={toggleUIMode}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition ${
+                            uiMode === "modern"
+                                ? "bg-blue-600 text-white shadow-md"
+                                : "bg-white/80 border border-blue-200/50 text-blue-600 hover:bg-blue-50"
+                        }`}
+                        title={uiMode === "modern" ? "تبديل إلى الوضع الكلاسيكي" : "تبديل إلى الوضع الحديث"}
+                    >
+                        <FontAwesomeIcon icon={faPalette} className="text-sm" />
+                    </motion.button>
 
-                    {/* Notifications */}
+                    {showMobileMenuButton() && (
+                        <button
+                            data-menu-toggle
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="lg:hidden w-9 h-9 rounded-xl bg-white/80 border border-blue-200/50 flex items-center justify-center text-blue-600 hover:bg-blue-50 transition relative"
+                        >
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={isMobileMenuOpen ? "close" : "open"}
+                                    initial={{ rotate: -90, opacity: 0 }}
+                                    animate={{ rotate: 0, opacity: 1 }}
+                                    exit={{ rotate: 90, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={isMobileMenuOpen ? faXmark : faBars}
+                                        className="text-sm"
+                                    />
+                                </motion.div>
+                            </AnimatePresence>
+                        </button>
+                    )}
+
                     <NotificationsDropdown />
 
-                    {/* Profile */}
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -332,17 +448,25 @@ export default function Navbar() {
                         type="text"
                         placeholder="بحث في البريد..."
                         value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
+                        onChange={(e) => handleSearchChange(e.target.value)}
                         className="w-full bg-white/80 border border-blue-200/50 rounded-xl px-4 py-2 pr-10 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200/50 transition"
                     />
                     <FontAwesomeIcon
                         icon={faSearch}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
                     />
+                    {searchValue && (
+                        <button
+                            onClick={() => handleSearchChange("")}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                        >
+                            <FontAwesomeIcon icon={faXmark} className="text-sm" />
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* ===== Mobile Menu (مع AnimatePresence) ===== */}
+            {/* ===== Mobile Menu ===== */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
@@ -354,7 +478,6 @@ export default function Navbar() {
                         className="lg:hidden fixed top-16 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-blue-100 shadow-xl py-2 px-4 max-h-[calc(100vh-4rem)] overflow-y-auto"
                     >
                         <div className="flex flex-col gap-0.5">
-                            {/* الصفحة الرئيسية */}
                             <NavButton
                                 icon={faHome}
                                 label="الصفحة الرئيسية"
@@ -362,77 +485,20 @@ export default function Navbar() {
                                 isActive={pathname === "/"}
                             />
 
-                            {/* التوزيع */}
+                            {/* ✅ أزرار حسب الدور في الموبايل */}
+                            {navButtons.map((btn) => (
+                                <NavButton
+                                    key={btn.href}
+                                    icon={btn.icon}
+                                    label={btn.label}
+                                    href={btn.href}
+                                    isActive={pathname === btn.href}
+                                />
+                            ))}
+
+                            {/* ✅ الملف الشخصي للجميع */}
                             <NavButton
-                                icon={faShare}
-                                label="التوزيع"
-                                href="/distribution"
-                                isActive={pathname === "/distribution"}
-                            />
-
-                            {/* الموافقات (للعميد والأدمن) */}
-                            {showAdminButtons && (
-                                <NavButton
-                                    icon={faCheck}
-                                    label="الموافقات"
-                                    href="/approvals"
-                                    isActive={pathname === "/approvals"}
-                                />
-                            )}
-
-                            {/* أنواع الوثائق (للعميد والأدمن) */}
-                            {showAdminButtons && (
-                                <NavButton
-                                    icon={faFile}
-                                    label="أنواع الوثائق"
-                                    href="/document-types"
-                                    isActive={pathname === "/document-types"}
-                                />
-                            )}
-
-                            {/* الجهات المرسلة (للعميد والأدمن) */}
-                            {showAdminButtons && (
-                                <NavButton
-                                    icon={faMessage}
-                                    label="الجهات المرسلة"
-                                    href="/sender-entities"
-                                    isActive={pathname === "/sender-entities"}
-                                />
-                            )}
-
-                            {/* المستخدمين (للعميد والأدمن) */}
-                            {showAdminButtons && (
-                                <NavButton
-                                    icon={faUserEdit}
-                                    label="المستخدمين"
-                                    href="/users"
-                                    isActive={pathname === "/users"}
-                                />
-                            )}
-
-                            {/* التفويضات (للعميد) */}
-                            {role === "Dean" && (
-                                <NavButton
-                                    icon={faChartBar}
-                                    label="التفويضات"
-                                    href="/delegations"
-                                    isActive={pathname === "/delegations"}
-                                />
-                            )}
-
-                            {/* الإحصائيات */}
-                            <NavButton
-                                icon={faChartBar}
-                                label="الإحصائيات"
-                                href={role === "Dean" || role === "Admin" ? "/statistics" : "/user-statistics"}
-                                isActive={
-                                    pathname === "/statistics" || pathname === "/user-statistics"
-                                }
-                            />
-
-                            {/* الملف الشخصي */}
-                            <NavButton
-                                icon={faUserCircle}
+                                icon={faUser}
                                 label="الملف الشخصي"
                                 href="/profile"
                                 isActive={pathname === "/profile"}
@@ -440,7 +506,6 @@ export default function Navbar() {
 
                             <div className="border-t border-gray-100 my-2" />
 
-                            {/* تسجيل الخروج */}
                             <NavButton
                                 icon={faXmark}
                                 label="تسجيل الخروج"
