@@ -5,9 +5,9 @@ export type Attachment = {
     fileName: string;
     filePath: string;
     fileSize: number;        
-    mimeType: string | null; 
+    mimeType: string ; 
     isPrimary: boolean;      
     uploadedAt: string;      
     uploadedBy: string;      
-    downloadUrl: string | null; 
+    downloadUrl?: string ; 
 };

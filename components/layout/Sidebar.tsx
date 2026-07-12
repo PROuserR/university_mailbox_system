@@ -2,7 +2,7 @@
 
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useUIModeStore from "@/store/uiModeStore";
 import MailCompose from "@/components/overlays/MailCompose";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -34,11 +34,13 @@ import SidebarItem from "./SidebarItem";
 import useSidebarToggleStore from "@/store/sidebarToggleStore";
 import { motion, AnimatePresence } from "framer-motion";
 import useUserInfoStore from "@/store/userInfoStore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 
-export default function Sidebar() {
+// ✅ مكون منفصل يستخدم useSearchParams مع Suspense
+function SidebarContentWrapper() {
     const router = useRouter();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { role } = useUserInfoStore();
     const { uiMode } = useUIModeStore();
     const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
@@ -59,14 +61,12 @@ export default function Sidebar() {
     const isHomePage = pathname === "/";
     const isModernMode = uiMode === "modern";
 
-    // ✅ صلاحيات المستخدم
     const isUser = role === "User";
     const isEmployee = role === "Employee";
     const isDean = role === "Dean";
     const isAdmin = role === "Admin";
     const isDeanOrAdmin = isDean || isAdmin;
 
-    // ✅ جلب عدد الرسائل
     const fetchMailsCount = async (): Promise<MailCounts> => {
         const res = await apiWrapper.get<{
             data: MailCounts;
@@ -91,16 +91,12 @@ export default function Sidebar() {
         enabled: isHomePage,
     });
 
-    // ✅ دالة معالجة الضغط على الفلتر - تذهب للرئيسية دائماً وتطبق الفلتر
     const handleFilterClick = (filterValue: string) => {
-        // ✅ دائماً نذهب للرئيسية مع الفلتر
         router.push(`/?filter=${filterValue}`);
-        // ✅ تحديث الفلتر في الـ Store
         setFilter(filterValue);
         if (isMobile) triggerSidebar();
     };
 
-    // ✅ دالة للذهاب للرئيسية ومسح الفلتر
     const goToHome = () => {
         router.push("/");
         setFilter("");
@@ -112,7 +108,29 @@ export default function Sidebar() {
         if (isMobile) triggerSidebar();
     };
 
-    // ✅ تحديد الصفحات حسب الدور (للوضع الحديث فقط)
+    const isLinkActive = (path: string): boolean => {
+        if (path.includes("?")) {
+            const [basePath, queryString] = path.split("?");
+            const params = new URLSearchParams(queryString);
+            const tab = params.get("tab");
+            
+            if (pathname === basePath && tab) {
+                return searchParams.get("tab") === tab;
+            }
+            return pathname === basePath;
+        }
+        
+        if (path === "/") {
+            return pathname === "/";
+        }
+        
+        if (path === "/correspondences") {
+            return pathname === "/correspondences" || pathname?.startsWith("/correspondences/");
+        }
+        
+        return pathname === path;
+    };
+
     const getPagesByRole = () => {
         const commonPages = [
             { icon: faUser, label: "الملف الشخصي", path: "/profile" },
@@ -120,7 +138,7 @@ export default function Sidebar() {
 
         if (isUser) {
             return [
-                { icon: faInbox, label: "الوارد", path: "/distribution" },
+                { icon: faInbox, label: "الوارد", path: "/distribution?tab=inbox" },
                 { icon: faChartBar, label: "الإحصائيات", path: "/user-statistics" },
                 ...commonPages,
             ];
@@ -128,8 +146,8 @@ export default function Sidebar() {
 
         if (isEmployee) {
             return [
-                { icon: faInbox, label: "الوارد", path: "/distribution" },
-                { icon: faPaperPlane, label: "الصادر", path: "/distribution?type=outbox" },
+                { icon: faInbox, label: "الوارد", path: "/distribution?tab=inbox" },
+                { icon: faPaperPlane, label: "الصادر", path: "/distribution?tab=outbox" },
                 { icon: faFolder, label: "المراسلات", path: "/correspondences" },
                 { icon: faChartBar, label: "الإحصائيات", path: "/user-statistics" },
                 ...commonPages,
@@ -138,8 +156,8 @@ export default function Sidebar() {
 
         if (isDeanOrAdmin) {
             return [
-                { icon: faInbox, label: "الوارد", path: "/distribution" },
-                { icon: faPaperPlane, label: "الصادر", path: "/distribution?type=outbox" },
+                { icon: faInbox, label: "الوارد", path: "/distribution?tab=inbox" },
+                { icon: faPaperPlane, label: "الصادر", path: "/distribution?tab=outbox" },
                 { icon: faFolder, label: "المراسلات", path: "/correspondences" },
                 { icon: faUsers, label: "المستخدمين", path: "/users" },
                 { icon: faBuilding, label: "الجهات المرسلة", path: "/sender-entities" },
@@ -153,163 +171,161 @@ export default function Sidebar() {
         return commonPages;
     };
 
-    // ✅ المحتوى المشترك للـ Sidebar
-    const renderSidebarContent = (isMobileView: boolean = false) => (
-        <>
-            <div className="flex-1 overflow-y-auto w-full">
-                {/* Compose Button */}
-                <button
-                    onClick={() => {
-                        triggerMailCompose();
-                        if (isMobileView) triggerSidebar();
-                    }}
-                    className={`
-                        w-full
-                        bg-gradient-to-r from-blue-500 to-blue-600
-                        text-white
-                        py-2.5
-                        rounded-xl
-                        flex
-                        items-center
-                        justify-center
-                        gap-2
-                        mb-4
-                        hover:from-blue-600 hover:to-blue-700
-                        transition-all
-                        duration-200
-                        shadow-md hover:shadow-lg
-                        ${!isSidebarToggleShown && !isMobileView ? "px-0" : "px-4"}
-                    `}
-                >
-                    <FontAwesomeIcon icon={faPlus} className="text-sm" />
-                    <AnimatePresence>
-                        {(isSidebarToggleShown || isMobileView) && (
-                            <motion.span
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                transition={{ duration: 0.2 }}
-                                className="text-sm font-medium whitespace-nowrap"
-                            >
-                                مراسلة جديدة
-                            </motion.span>
-                        )}
-                    </AnimatePresence>
-                </button>
+    const renderSidebarContent = (isMobileView: boolean = false) => {
+        const pages = getPagesByRole();
 
-                {/* القسم الرئيسي */}
-                <div className="space-y-1">
-                    {/* ✅ الرئيسية - تذهب للرئيسية وتمسح الفلتر */}
-                    <SidebarItem
-                        icon={faHome}
-                        label={(isSidebarToggleShown || isMobileView) ? "الرئيسية" : ""}
-                        onClick={goToHome}
-                        active={pathname === "/" && filter === ""}
-                        isCollapsed={!isSidebarToggleShown && !isMobileView}
-                    />
+        return (
+            <>
+                <div className="flex-1 overflow-y-auto w-full">
+                    <button
+                        onClick={() => {
+                            triggerMailCompose();
+                            if (isMobileView) triggerSidebar();
+                        }}
+                        className={`
+                            w-full
+                            bg-gradient-to-r from-blue-500 to-blue-600
+                            text-white
+                            py-2.5
+                            rounded-xl
+                            flex
+                            items-center
+                            justify-center
+                            gap-2
+                            mb-4
+                            hover:from-blue-600 hover:to-blue-700
+                            transition-all
+                            duration-200
+                            shadow-md hover:shadow-lg
+                            ${!isSidebarToggleShown && !isMobileView ? "px-0" : "px-4"}
+                        `}
+                    >
+                        <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                        <AnimatePresence>
+                            {(isSidebarToggleShown || isMobileView) && (
+                                <motion.span
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="text-sm font-medium whitespace-nowrap"
+                                >
+                                    مراسلة جديدة
+                                </motion.span>
+                            )}
+                        </AnimatePresence>
+                    </button>
 
-                    {/* ✅ الفلاتر - تظهر فقط في التصميم الكلاسيكي (مع الـ MailList) */}
-                    {!isModernMode && (
-                        <>
-                            <div className="h-px bg-blue-100/50 my-2" />
+                    <div className="space-y-1">
+                        <SidebarItem
+                            icon={faHome}
+                            label={(isSidebarToggleShown || isMobileView) ? "الرئيسية" : ""}
+                            onClick={goToHome}
+                            active={isLinkActive("/")}
+                            isCollapsed={!isSidebarToggleShown && !isMobileView}
+                        />
 
-                            <SidebarItem
-                                icon={faEnvelope}
-                                label={(isSidebarToggleShown || isMobileView) ? "صندوق البريد" : ""}
-                                onClick={() => handleFilterClick("")}
-                                active={filter === "" && pathname === "/"}
-                                count={(isSidebarToggleShown || isMobileView) ? data.totalCount : undefined}
-                                isCollapsed={!isSidebarToggleShown && !isMobileView}
-                            />
+                        {!isModernMode && (
+                            <>
+                                <div className="h-px bg-blue-100/50 my-2" />
 
-                            <SidebarItem
-                                icon={faInbox}
-                                label={(isSidebarToggleShown || isMobileView) ? "الوارد" : ""}
-                                onClick={() => handleFilterClick("Incoming")}
-                                active={filter === "Incoming" && pathname === "/"}
-                                count={(isSidebarToggleShown || isMobileView) ? data.incomingCount : undefined}
-                                isCollapsed={!isSidebarToggleShown && !isMobileView}
-                            />
-
-                            <SidebarItem
-                                icon={faPaperPlane}
-                                label={(isSidebarToggleShown || isMobileView) ? "الصادر" : ""}
-                                onClick={() => handleFilterClick("Outgoing")}
-                                active={filter === "Outgoing" && pathname === "/"}
-                                count={(isSidebarToggleShown || isMobileView) ? data.outgoingCount : undefined}
-                                isCollapsed={!isSidebarToggleShown && !isMobileView}
-                            />
-
-                            <SidebarItem
-                                icon={faFile}
-                                label={(isSidebarToggleShown || isMobileView) ? "الداخلي" : ""}
-                                onClick={() => handleFilterClick("Internal")}
-                                active={filter === "Internal" && pathname === "/"}
-                                count={(isSidebarToggleShown || isMobileView) ? data.internalCount : undefined}
-                                isCollapsed={!isSidebarToggleShown && !isMobileView}
-                            />
-
-                            <SidebarItem
-                                icon={faBriefcase}
-                                label={(isSidebarToggleShown || isMobileView) ? "المهني" : ""}
-                                onClick={() => handleFilterClick("Professional")}
-                                active={filter === "Professional" && pathname === "/"}
-                                count={(isSidebarToggleShown || isMobileView) ? data.professionalCount : undefined}
-                                isCollapsed={!isSidebarToggleShown && !isMobileView}
-                            />
-                        </>
-                    )}
-
-                    {/* ✅ روابط الصفحات حسب الدور - تظهر فقط في التصميم الحديث */}
-                    {isModernMode && (
-                        <>
-                            <div className="h-px bg-blue-100/50 my-2" />
-                            {getPagesByRole().map((page) => (
                                 <SidebarItem
-                                    key={page.path}
-                                    icon={page.icon}
-                                    label={(isSidebarToggleShown || isMobileView) ? page.label : ""}
-                                    onClick={() => handleNavigation(page.path)}
-                                    active={pathname === page.path || pathname?.startsWith(page.path + "/")}
+                                    icon={faEnvelope}
+                                    label={(isSidebarToggleShown || isMobileView) ? "صندوق البريد" : ""}
+                                    onClick={() => handleFilterClick("")}
+                                    active={filter === "" && pathname === "/"}
+                                    count={(isSidebarToggleShown || isMobileView) ? data.totalCount : undefined}
                                     isCollapsed={!isSidebarToggleShown && !isMobileView}
                                 />
-                            ))}
-                        </>
-                    )}
-                </div>
-            </div>
 
-            {/* BOTTOM SECTION */}
-            <div className="w-full">
-                <AnimatePresence>
-                    {(isSidebarToggleShown || isMobileView) && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            transition={{ duration: 0.25 }}
-                            className="mt-3 p-3 rounded-xl bg-blue-50/50 border border-blue-100/50"
-                        >
-                            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                                <span>التخزين</span>
-                                <span>2.4GB / 10GB</span>
-                            </div>
-                            <div className="w-full bg-blue-200/50 h-1.5 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600"
-                                    style={{ width: "24%" }}
+                                <SidebarItem
+                                    icon={faInbox}
+                                    label={(isSidebarToggleShown || isMobileView) ? "الوارد" : ""}
+                                    onClick={() => handleFilterClick("Incoming")}
+                                    active={filter === "Incoming" && pathname === "/"}
+                                    count={(isSidebarToggleShown || isMobileView) ? data.incomingCount : undefined}
+                                    isCollapsed={!isSidebarToggleShown && !isMobileView}
                                 />
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </>
-    );
+
+                                <SidebarItem
+                                    icon={faPaperPlane}
+                                    label={(isSidebarToggleShown || isMobileView) ? "الصادر" : ""}
+                                    onClick={() => handleFilterClick("Outgoing")}
+                                    active={filter === "Outgoing" && pathname === "/"}
+                                    count={(isSidebarToggleShown || isMobileView) ? data.outgoingCount : undefined}
+                                    isCollapsed={!isSidebarToggleShown && !isMobileView}
+                                />
+
+                                <SidebarItem
+                                    icon={faFile}
+                                    label={(isSidebarToggleShown || isMobileView) ? "الداخلي" : ""}
+                                    onClick={() => handleFilterClick("Internal")}
+                                    active={filter === "Internal" && pathname === "/"}
+                                    count={(isSidebarToggleShown || isMobileView) ? data.internalCount : undefined}
+                                    isCollapsed={!isSidebarToggleShown && !isMobileView}
+                                />
+
+                                <SidebarItem
+                                    icon={faBriefcase}
+                                    label={(isSidebarToggleShown || isMobileView) ? "المهني" : ""}
+                                    onClick={() => handleFilterClick("Professional")}
+                                    active={filter === "Professional" && pathname === "/"}
+                                    count={(isSidebarToggleShown || isMobileView) ? data.professionalCount : undefined}
+                                    isCollapsed={!isSidebarToggleShown && !isMobileView}
+                                />
+                            </>
+                        )}
+
+                        {isModernMode && (
+                            <>
+                                <div className="h-px bg-blue-100/50 my-2" />
+                                {pages.map((page) => (
+                                    <SidebarItem
+                                        key={page.path}
+                                        icon={page.icon}
+                                        label={(isSidebarToggleShown || isMobileView) ? page.label : ""}
+                                        onClick={() => handleNavigation(page.path)}
+                                        active={isLinkActive(page.path)}
+                                        isCollapsed={!isSidebarToggleShown && !isMobileView}
+                                    />
+                                ))}
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                <div className="w-full">
+                    <AnimatePresence>
+                        {(isSidebarToggleShown || isMobileView) && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                transition={{ duration: 0.25 }}
+                                className="mt-3 p-3 rounded-xl bg-blue-50/50 border border-blue-100/50"
+                            >
+                                <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                                    <span>التخزين</span>
+                                    <span>2.4GB / 10GB</span>
+                                </div>
+                                <div className="w-full bg-blue-200/50 h-1.5 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600"
+                                        style={{ width: "24%" }}
+                                    />
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {isMailComposeShown && <MailCompose />}
+            </>
+        );
+    };
 
     return (
         <>
-            {/* ===== Desktop Sidebar ===== */}
             <motion.aside
                 dir="rtl"
                 animate={{
@@ -336,7 +352,6 @@ export default function Sidebar() {
                 {renderSidebarContent(false)}
             </motion.aside>
 
-            {/* ===== Mobile Sidebar (Overlay) ===== */}
             <AnimatePresence>
                 {isMobile && isSidebarToggleShown && (
                     <>
@@ -383,8 +398,15 @@ export default function Sidebar() {
                     </>
                 )}
             </AnimatePresence>
-
-            {isMailComposeShown && <MailCompose />}
         </>
+    );
+}
+
+// ✅ المكون الرئيسي مع Suspense
+export default function Sidebar() {
+    return (
+        <Suspense fallback={<div className="w-16 h-full bg-blue-50/50 animate-pulse" />}>
+            <SidebarContentWrapper />
+        </Suspense>
     );
 }

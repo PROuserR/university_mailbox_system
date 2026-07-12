@@ -1,17 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// components/correspondence/CorrespondenceEmailDetail.tsx
-
+// components/distribution/OutboxEmailDetail.tsx
 "use client";
 
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { useRouter } from "next/navigation";
 import {
-  ArchiveIcon,
-  Trash2Icon,
-  MailPlusIcon,
-  FolderOpenIcon,
-  MoreVerticalIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   StarIcon,
@@ -26,9 +18,8 @@ import {
   FileArchiveIcon,
   DownloadIcon,
   EyeIcon,
-  SendIcon,
-  EditIcon,
-  InfoIcon,
+  CheckCheckIcon,
+  Clock,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -47,16 +38,13 @@ import {
 } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { CorrespondenceResponse, getMainTypeString } from "@/types/api/correspondence.types";
-import { Attachment } from "@/types/api/Attachment";
+import { DistributionOutboxDto } from "@/types/api/distribution";
 import { downloadAttachment } from "@/services/correspondence.service";
-import { useUserRole } from "@/hooks/useUserRole";
 import toast from "react-hot-toast";
 import { useState, useRef } from "react";
-import { TooltipProvider } from "@radix-ui/react-tooltip";
 
-interface CorrespondenceEmailDetailProps {
-  item: CorrespondenceResponse;
+interface OutboxEmailDetailProps {
+  item: DistributionOutboxDto;
   onClose: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
@@ -84,7 +72,7 @@ function getFileGradient(type: string) {
   return { start: "#6b7280", end: "#4b5563" };
 }
 
-export function CorrespondenceEmailDetail({
+export function OutboxEmailDetail({
   item,
   onClose,
   onPrevious,
@@ -93,10 +81,7 @@ export function CorrespondenceEmailDetail({
   hasNext,
   currentIndex,
   totalCount,
-}: CorrespondenceEmailDetailProps) {
-  const router = useRouter();
-  const { isDean, isEmployee } = useUserRole();
-  
+}: OutboxEmailDetailProps) {
   const [downloading, setDownloading] = useState<number | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -105,28 +90,23 @@ export function CorrespondenceEmailDetail({
   const [isStarred, setIsStarred] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const canDistribute = isDean || isEmployee;
-  const canEdit = isDean || isEmployee;
-
-  // ✅ معاينة المرفق
-  const handleView = async (attachment: Attachment) => {
+  const handleView = async (attachmentId: number, fileName: string, mimeType: string) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     setPreviewLoading(true);
     setPreviewUrl(null);
-    setPreviewType(attachment.mimeType);
-    setPreviewName(attachment.fileName);
+    setPreviewType(mimeType);
+    setPreviewName(fileName);
 
     try {
-      const blob = await downloadAttachment(attachment.id, controller.signal);
+      const blob = await downloadAttachment(attachmentId, controller.signal);
       const url = URL.createObjectURL(blob);
       setPreviewUrl(url);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      if (error.name !== "AbortError") {
-        toast.error(error.message || "فشل في تحميل الملف للمعاينة");
-      }
+      if (error.name !== "AbortError") toast.error("فشل في تحميل الملف للمعاينة");
       closePreview();
     } finally {
       setPreviewLoading(false);
@@ -143,40 +123,27 @@ export function CorrespondenceEmailDetail({
     setPreviewName("");
   };
 
-  // ✅ تحميل المرفق
-  const handleDownload = async (attachment: Attachment) => {
-    setDownloading(attachment.id);
+  const handleDownload = async (attachmentId: number) => {
+    setDownloading(attachmentId);
     try {
-      const blob = await downloadAttachment(attachment.id);
+      const blob = await downloadAttachment(attachmentId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = attachment.fileName;
+      a.download = attachmentId.toString();
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("تم تحميل المرفق بنجاح");
-    } catch (error: any) {
-      toast.error(error.message || "فشل تحميل المرفق");
+      toast.success("تم تحميل المرفق");
+    } catch {
+      toast.error("فشل التحميل");
     } finally {
       setDownloading(null);
     }
   };
 
- const handleDistribute = () => {
-  router.push(`/distribution-page?id=${item.id}`);
-};
-
-  const handleEdit = () => {
-    router.push(`/mail/${item.id}/edit`);
-  };
-
-  const handleDistributionStatus = () => {
-    router.push(`/mail/${item.id}/distribution-status`);
-  };
-
- const getTypeBadge = (mainType: string | number) => {
+  const getTypeBadge = (mainType: string | number) => {
   if (typeof mainType === 'number') {
     switch (mainType) {
       case 1:
@@ -202,18 +169,33 @@ export function CorrespondenceEmailDetail({
   }
 };
 
-  const formatDateShort = (date?: string | null) => {
-    if (!date) return "";
+  const getStatusBadge = () => {
+    if (item.isRead) {
+      return (
+        <Badge variant="outline" className="gap-1 text-green-600 border-green-300">
+          <CheckCheckIcon className="h-3 w-3" />
+          مقروءة
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="gap-1 text-amber-600 border-amber-300">
+        <Clock className="h-3 w-3" />
+        غير مقروءة
+      </Badge>
+    );
+  };
+
+  const formatDateShort = (date: string) => {
     return format(new Date(date), "dd/MM/yyyy");
   };
 
   return (
     <div className="flex h-full flex-col bg-card">
-      {/* ========== شريط الإجراءات العلوي ========== */}
+      {/* Top Action Bar */}
       <div className="shrink-0 flex items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-1">
-         <TooltipProvider>
-           <Tooltip>
+          <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon-sm" onClick={onClose} className="md:hidden">
                 <XIcon className="h-4 w-4" />
@@ -221,102 +203,6 @@ export function CorrespondenceEmailDetail({
             </TooltipTrigger>
             <TooltipContent>إغلاق</TooltipContent>
           </Tooltip>
-         </TooltipProvider>
-         
-
-          {canDistribute && (
-         <TooltipProvider>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={handleDistribute}
-                  className="text-blue-500 hover:text-blue-700"
-                >
-                  <SendIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>توزيع</TooltipContent>
-            </Tooltip>
-         </TooltipProvider>
-
-          )}
-
-          {canEdit && (
-             <TooltipProvider>
- <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={handleEdit}
-                  className="text-amber-500 hover:text-amber-700"
-                >
-                  <EditIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>تعديل</TooltipContent>
-            </Tooltip>
-             </TooltipProvider>
-           
-          )}
-
-          {isDean && (
-            <TooltipProvider>
- <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={handleDistributionStatus}
-                  className="text-purple-500 hover:text-purple-700"
-                >
-                  <InfoIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>حالة التوزيع</TooltipContent>
-            </Tooltip>
-            </TooltipProvider>
-           
-          )}
-
-          {/* <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm">
-                <MoreVerticalIcon className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              <DropdownMenuItem>
-                <ArchiveIcon className="ml-2 h-4 w-4" />
-                <span>أرشفة</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Trash2Icon className="ml-2 h-4 w-4" />
-                <span>حذف</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <MailPlusIcon className="ml-2 h-4 w-4" />
-                <span>تحديد كغير مقروء</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <FolderOpenIcon className="ml-2 h-4 w-4" />
-                <span>نقل إلى مجلد</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <span>تأجيل</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <span>إضافة إلى المهام</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <span>إنشاء حدث</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu> */}
         </div>
 
         <div className="flex items-center gap-2">
@@ -339,27 +225,30 @@ export function CorrespondenceEmailDetail({
         </div>
       </div>
 
-      {/* ========== تفاصيل المرسل والمعلومات الأساسية ========== */}
+      {/* Receiver Info */}
       <div className="shrink-0 border-b border-border p-4">
         <div className="flex flex-wrap justify-between gap-4">
           <div className="flex gap-3">
             <Avatar className="size-10">
               <AvatarFallback className="bg-primary/10 text-primary">
-                {item.senderEntity?.charAt(0) || "ج"}
+                {item.receiverName?.charAt(0) || "م"}
               </AvatarFallback>
             </Avatar>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-semibold text-foreground">
-                  {item.senderEntity || "جهة غير محددة"}
+                  {item.receiverName || "مستلم غير محدد"}
                 </h2>
                 {getTypeBadge(item.mainType)}
                 {item.isProfessional && (
-                  <Badge variant="professional">مهني</Badge>
+                  <Badge variant="outline" className="border-amber-200 text-amber-600">
+                    مهني
+                  </Badge>
                 )}
+                {getStatusBadge()}
               </div>
               <p className="text-xs text-muted-foreground">
-                رقم: {item.number}
+                رقم المراسلة: {item.correspondenceNumber}
               </p>
             </div>
           </div>
@@ -368,8 +257,7 @@ export function CorrespondenceEmailDetail({
             <Button variant="ghost" size="icon-sm" onClick={() => setIsStarred(!isStarred)}>
               <StarIcon className={cn("h-4 w-4", isStarred && "fill-yellow-500 text-yellow-500")} />
             </Button>
-            <TooltipProvider>
- <Tooltip>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon-sm">
                   <ReplyIcon className="h-4 w-4" />
@@ -377,9 +265,7 @@ export function CorrespondenceEmailDetail({
               </TooltipTrigger>
               <TooltipContent>رد</TooltipContent>
             </Tooltip>
-            </TooltipProvider>
-           <TooltipProvider>
-              <Tooltip>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon-sm">
                   <ForwardIcon className="h-4 w-4" />
@@ -387,26 +273,30 @@ export function CorrespondenceEmailDetail({
               </TooltipTrigger>
               <TooltipContent>إعادة توجيه</TooltipContent>
             </Tooltip>
-           </TooltipProvider>
-           
           </div> */}
         </div>
       </div>
 
-      {/* ========== العنوان ========== */}
+      {/* Title */}
       <div className="shrink-0 border-b border-border px-4 py-3">
-        <h1 className="text-lg font-bold text-foreground">{item.title}</h1>
+        <h1 className="text-lg font-bold text-foreground">{item.correspondenceTitle}</h1>
       </div>
 
-      {/* ========== منطقة التمرير ========== */}
+      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto hide-scrollbar">
-        {/* التفاصيل الإضافية */}
+        {/* Additional Info */}
         <div className="border-b border-border p-4">
           <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
             {item.documentType && (
               <div className="flex items-center gap-2">
                 <span className="font-medium text-foreground">نوع الوثيقة:</span>
                 <span className="text-muted-foreground">{item.documentType}</span>
+              </div>
+            )}
+            {item.senderEntity && (
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">الجهة المرسلة:</span>
+                <span className="text-muted-foreground">{item.senderEntity}</span>
               </div>
             )}
             {item.senderReference && (
@@ -417,6 +307,7 @@ export function CorrespondenceEmailDetail({
             )}
           </div>
 
+          {/* Dates */}
           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
             {item.issuedDate && (
               <div className="flex items-center gap-2">
@@ -424,27 +315,29 @@ export function CorrespondenceEmailDetail({
                 <span>{formatDateShort(item.issuedDate)}</span>
               </div>
             )}
-            {item.mainType === 1 && item.receivedDate && (
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground">📥 تاريخ الاستلام:</span>
-                <span>{formatDateShort(item.receivedDate)}</span>
-              </div>
-            )}
-            {item.mainType === 2 && item.sentDate && (
+            {item.mainType === "Outgoing" && item.sentDate && (
               <div className="flex items-center gap-2">
                 <span className="font-medium text-foreground">📤 تاريخ الإرسال:</span>
                 <span>{formatDateShort(item.sentDate)}</span>
               </div>
             )}
+            {item.distributedDate && (
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">📤 تاريخ التوزيع:</span>
+                <span>{formatDateShort(item.distributedDate)}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* المحتوى */}
+        {/* Content */}
         <div className="border-b border-border p-4">
           <div className="prose prose-sm max-w-none dark:prose-invert">
-            <div dangerouslySetInnerHTML={{ __html: item.content || "<p class='text-muted-foreground'>لا يوجد محتوى</p>" }} />
+            <div dangerouslySetInnerHTML={{ __html: item.correspondenceContent || "<p class='text-muted-foreground'>لا يوجد محتوى</p>" }} />
           </div>
         </div>
+        
+{/* Notes - ملاحظات */}
 {item.notes && (
     <div className="border-b border-border p-4">
         <div className="flex items-start gap-2">
@@ -453,8 +346,8 @@ export function CorrespondenceEmailDetail({
         </div>
     </div>
 )}
-        {/* المرفقات */}
-        {item.attachments && item.attachments.length > 0 && (
+        {/* Attachments */}
+        {item.attachments.length > 0 && (
           <div className="p-4">
             <div className="mb-3 flex items-center gap-2">
               <ShieldIcon className="h-4 w-4 text-emerald-500" />
@@ -486,27 +379,24 @@ export function CorrespondenceEmailDetail({
                       </div>
                     </div>
                     <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">
-                      <TooltipProvider>
-  <Tooltip>
+                      <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            onClick={() => handleView(att)}
+                            onClick={() => handleView(att.id, att.fileName, att.mimeType)}
                           >
                             <EyeIcon className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>معاينة</TooltipContent>
                       </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                         <Tooltip>
+                      <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            onClick={() => handleDownload(att)}
+                            onClick={() => handleDownload(att.id)}
                             disabled={downloading === att.id}
                           >
                             <DownloadIcon className="h-4 w-4" />
@@ -514,9 +404,6 @@ export function CorrespondenceEmailDetail({
                         </TooltipTrigger>
                         <TooltipContent>تحميل</TooltipContent>
                       </Tooltip>
-                      </TooltipProvider>
-                    
-                     
                     </div>
                   </div>
                 );
@@ -526,19 +413,19 @@ export function CorrespondenceEmailDetail({
         )}
       </div>
 
-      {/* ========== نافذة معاينة المرفقات ========== */}
+      {/* Preview Dialog */}
       <Dialog open={!!previewUrl || previewLoading} onOpenChange={(open) => !open && closePreview()}>
-  <DialogContent className="max-h-[85vh] max-w-[95vw] overflow-auto rounded-lg bg-white p-0 shadow-xl sm:max-w-4xl [&_[data-slot=dialog-close]]:hidden">
-    {/* Header */}
-    <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white p-2">
-      <DialogTitle className="truncate text-sm font-medium text-foreground sm:text-base">
-        {previewName.length > 40 ? previewName.slice(0, 40) + "..." : previewName}
-      </DialogTitle>
-      <Button variant="ghost" size="icon-sm" onClick={closePreview} className="h-8 w-8">
-        <XIcon className="h-4 w-4" />
-      </Button>
-    </div>
-          <div className="flex min-h-[300px] items-center justify-center bg-white p-2 sm:p-4">  {previewLoading ? (
+        <DialogContent className="max-h-[85vh] max-w-[95vw] overflow-auto rounded-lg bg-white p-0 shadow-xl sm:max-w-4xl [&_[data-slot=dialog-close]]:hidden" hideCloseButton={true}>
+          <div className="sticky top-0 flex items-center justify-between border-b border-border bg-white p-2">
+            <DialogTitle className="truncate text-sm font-medium text-foreground sm:text-base">
+              {previewName.length > 40 ? previewName.slice(0, 40) + "..." : previewName}
+            </DialogTitle>
+            <Button variant="ghost" size="icon-sm" onClick={closePreview} className="h-8 w-8">
+              <XIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex min-h-[300px] items-center justify-center  bg-white p-2 sm:p-4">
+            {previewLoading ? (
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                 <p className="text-center text-sm text-muted-foreground">جاري تحميل الملف...</p>

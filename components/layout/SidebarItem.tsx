@@ -1,90 +1,101 @@
 // components/layout/SidebarItem.tsx
 
-import useSidebarToggleStore from "@/store/sidebarToggleStore";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+"use client";
+
 import { motion } from "framer-motion";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { cn } from "@/lib/utils";
 
 interface SidebarItemProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    icon: any;
-    label: string | null;
-    count?: number;
+    icon: IconDefinition;
+    label: string;
+    onClick: () => void;
     active?: boolean;
-    onClick?: () => void;
-    isCollapsed?: boolean; // ✅ إضافة prop
+    count?: number;
+    isCollapsed?: boolean;
+    isModern?: boolean;
+    className?: string;
 }
 
 export default function SidebarItem({
     icon,
     label,
-    count,
-    active,
     onClick,
-    isCollapsed = false, // ✅ قيمة افتراضية
+    active = false,
+    count,
+    isCollapsed = false,
+    isModern = false,
+    className = "",
 }: SidebarItemProps) {
-    const { isSidebarToggleShown } = useSidebarToggleStore();
+    const styles = isModern ? {
+        base: `text-white/70 hover:text-white hover:bg-white/10`,
+        active: `bg-white/15 text-white shadow-lg shadow-white/5 border-r-2 border-indigo-400`,
+        icon: `text-white/50 group-hover:text-white`,
+        iconActive: `text-indigo-400`,
+        count: `bg-white/10 text-white/70`,
+        countActive: `bg-indigo-500/20 text-indigo-300`,
+    } : {
+        base: `text-gray-700 hover:text-blue-600 hover:bg-blue-50`,
+        active: `bg-blue-50 text-blue-700 font-semibold border-r-4 border-blue-500`,
+        icon: `text-gray-400 group-hover:text-blue-500`,
+        iconActive: `text-blue-600`,
+        count: `bg-gray-100 text-gray-500`,
+        countActive: `bg-blue-100 text-blue-600`,
+    };
 
-    // ✅ تحديد إذا كان العنصر مطويًا (Collapsed)
-    const isCollapsedMode = isCollapsed || !isSidebarToggleShown;
-
-    if (isSidebarToggleShown) {
-        return (
-            <motion.div
-                whileHover={{ x: 4, backgroundColor: "rgba(59, 130, 246, 0.06)" }}
-                whileTap={{ scale: 0.97 }}
-                onClick={onClick}
-                className={`
-                    flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all duration-200
-                    ${active 
-                        ? "bg-blue-100 text-blue-700 font-semibold shadow-sm" 
-                        : "text-gray-600 hover:text-blue-600 hover:bg-blue-50/50"
-                    }
-                `}
-            >
-                <div className="flex items-center gap-3">
-                    <FontAwesomeIcon 
-                        icon={icon} 
-                        className={`text-sm ${active ? "text-blue-600" : "text-gray-400"}`} 
-                    />
-                    <span className="text-sm">{label}</span>
-                </div>
-
-                {count !== undefined && (
-                    <span className={`
-                        text-[10px] px-2 py-0.5 rounded-full font-medium
-                        ${active 
-                            ? "bg-blue-200 text-blue-700" 
-                            : "bg-gray-100 text-gray-500"
-                        }
-                    `}>
-                        {count}
-                    </span>
-                )}
-            </motion.div>
-        );
-    }
-
-    // ✅ وضع مطوي (Collapsed)
     return (
-        <motion.div
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+        <motion.button
+            whileHover={{ x: isCollapsed ? 0 : 4 }}
+            whileTap={{ scale: 0.97 }}
             onClick={onClick}
-            className={`
-                flex items-center justify-center w-10 h-10 rounded-xl cursor-pointer transition-all duration-200 mx-auto
-                ${active 
-                    ? "bg-blue-100 text-blue-600" 
-                    : "text-gray-400 hover:text-blue-500 hover:bg-blue-50/50"
-                }
-            `}
-            title={label || ""}
+            className={cn(
+                `
+                    flex items-center gap-3
+                    w-full px-4 py-2.5
+                    rounded-xl
+                    transition-all duration-200
+                    text-right text-sm
+                    relative
+                    group
+                `,
+                styles.base,
+                active && styles.active,
+                isCollapsed && "justify-center px-0",
+                className
+            )}
         >
-            <FontAwesomeIcon icon={icon} className="text-base" />
-            {count !== undefined && count > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-bold px-0.5">
-                    {count > 99 ? "99+" : count}
+            <FontAwesomeIcon
+                icon={icon}
+                className={cn(
+                    "w-5 transition-colors duration-200",
+                    styles.icon,
+                    active && styles.iconActive
+                )}
+            />
+
+            {!isCollapsed && (
+                <span className="flex-1 text-right">{label}</span>
+            )}
+
+            {!isCollapsed && count !== undefined && count > 0 && (
+                <span
+                    className={cn(
+                        "text-xs px-2 py-0.5 rounded-full transition-colors duration-200",
+                        styles.count,
+                        active && styles.countActive
+                    )}
+                >
+                    {count}
                 </span>
             )}
-        </motion.div>
+
+            {isCollapsed && label && (
+                <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                    {label}
+                    {count !== undefined && count > 0 && ` (${count})`}
+                </div>
+            )}
+        </motion.button>
     );
 }

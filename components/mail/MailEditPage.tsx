@@ -26,7 +26,7 @@ import toast from "react-hot-toast";
 // =========================
 import { useCorrespondence, useUpdateCorrespondence, useDocumentTypes, useSenderEntities } from "@/hooks/useCorrespondence";
 import { CorrespondenceMainType, UpdateCorrespondencePayload } from "@/types/api/correspondence.types";
-import { Attachment } from "@/types/api/attachment.types";
+import { Attachment } from "@/types/api/Attachment";
 import { Mail } from "@/types/api/Mail/Mail";
 
 // =========================

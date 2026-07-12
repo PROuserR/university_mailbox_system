@@ -1,26 +1,25 @@
-// components/correspondence/CorrespondenceEmailList.tsx
-
+// components/distribution/InboxEmailList.tsx
 "use client";
 
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { forwardRef } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { CorrespondenceResponse } from "@/types/api/correspondence.types";
-import { forwardRef } from "react";
+import { DistributionInboxDto } from "@/types/api/distribution";
+import { Loader2 } from "lucide-react";
 
-interface CorrespondenceEmailListProps {
-  items: CorrespondenceResponse[];
+interface InboxEmailListProps {
+  items: DistributionInboxDto[];
   selectedId: number | null;
   onSelectItem: (id: number) => void;
-  isLoading?: boolean;
+  isLoadingMore?: boolean;
+  hasMore?: boolean;
 }
 
-export const CorrespondenceEmailList = forwardRef<HTMLDivElement, CorrespondenceEmailListProps>(
-  ({ items, selectedId, onSelectItem, isLoading = false }, ref) => {
-    const formatDate = (dateString?: string | null) => {
-      if (!dateString) return "";
+export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
+  ({ items, selectedId, onSelectItem, isLoadingMore, hasMore }, ref) => {
+    const formatDate = (dateString: string) => {
       const date = new Date(dateString);
       const now = new Date();
       const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
@@ -30,59 +29,29 @@ export const CorrespondenceEmailList = forwardRef<HTMLDivElement, Correspondence
       return format(date, "dd/MM/yyyy");
     };
 
-    const getTypeBadge = (mainType: string | number) => {
-      if (typeof mainType === 'number') {
-        switch (mainType) {
-          case 1:
-            return <Badge variant="incoming">وارد</Badge>;
-          case 2:
-            return <Badge variant="outgoing">صادر</Badge>;
-          case 3:
-            return <Badge variant="internal">داخلي</Badge>;
-          default:
-            return null;
-        }
-      }
-      
+    const getTypeBadge = (mainType: string) => {
       switch (mainType) {
         case "Incoming":
-          return <Badge variant="incoming">وارد</Badge>;
+          return <Badge variant="outline" className="border-blue-200 text-blue-600 dark:border-blue-800 dark:text-blue-400">وارد</Badge>;
         case "Outgoing":
-          return <Badge variant="outgoing">صادر</Badge>;
+          return <Badge variant="outline" className="border-green-200 text-green-600 dark:border-green-800 dark:text-green-400">صادر</Badge>;
         case "Internal":
-          return <Badge variant="internal">داخلي</Badge>;
+          return <Badge variant="outline" className="border-purple-200 text-purple-600 dark:border-purple-800 dark:text-purple-400">داخلي</Badge>;
         default:
           return null;
       }
     };
 
-    if (isLoading) {
-      return (
-        <div ref={ref} className="flex h-full items-center justify-center text-muted-foreground">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p className="text-sm">جاري تحميل المراسلات...</p>
-          </div>
-        </div>
-      );
-    }
-
     if (items.length === 0) {
       return (
         <div ref={ref} className="flex h-full items-center justify-center text-muted-foreground">
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-lg">📭</p>
-            <p>لا توجد مراسلات</p>
-          </div>
+          لا توجد مراسلات في الوارد
         </div>
       );
     }
 
     return (
       <div ref={ref} className="flex flex-col">
-        {/* ✅ تم حذف العنوان وزر التحديث */}
-        
-        {/* قائمة المراسلات */}
         {items.map((item) => {
           const isSelected = selectedId === item.id;
           return (
@@ -97,7 +66,7 @@ export const CorrespondenceEmailList = forwardRef<HTMLDivElement, Correspondence
                 <div className="flex gap-3">
                   <Avatar className="h-9 w-9">
                     <AvatarFallback className="bg-primary/10 text-primary">
-                      {item.senderEntity?.charAt(0) || "ج"}
+                      {item.distributorName?.charAt(0) || "م"}
                     </AvatarFallback>
                   </Avatar>
                   
@@ -105,25 +74,23 @@ export const CorrespondenceEmailList = forwardRef<HTMLDivElement, Correspondence
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-foreground">
-                          {item.senderEntity || "جهة غير محددة"}
+                          {item.distributorName || "مرسل غير محدد"}
                         </span>
                         {getTypeBadge(item.mainType)}
                         {item.isProfessional && (
-                          <Badge variant="professional">مهني</Badge>
+                          <Badge variant="outline" className="border-amber-200 text-amber-600 dark:border-amber-800 dark:text-amber-400">
+                            مهني
+                          </Badge>
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {formatDate(item.issuedDate)}
+                        {formatDate(item.distributedDate)}
                       </span>
                     </div>
                     
                     <p className="mt-1 text-sm font-medium text-foreground line-clamp-1">
-                      {item.title}
+                      {item.correspondenceTitle}
                     </p>
-                    
-                    {/* <p className="mt-0.5 text-sm text-muted-foreground line-clamp-2">
-                      {item.content?.replace(/<[^>]*>/g, "") || "لا يوجد محتوى"}
-                    </p> */}
                     
                     {item.attachments && item.attachments.length > 0 && (
                       <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
@@ -136,9 +103,19 @@ export const CorrespondenceEmailList = forwardRef<HTMLDivElement, Correspondence
             </div>
           );
         })}
+        {isLoadingMore && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {!hasMore && items.length > 0 && (
+          <div className="py-4 text-center text-xs text-muted-foreground">
+            تم تحميل جميع المراسلات
+          </div>
+        )}
       </div>
     );
   }
 );
 
-CorrespondenceEmailList.displayName = "CorrespondenceEmailList";
+InboxEmailList.displayName = "InboxEmailList";

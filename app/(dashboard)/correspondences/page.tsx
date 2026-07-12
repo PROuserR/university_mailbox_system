@@ -11,18 +11,21 @@ import { CorrespondenceEmailList } from "@/components/correspondence/Corresponde
 import { CorrespondenceEmailDetail } from "@/components/correspondence/CorrespondenceEmailDetail";
 import { AdvancedSearchModal } from "@/components/ui/AdvancedSearchModal";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { RefreshCw, Plus, Filter } from "lucide-react";
 import Link from "next/link";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useSearchStore } from "@/store/searchStore";
-import { CorrespondenceMainType,CorrespondenceSearchDto } from "@/types/api/correspondence.types";
+import {
+  CorrespondenceMainType,
+  CorrespondenceSearchDto,
+} from "@/types/api/correspondence.types";
 import toast from "react-hot-toast";
+import { Drawer } from "vaul";
 
 const PAGE_HEIGHT = "calc(100vh - 64px)";
 
 const cleanText = (text: string): string => {
-  return text.replace(/\s+/g, ' ').trim();
+  return text.replace(/\s+/g, " ").trim();
 };
 
 export default function CorrespondencesPage() {
@@ -79,11 +82,18 @@ export default function CorrespondencesPage() {
     const params: CorrespondenceSearchDto = {
       page: 1,
       pageSize: 50,
-      sortBy: searchParams.sortField === "issuedDate" ? "IssuedDate" :
-             searchParams.sortField === "createdAt" ? "CreatedAt" :
-             searchParams.sortField === "title" ? "Title" :
-             searchParams.sortField === "number" ? "Number" :
-             searchParams.sortField === "senderEntity" ? "SenderEntity" : "MainType",
+      sortBy:
+        searchParams.sortField === "issuedDate"
+          ? "IssuedDate"
+          : searchParams.sortField === "createdAt"
+          ? "CreatedAt"
+          : searchParams.sortField === "title"
+          ? "Title"
+          : searchParams.sortField === "number"
+          ? "Number"
+          : searchParams.sortField === "senderEntity"
+          ? "SenderEntity"
+          : "MainType",
       sortOrderDESC: searchParams.sortDirection === "desc",
     };
 
@@ -107,13 +117,12 @@ export default function CorrespondencesPage() {
     return params;
   }, [searchParams]);
 
-    const { 
-    data, 
-    isLoading, 
-    error, 
-    refetch,
-    isFetching,
-  } = useCorrespondences(apiParams);
+  const { data, isLoading, error, refetch, isFetching } =
+    useCorrespondences(apiParams);
+
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   useEffect(() => {
     if (error) {
@@ -122,30 +131,22 @@ export default function CorrespondencesPage() {
   }, [error]);
 
   const isApplyingFilters = useRef(false);
+  const isResetting = useRef(false);
   const previousApiParams = useRef<string>("");
 
-useEffect(() => {
-    // ✅ إذا كان الـ Modal مفتوحاً ولا يوجد تطبيق فلاتر، لا تفعل شيء
-    if (isAdvancedOpen && !isApplyingFilters.current) {
-      return;
-    }
-
-    // ✅ منع إعادة الجلب إذا كانت نفس المعاملات السابقة
+  useEffect(() => {
     const currentParams = JSON.stringify(apiParams);
-    if (previousApiParams.current === currentParams) {
-      return;
-    }
-
     previousApiParams.current = currentParams;
-    refetch();
-    
-    // ✅ إعادة تعيين علم التطبيق بعد الجلب
+
     if (isApplyingFilters.current) {
       isApplyingFilters.current = false;
     }
-  }, [apiParams, isAdvancedOpen, refetch]);
+    if (isResetting.current) {
+      isResetting.current = false;
+    }
+  }, [apiParams]);
 
-const hasSetInitialSelection = useRef(false);
+  const hasSetInitialSelection = useRef(false);
 
   useEffect(() => {
     if (
@@ -193,13 +194,13 @@ const hasSetInitialSelection = useRef(false);
     }
   };
 
- const handleApplyFilters = useCallback(() => {
+  const handleApplyFilters = useCallback(() => {
     isApplyingFilters.current = true;
-    applyFilters(); 
+    applyFilters();
   }, [applyFilters]);
 
   const handleResetFilters = useCallback(() => {
-    isApplyingFilters.current = true;
+    isResetting.current = true;
     resetFilters();
     clearSearch();
   }, [resetFilters, clearSearch]);
@@ -215,7 +216,10 @@ const hasSetInitialSelection = useRef(false);
 
   if (isLoading && items.length === 0) {
     return (
-      <div className="flex items-center justify-center" style={{ height: PAGE_HEIGHT }}>
+      <div
+        className="flex items-center justify-center"
+        style={{ height: PAGE_HEIGHT }}
+      >
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
@@ -224,16 +228,29 @@ const hasSetInitialSelection = useRef(false);
   // ========== Mobile View ==========
   if (isMobile) {
     return (
-      <div className="flex flex-col overflow-hidden" style={{ height: PAGE_HEIGHT }}>
+      <div
+        className="flex flex-col overflow-hidden"
+        style={{ height: PAGE_HEIGHT }}
+      >
         <div className="shrink-0 bg-background border-b border-border p-3 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold">المراسلات</h1>
               <p className="text-xs text-muted-foreground">
-                {totalCount} مراسلة
+                إجمالي {totalCount} مراسلة
+                {items.length > 0 && ` · عرض ${items.length}`}
               </p>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                className="gap-1"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -269,22 +286,42 @@ const hasSetInitialSelection = useRef(false);
           </div>
         )}
 
-        <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
-          <SheetContent side="bottom" className="h-[90vh] rounded-t-xl p-0">
-            {selectedItem && (
-              <CorrespondenceEmailDetail
-                item={selectedItem}
-                onClose={handleCloseDetail}
-                onPrevious={handlePrevious}
-                onNext={handleNext}
-                hasPrevious={hasPrevious}
-                hasNext={hasNext}
-                currentIndex={currentIndex}
-                totalCount={items.length}
-              />
-            )}
-          </SheetContent>
-        </Sheet>
+        <Drawer.Root
+          open={detailOpen}
+          onOpenChange={(open) => {
+            setDetailOpen(open);
+            if (!open) {
+              document.body.style.overflow = "unset";
+            }
+          }}
+          modal={true}
+          dismissible={true}
+          closeThreshold={0.05}
+        >
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-150" />
+            <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 max-h-[92vh] rounded-t-xl bg-white p-0 outline-none flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-200">
+              <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing select-none shrink-0">
+                <div className="h-1 w-12 rounded-full bg-gray-300" />
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 pb-4">
+                {selectedItem && (
+                  <CorrespondenceEmailDetail
+                    item={selectedItem}
+                    onClose={handleCloseDetail}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                    hasPrevious={hasPrevious}
+                    hasNext={hasNext}
+                    currentIndex={currentIndex}
+                    totalCount={items.length}
+                  />
+                )}
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
 
         <AdvancedSearchModal
           isOpen={isAdvancedOpen}
@@ -320,10 +357,21 @@ const hasSetInitialSelection = useRef(false);
             <div>
               <h2 className="text-lg font-semibold">المراسلات</h2>
               <p className="text-xs text-muted-foreground">
-                {totalCount} مراسلة
+                إجمالي {totalCount} مراسلة
+                {items.length > 0 && ` · عرض ${items.length}`}
               </p>
             </div>
             <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleRefresh}
+                className="relative"
+                title="تحديث"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -336,10 +384,6 @@ const hasSetInitialSelection = useRef(false);
                     {activeFiltersCount}
                   </span>
                 )}
-              </Button>
-
-              <Button variant="ghost" size="icon-sm" onClick={handleResetFilters}>
-                <RefreshCw className="h-4 w-4" />
               </Button>
 
               <Link href="/mail/create">
@@ -384,7 +428,6 @@ const hasSetInitialSelection = useRef(false);
         )}
       </div>
 
-      {/* ✅ Modal البحث المتقدم */}
       <AdvancedSearchModal
         isOpen={isAdvancedOpen}
         onClose={closeModal}

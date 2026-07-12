@@ -1,6 +1,6 @@
 // src/types/correspondence.types.ts
 
-import { Attachment } from "@/types/api/attachment.types";
+import { Attachment } from "@/types/api/Attachment";
 
 // =========================
 // CorrespondenceMainType من Backend
