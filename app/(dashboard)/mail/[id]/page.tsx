@@ -8,17 +8,22 @@ import { Mail } from "@/types/api/Mail/Mail";
 import { apiWrapper } from "@/utils/apiClient";
 import MailViewer from "@/components/mail/MailViewer";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faChartPie } from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
+import useUserInfoStore from "@/store/userInfoStore";
 
 export default function MailPage() {
     const params = useParams();
     const router = useRouter();
     const id = params?.id as string;
+    const { role } = useUserInfoStore();
 
     const [mailData, setMailData] = useState<Mail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
+
+    // ✅ التحقق من صلاحية المستخدم (العميد فقط)
+    const isDean = role === "Dean";
 
     useEffect(() => {
         if (!id) return;
@@ -81,6 +86,11 @@ export default function MailPage() {
             onDistribute={() => {
                 router.push(`/distribution-page?id=${id}`);
             }}
+            // ✅ إضافة زر تقرير حالة التوزيع (للعميد فقط)
+            onDistributionStatus={() => {
+                router.push(`/correspondences/${id}/distribution-status`);
+            }}
+            showDistributionStatus={isDean}
         />
     );
 }

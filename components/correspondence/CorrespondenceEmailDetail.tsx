@@ -173,7 +173,7 @@ export function CorrespondenceEmailDetail({
   };
 
   const handleDistributionStatus = () => {
-    router.push(`/mail/${item.id}/distribution-status`);
+    router.push(`/correspondences/${item.id}/distribution-status`);
   };
 
  const getTypeBadge = (mainType: string | number) => {
@@ -276,7 +276,7 @@ export function CorrespondenceEmailDetail({
                   <InfoIcon className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>حالة التوزيع</TooltipContent>
+              <TooltipContent>تقرير حالة التوزيع </TooltipContent>
             </Tooltip>
             </TooltipProvider>
            

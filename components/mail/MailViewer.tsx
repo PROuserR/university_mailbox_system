@@ -1,3 +1,4 @@
+// components/mail/MailViewer.tsx
 
 "use client";
 
@@ -21,6 +22,7 @@ import {
     faUserTag,
     faInfoCircle,
     faUsers,
+    faChartPie,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -41,9 +43,19 @@ type Props = {
     onDistribute?: () => void;
     onBack?: () => void;
     hideActions?: boolean;
+    onDistributionStatus?: () => void; // ✅ إضافة
+    showDistributionStatus?: boolean; // ✅ إضافة
 };
 
-export default function MailViewer({ data, onEdit, onDistribute,onBack ,hideActions}: Props) {
+export default function MailViewer({ 
+    data, 
+    onEdit, 
+    onDistribute, 
+    onBack,
+    hideActions,
+    onDistributionStatus,
+    showDistributionStatus = false,
+}: Props) {
     const router = useRouter();
     const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } =
         useShowMailDetailsStore();
@@ -191,17 +203,18 @@ export default function MailViewer({ data, onEdit, onDistribute,onBack ,hideActi
         }
     };
 
-      if (!isMailDetailsStoreShown && !onBack) return null;
+    if (!isMailDetailsStoreShown && !onBack) return null;
 
     const dateFields = getDateFields();
 
- const handleBack = () => {
+    const handleBack = () => {
         if (onBack) {
             onBack();
         } else {
             triggerMailDetailsStoreShown();
         }
     };
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -213,45 +226,58 @@ export default function MailViewer({ data, onEdit, onDistribute,onBack ,hideActi
             {/* ===== HEADER - ثابت ===== */}
             <header className="bg-white border-b border-gray-200 shadow-sm shrink-0">
                 <div className="flex items-center justify-between px-4 md:px-8 py-3">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition text-sm font-medium"
-                    >
-                        <FontAwesomeIcon icon={faArrowRight} />
-                        رجوع
-                    </button>
- {!hideActions && (
                     <div className="flex items-center gap-2">
-                        
-<button
-    onClick={() => {
-        if (onEdit) {
-            onEdit();
-        } else {
-            router.push(`/mail/${data.id}/edit`);
-        }
-    }}
-    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-yellow-400 text-black hover:bg-yellow-500 transition text-sm font-medium"
->
-    <FontAwesomeIcon icon={faPen} />
-    تعديل
-</button>
+                        <button
+                            onClick={handleBack}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition text-sm font-medium"
+                        >
+                            <FontAwesomeIcon icon={faArrowRight} />
+                            رجوع
+                        </button>
 
-                        
-<button
-    onClick={() => {
-        if (onDistribute) {
-            onDistribute();
-        } else {
-            router.push(`/distribution-page?id=${data.id}`);
-        }
-    }}
-    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition text-sm font-medium"
->
-    <FontAwesomeIcon icon={faShare} />
-    توزيع
-</button>
-                    </div> )}
+                        {/* ✅ زر تقرير حالة التوزيع (للعميد فقط) */}
+                        {showDistributionStatus && onDistributionStatus && (
+                            <button
+                                onClick={onDistributionStatus}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-100 text-purple-700 hover:bg-purple-200 transition text-sm font-medium"
+                            >
+                                <FontAwesomeIcon icon={faChartPie} />
+                                تقرير التوزيع
+                            </button>
+                        )}
+                    </div>
+
+                    {!hideActions && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => {
+                                    if (onEdit) {
+                                        onEdit();
+                                    } else {
+                                        router.push(`/mail/${data.id}/edit`);
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-yellow-400 text-black hover:bg-yellow-500 transition text-sm font-medium"
+                            >
+                                <FontAwesomeIcon icon={faPen} />
+                                تعديل
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    if (onDistribute) {
+                                        onDistribute();
+                                    } else {
+                                        router.push(`/distribution-page?id=${data.id}`);
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition text-sm font-medium"
+                            >
+                                <FontAwesomeIcon icon={faShare} />
+                                توزيع
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* العنوان والبيانات الرئيسية */}
@@ -296,101 +322,103 @@ export default function MailViewer({ data, onEdit, onDistribute,onBack ,hideActi
 
             {/* ===== MAIN CONTENT - قابل للتمرير ===== */}
             <main className="flex-1 overflow-y-auto px-4 md:px-8 py-4">
-                <div className="max-w  space-y-4">
+                <div className="max-w space-y-4">
+                    {/* ===== صندوق المعلومات ===== */}
+                    <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5">
+                            {/* العمود الأول */}
+                            <div className="space-y-4">
+                                {/* نوع الوثيقة */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-gray-500 min-w-[90px]">نوع الوثيقة:</span>
+                                    <span className="font-medium text-gray-800">
+                                        {data.documentType || "تعميم"}
+                                    </span>
+                                </div>
 
-{/* ===== صندوق المعلومات ===== */}
-<div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-sm">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5">
-        {/* العمود الأول */}
-        <div className="space-y-4">
-            {/* نوع الوثيقة */}
-            <div className="flex items-center gap-2">
-                <span className="text-gray-500 min-w-[90px]">نوع الوثيقة:</span>
-                <span className="font-medium text-gray-800">
-                    {data.documentType || "تعميم"}
-                </span>
-            </div>
+                                {/* تاريخ الإصدار */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-gray-500 min-w-[90px]">📅 تاريخ الإصدار:</span>
+                                    <span className="font-medium text-gray-800">
+                                        {data.issuedDate ? formatDate(data.issuedDate) : "—"}
+                                    </span>
+                                </div>
+                            </div>
 
-            {/* تاريخ الإصدار */}
-            <div className="flex items-center gap-2">
-                <span className="text-gray-500 min-w-[90px]">📅 تاريخ الإصدار:</span>
-                <span className="font-medium text-gray-800">
-                    {data.issuedDate ? formatDate(data.issuedDate) : "—"}
-                </span>
-            </div>
-        </div>
+                            {/* العمود الثاني */}
+                            <div className="space-y-4">
+                                {/* مرجع المرسل - يظهر فقط إذا كان له قيمة حقيقية */}
+                                {data.senderReference && data.senderReference.trim() !== "" && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-gray-500 min-w-[90px]">مرجع المرسل:</span>
+                                        <span className="font-medium text-gray-800">
+                                            {data.senderReference}
+                                        </span>
+                                    </div>
+                                )}
 
-        {/* العمود الثاني */}
-        <div className="space-y-4">
-            {/* مرجع المرسل - يظهر فقط إذا كان له قيمة حقيقية */}
-{data.senderReference && data.senderReference.trim() !== "" && (
-    <div className="flex items-center gap-2">
-        <span className="text-gray-500 min-w-[90px]">مرجع المرسل:</span>
-        <span className="font-medium text-gray-800">
-            {data.senderReference}
-        </span>
-    </div>
-)}
+                                {/* تاريخ الاستلام أو الإرسال حسب نوع البريد */}
+                                {data.mainType === "Incoming" && data.receivedDate && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-gray-500 min-w-[90px]">📥 تاريخ الاستلام:</span>
+                                        <span className="font-medium text-gray-800">
+                                            {formatDate(data.receivedDate)}
+                                        </span>
+                                    </div>
+                                )}
+                                {data.mainType === "Outgoing" && data.sentDate && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-gray-500 min-w-[90px]">📤 تاريخ الإرسال:</span>
+                                        <span className="font-medium text-gray-800">
+                                            {formatDate(data.sentDate)}
+                                        </span>
+                                    </div>
+                                )}
+                                {data.mainType === "Internal" && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-gray-500 min-w-[90px]">📌 تاريخ داخلي:</span>
+                                        <span className="font-medium text-gray-800">
+                                            {data.issuedDate ? formatDate(data.issuedDate) : "—"}
+                                        </span>
+                                    </div>
+                                )}
+                                {data.mainType !== "Incoming" && data.mainType !== "Outgoing" && data.mainType !== "Internal" && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-gray-500 min-w-[90px]">📅 التاريخ:</span>
+                                        <span className="font-medium text-gray-800">
+                                            {data.issuedDate ? formatDate(data.issuedDate) : "—"}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-            {/* تاريخ الاستلام أو الإرسال حسب نوع البريد */}
-            {data.mainType === "Incoming" && data.receivedDate && (
-                <div className="flex items-center gap-2">
-                    <span className="text-gray-500 min-w-[90px]">📥 تاريخ الاستلام:</span>
-                    <span className="font-medium text-gray-800">
-                        {formatDate(data.receivedDate)}
-                    </span>
-                </div>
-            )}
-            {data.mainType === "Outgoing" && data.sentDate && (
-                <div className="flex items-center gap-2">
-                    <span className="text-gray-500 min-w-[90px]">📤 تاريخ الإرسال:</span>
-                    <span className="font-medium text-gray-800">
-                        {formatDate(data.sentDate)}
-                    </span>
-                </div>
-            )}
-            {data.mainType === "Internal" && (
-                <div className="flex items-center gap-2">
-                    <span className="text-gray-500 min-w-[90px]">📌 تاريخ داخلي:</span>
-                    <span className="font-medium text-gray-800">
-                        {data.issuedDate ? formatDate(data.issuedDate) : "—"}
-                    </span>
-                </div>
-            )}
-            {data.mainType !== "Incoming" && data.mainType !== "Outgoing" && data.mainType !== "Internal" && (
-                <div className="flex items-center gap-2">
-                    <span className="text-gray-500 min-w-[90px]">📅 التاريخ:</span>
-                    <span className="font-medium text-gray-800">
-                        {data.issuedDate ? formatDate(data.issuedDate) : "—"}
-                    </span>
-                </div>
-            )}
-        </div>
-    </div>
+                        {/* ===== الإحصائيات ===== */}
+                        <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap items-center justify-start gap-x-6 gap-y-1">
+                            {!hideActions && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-gray-400 text-sm">👥</span>
+                                    <span className="text-gray-500">عدد المستلمين:</span>
+                                    <span className="font-semibold text-gray-800">{data.totalReceivers || 0}</span>
+                                </div>
+                            )}
+                            {!hideActions && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-gray-400 text-sm">📖</span>
+                                    <span className="text-gray-500">مقروء:</span>
+                                    <span className="font-semibold text-gray-800">{data.readCount || 0}</span>
+                                </div>
+                            )}
+                            {data.status && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-gray-400 text-sm">📌</span>
+                                    <span className="text-gray-500">الحالة:</span>
+                                    <span className="font-semibold text-gray-800">{data.status}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-    {/* ===== الإحصائيات ===== */}
-    <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap items-center justify-start gap-x-6 gap-y-1">
-       {!hideActions && (
-        <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-sm">👥</span>
-            <span className="text-gray-500">عدد المستلمين:</span>
-            <span className="font-semibold text-gray-800">{data.totalReceivers || 0}</span>
-        </div>)}
-         {!hideActions && (
-        <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-sm">📖</span>
-            <span className="text-gray-500">مقروء:</span>
-            <span className="font-semibold text-gray-800">{data.readCount || 0}</span>
-        </div>)}
-        {data.status && (
-            <div className="flex items-center gap-2">
-                <span className="text-gray-400 text-sm">📌</span>
-                <span className="text-gray-500">الحالة:</span>
-                <span className="font-semibold text-gray-800">{data.status}</span>
-            </div>
-        )}
-    </div>
-</div>
                     {/* ===== المحتوى ===== */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                         <div className="p-4 md:p-6 prose max-w-none text-right">
