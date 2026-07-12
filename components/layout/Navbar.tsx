@@ -27,7 +27,7 @@ import {
   faFolder,
   faUsers,
   faBuilding,
-  faUser,
+  faUser,faBan,faGear
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
@@ -260,64 +260,36 @@ function NavbarContent() {
       ];
     }
 
-    if (isDeanOrAdmin) {
-      return [
-        {
-          icon: faInbox,
-          href: "/distribution?tab=inbox",
-          label: "الوارد",
-          isActive: isActiveInbox,
-        },
-        {
-          icon: faPaperPlane,
-          href: "/distribution?tab=outbox",
-          label: "الصادر",
-          isActive: isActiveOutbox,
-        },
-        {
-          icon: faFolder,
-          href: "/correspondences",
-          label: "المراسلات",
-          isActive: isActiveCorrespondences,
-        },
-        {
-          icon: faUsers,
-          href: "/users",
-          label: "المستخدمين",
-          isActive: isActiveUsers,
-        },
-        {
-          icon: faBuilding,
-          href: "/sender-entities",
-          label: "الجهات المرسلة",
-          isActive: isActiveSenderEntities,
-        },
-        {
-          icon: faFile,
-          href: "/document-types",
-          label: "أنواع الوثائق",
-          isActive: isActiveDocumentTypes,
-        },
-        {
-          icon: faCheck,
-          href: "/approvals",
-          label: "الموافقات",
-          isActive: isActiveApprovals,
-        },
-        {
-          icon: faChartBar,
-          href: "/statistics",
-          label: "الإحصائيات",
-          isActive: isActiveStatistics,
-        },
-        {
-          icon: faUser,
-          href: "/profile",
-          label: "الملف الشخصي",
-          isActive: isActiveProfile,
-        },
-      ];
-    }
+   
+
+if (isDeanOrAdmin) {
+    const tab = searchParams.get("tab");
+    const isActiveInbox = pathname === "/distribution" && tab === "inbox";
+    const isActiveOutbox = pathname === "/distribution" && tab === "outbox";
+    const isActiveCorrespondences = pathname === "/correspondences" || pathname?.startsWith("/correspondences/");
+    const isActiveUsers = pathname === "/users";
+    const isActiveSenderEntities = pathname === "/sender-entities";
+    const isActiveDocumentTypes = pathname === "/document-types";
+    const isActiveApprovals = pathname === "/approvals";
+    const isActiveStatistics = pathname === "/statistics";
+    const isActiveIgnoredReport = pathname === "/dean/ignored-report";
+    const isActiveIgnoredUsers = pathname === "/dean/ignored-users";
+    const isActiveSettings = pathname === "/dean/settings";
+    
+    return [
+        { icon: faInbox, href: "/distribution?tab=inbox", label: "الوارد", isActive: isActiveInbox },
+        { icon: faPaperPlane, href: "/distribution?tab=outbox", label: "الصادر", isActive: isActiveOutbox },
+        { icon: faFolder, href: "/correspondences", label: "المراسلات", isActive: isActiveCorrespondences },
+        { icon: faUsers, href: "/users", label: "المستخدمين", isActive: isActiveUsers },
+        { icon: faBuilding, href: "/sender-entities", label: "الجهات المرسلة", isActive: isActiveSenderEntities },
+        { icon: faFile, href: "/document-types", label: "أنواع الوثائق", isActive: isActiveDocumentTypes },
+        { icon: faCheck, href: "/approvals", label: "الموافقات", isActive: isActiveApprovals },
+        { icon: faChartBar, href: "/statistics", label: "الإحصائيات", isActive: isActiveStatistics },
+        { icon: faBan, href: "/dean/ignored-report", label: "تقرير المتجاهلين", isActive: isActiveIgnoredReport },
+        { icon: faUsers, href: "/dean/ignored-users", label: "المستخدمين المتجاهلين", isActive: isActiveIgnoredUsers },
+        { icon: faGear, href: "/dean/settings", label: "إعدادات النظام", isActive: isActiveSettings },
+    ];
+}
 
     return [];
   };

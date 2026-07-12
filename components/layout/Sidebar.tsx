@@ -4,7 +4,6 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useUIModeStore from "@/store/uiModeStore";
-import MailCompose from "@/components/overlays/MailCompose";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faHome,
@@ -24,8 +23,9 @@ import {
     faUserCog,
     faXmark,
     faUser,
+    faBan,
+    faGear
 } from "@fortawesome/free-solid-svg-icons";
-import useMailComposeStore from "@/store/mailComposeStore";
 import useMailFilterStore from "@/store/mailFilterStore";
 import { useQuery } from "@tanstack/react-query";
 import { apiWrapper } from "@/utils/apiClient";
@@ -43,7 +43,6 @@ function SidebarContentWrapper() {
     const searchParams = useSearchParams();
     const { role } = useUserInfoStore();
     const { uiMode } = useUIModeStore();
-    const { isMailComposeShown, triggerMailCompose } = useMailComposeStore();
     const { filter, setFilter } = useMailFilterStore();
     const { isSidebarToggleShown, triggerSidebar } = useSidebarToggleStore();
     const [isMobile, setIsMobile] = useState(false);
@@ -154,19 +153,24 @@ function SidebarContentWrapper() {
             ];
         }
 
-        if (isDeanOrAdmin) {
-            return [
-                { icon: faInbox, label: "الوارد", path: "/distribution?tab=inbox" },
-                { icon: faPaperPlane, label: "الصادر", path: "/distribution?tab=outbox" },
-                { icon: faFolder, label: "المراسلات", path: "/correspondences" },
-                { icon: faUsers, label: "المستخدمين", path: "/users" },
-                { icon: faBuilding, label: "الجهات المرسلة", path: "/sender-entities" },
-                { icon: faFile, label: "أنواع الوثائق", path: "/document-types" },
-                { icon: faCheckCircle, label: "الموافقات", path: "/approvals" },
-                { icon: faChartBar, label: "الإحصائيات", path: "/statistics" },
-                ...commonPages,
-            ];
-        }
+       if (isDeanOrAdmin) {
+    return [
+        { icon: faInbox, label: "الوارد", path: "/distribution?tab=inbox" },
+        { icon: faPaperPlane, label: "الصادر", path: "/distribution?tab=outbox" },
+        { icon: faFolder, label: "المراسلات", path: "/correspondences" },
+        { icon: faUsers, label: "المستخدمين", path: "/users" },
+        { icon: faBuilding, label: "الجهات المرسلة", path: "/sender-entities" },
+        { icon: faFile, label: "أنواع الوثائق", path: "/document-types" },
+        { icon: faCheckCircle, label: "الموافقات", path: "/approvals" },
+        { icon: faChartBar, label: "الإحصائيات", path: "/statistics" },
+        
+        { icon: faBan, label: "تقرير المتجاهلين", path: "/dean/ignored-report" },
+        { icon: faUsers, label: "المستخدمين المتجاهلين", path: "/dean/ignored-users" },
+        { icon: faGear, label: "إعدادات النظام", path: "/dean/settings" },
+        
+        { icon: faUser, label: "الملف الشخصي", path: "/profile" },
+    ];
+}
 
         return commonPages;
     };
@@ -179,7 +183,7 @@ function SidebarContentWrapper() {
                 <div className="flex-1 overflow-y-auto w-full">
                     <button
                         onClick={() => {
-                            triggerMailCompose();
+                            router.push("/mail/create");
                             if (isMobileView) triggerSidebar();
                         }}
                         className={`
@@ -319,7 +323,6 @@ function SidebarContentWrapper() {
                     </AnimatePresence>
                 </div>
 
-                {isMailComposeShown && <MailCompose />}
             </>
         );
     };

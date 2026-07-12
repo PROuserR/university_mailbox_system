@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import { useCorrespondences } from "@/hooks/useCorrespondence";
 import { useDocumentTypes } from "@/hooks/useCorrespondence";
 import { useSenderEntities } from "@/hooks/useCorrespondence";
@@ -21,6 +21,7 @@ import {
 } from "@/types/api/correspondence.types";
 import toast from "react-hot-toast";
 import { Drawer } from "vaul";
+import { useSearchParams } from "next/navigation";
 
 const PAGE_HEIGHT = "calc(100vh - 64px)";
 
@@ -28,7 +29,7 @@ const cleanText = (text: string): string => {
   return text.replace(/\s+/g, " ").trim();
 };
 
-export default function CorrespondencesPage() {
+ function CorrespondencesContent() {
   useAuthGuard();
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -58,13 +59,24 @@ export default function CorrespondencesPage() {
     sortDirection: "desc",
   });
 
+ const searchParams2 = useSearchParams();
+    const correspondenceId = searchParams2.get("id");
+  
+    useEffect(() => {
+        if (correspondenceId) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setSelectedId(Number(correspondenceId));
+            setDetailOpen(true);
+        }
+    }, [correspondenceId]);
+
+
   const { data: documentTypesData } = useDocumentTypes();
   const { data: senderEntitiesData } = useSenderEntities();
 
   const documentTypes = documentTypesData || [];
   const senderEntities = senderEntitiesData || [];
-
-  useEffect(() => {
+   useEffect(() => {
     const cleaned = cleanText(searchQuery);
     setSearchText(cleaned);
   }, [searchQuery, setSearchText]);
@@ -450,4 +462,13 @@ export default function CorrespondencesPage() {
       />
     </div>
   );
+}
+export default function CorrespondencesPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>}>
+            <CorrespondencesContent />
+        </Suspense>
+    );
 }
