@@ -57,12 +57,12 @@ export function RecentActivities({ data }: RecentActivitiesProps) {
                                 {item.userName.charAt(0)}
                             </div>
                             <div className="min-w-0">
-                                <p className="text-sm truncate">
+                                <p className="text-sm ">
                                     <span className="font-medium text-gray-800">{item.userName}</span>
                                     <span className={`mx-1 font-medium ${ACTION_COLORS[item.action] || "text-gray-500"}`}>
                                         {ACTION_LABELS[item.action] || item.action}
                                     </span>
-                                    <span className="text-gray-600 truncate">{item.entityName}</span>
+                                    <span className="text-gray-600 truncate"> {item.entityName}</span>
                                 </p>
                                 <p className="text-xs text-gray-400">{formatDate(item.createdAt)}</p>
                             </div>
@@ -70,11 +70,6 @@ export function RecentActivities({ data }: RecentActivitiesProps) {
                     </div>
                 ))}
             </div>
-            {data.length > 5 && (
-                <div className="text-center text-xs text-gray-400 py-1 border-t border-gray-100 mt-1">
-                    عرض {data.length} نشاط
-                </div>
-            )}
         </div>
     );
 }
