@@ -371,7 +371,7 @@ export function OutboxEmailDetail({
 
                 return (
                   <div
-                    key={att.id || Math.random()}
+                    key={att.id}
                     className="group flex w-full max-w-[260px] items-center justify-between rounded-lg border border-border bg-muted/30 p-2 transition-all hover:shadow-md"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2">

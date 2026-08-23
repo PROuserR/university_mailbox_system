@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
-// /* eslint-disable react-hooks/set-state-in-effect */
 // app/(dashboard)/distribution/page.tsx
 
 "use client";
@@ -11,7 +10,6 @@ import { apiWrapper } from "@/utils/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSearchStore } from "@/store/searchStore";
 import useUserInfoStore from "@/store/userInfoStore";
-import useUIModeStore from "@/store/uiModeStore";
 import useShowMailDetailsStore from "@/store/showMailDetails";
 import useInfiniteScroll from "@/hooks/useInfiniteScroll";
 import MailCard from "@/components/mail/MailCard";
@@ -103,39 +101,6 @@ interface PageResponse {
     hasNextPage: boolean;
 }
 
-// ================= NORMALIZE =================
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const normalizeMail = (mail: DistributionMail): any => {
-    return {
-        id: mail.id,
-        number: mail.correspondenceNumber,
-        title: mail.correspondenceTitle,
-        content: mail.correspondenceContent ?? "",
-        createdAt: mail.distributedDate,
-        sender: mail.distributorName ?? mail.receiverName ?? "غير معروف",
-        documentType: mail.documentType,
-        documentTypeId: 0,
-        senderEntityId: 0,
-        totalReceivers: 1,
-        senderEntity: mail.senderEntity ?? "",
-        isProfessional: mail.isProfessional,
-        mainType: mail.mainType,
-        status: mail.status,
-        isRead: mail.isRead,
-        readAt: mail.readAt,
-        attachments: mail.attachments ?? [],
-        correspondenceId: mail.correspondenceId,
-        correspondenceNumber: mail.correspondenceNumber,
-        correspondenceTitle: mail.correspondenceTitle,
-        correspondenceContent: mail.correspondenceContent,
-        distributedDate: mail.distributedDate,
-        issuedDate: mail.issuedDate,
-        receivedDate: mail.receivedDate,
-        sentDate: mail.sentDate,
-    };
-};
-
 // ================= SORT TYPES =================
 
 type ModernSortField = 
@@ -183,20 +148,8 @@ function DistributionContent() {
     const queryClient = useQueryClient();
     const { role } = useUserInfoStore();
     const { searchQuery } = useSearchStore();
-    const { uiMode } = useUIModeStore();
+    const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } = useShowMailDetailsStore();
     const isMobile = useMediaQuery("(max-width: 768px)");
-
-    // ===== Classic Mode States =====
-    const {
-        isMailDetailsStoreShown,
-        triggerMailDetailsStoreShown,
-    } = useShowMailDetailsStore();
-    const [folder, setFolder] = useState<"inbox" | "outbox">("inbox");
-    const [sortBy, setSortBy] = useState<
-        "DistributedDate" | "title" | "number"
-    >("DistributedDate");
-    const [sortDescending, setSortDescending] = useState(true);
-    const [selectedMailData, setSelectedMailData] = useState<Mail>();
 
     // ===== Modern Mode States =====
     const [activeTab, setActiveTab] = useState<TabType>("inbox");
@@ -208,99 +161,17 @@ function DistributionContent() {
     const [mainTypeFilter, setMainTypeFilter] = useState<string>("all");
     const [professionalFilter, setProfessionalFilter] = useState<string>("all");
 
-    const isModernMode = uiMode === "modern";
     const canViewOutbox = role === "Dean" || role === "Admin" || role === "Employee";
 
-    // ✅ قراءة نوع التبويب من الـ URL وتحديث الحالة
+    // قراءة نوع التبويب من الـ URL وتحديث الحالة
     useEffect(() => {
         const tab = searchParams.get("tab");
         if (tab === "inbox") {
             setActiveTab("inbox");
-            setFolder("inbox");
         } else if (tab === "outbox") {
             setActiveTab("outbox");
-            setFolder("outbox");
         }
     }, [searchParams]);
-
-
-    
-    // ==========================================
-    // ===== CLASSIC MODE FETCH =====
-    // ==========================================
-
-    const fetchClassicMails = async (page: number): Promise<PageResponse> => {
-        const endpoint =
-            folder === "inbox"
-                ? "/Distributions/my-inbox"
-                : "/Distributions/my-outbox";
-
-        const res = await apiWrapper.get<{
-            data: PageResponse;
-        }>(endpoint, {
-            page,
-            pageSize: 10,
-            sortBy,
-            sortDescending,
-            search: searchQuery || undefined,
-        });
-
-        if (!res.success || !res.data) {
-            throw new Error("Failed loading mails");
-        }
-
-        return res.data.data;
-    };
-
-    const {
-        data: classicData,
-        fetchNextPage: fetchNextClassic,
-        hasNextPage: hasNextClassic,
-        isFetchingNextPage: isFetchingNextClassic,
-        isLoading: isLoadingClassic,
-        isError: isErrorClassic,
-        refetch: refetchClassic,
-    } = useInfiniteQuery<PageResponse>({
-        queryKey: ["distribution-classic", folder, sortBy, sortDescending, searchQuery],
-        queryFn: ({ pageParam = 1 }) => fetchClassicMails(pageParam as number),
-        initialPageParam: 1,
-        getNextPageParam: (lastPage) => {
-            return lastPage.hasNextPage ? lastPage.pageNumber + 1 : undefined;
-        },
-        enabled: !isModernMode,
-    });
-
-    const classicMails = classicData?.pages.flatMap((page) => page.items) ?? [];
-
-    const classicBottomRef = useInfiniteScroll({
-        onBottom: () => {
-            fetchNextClassic();
-        },
-        isLoading: isFetchingNextClassic,
-        hasMore: !!hasNextClassic,
-        dataLength: classicMails.length,
-    });
-
-    const swipeHandlers = useSwipeable({
-        onSwipedDown: () => {
-            if (detailOpen) handleCloseDetail();
-        },
-        trackMouse: true,
-        trackTouch: true,
-        delta: 50,
-    });
-
-    const openMail = (mail: Mail) => {
-        setSelectedMailData(mail);
-        triggerMailDetailsStoreShown();
-    };
-
-    // ✅ دالة التحديث للـ Classic Mode
-    const handleRefreshClassic = () => {
-        queryClient.resetQueries({
-            queryKey: ["distribution-classic", folder, sortBy, sortDescending, searchQuery],
-        });
-    };
 
     // ==========================================
     // ===== MODERN MODE FETCH =====
@@ -354,7 +225,7 @@ function DistributionContent() {
         return res.data.data;
     };
 
-    // Inbox Query (Modern)
+    // Inbox Query
     const {
         data: inboxData,
         fetchNextPage: fetchNextInbox,
@@ -370,10 +241,10 @@ function DistributionContent() {
         getNextPageParam: (lastPage) => {
             return lastPage.hasNextPage ? lastPage.pageNumber + 1 : undefined;
         },
-        enabled: activeTab === "inbox" && isModernMode,
+        enabled: activeTab === "inbox",
     });
 
-    // Outbox Query (Modern)
+    // Outbox Query
     const {
         data: outboxData,
         fetchNextPage: fetchNextOutbox,
@@ -389,7 +260,7 @@ function DistributionContent() {
         getNextPageParam: (lastPage) => {
             return lastPage.hasNextPage ? lastPage.pageNumber + 1 : undefined;
         },
-        enabled: activeTab === "outbox" && canViewOutbox && isModernMode,
+        enabled: activeTab === "outbox" && canViewOutbox,
     });
 
     const inboxItems = inboxData?.pages.flatMap((p) => p.items) ?? [];
@@ -412,7 +283,6 @@ function DistributionContent() {
 
     const handleTabChange = (tab: TabType) => {
         setActiveTab(tab);
-        setFolder(tab);
         setSelectedId(null);
         setDetailOpen(false);
         router.push(`/distribution?tab=${tab}`);
@@ -473,8 +343,7 @@ function DistributionContent() {
         }
     };
 
-    // ✅ دالة التحديث للـ Modern Mode
-    const handleRefreshModern = () => {
+    const handleRefresh = () => {
         if (activeTab === "inbox") {
             queryClient.resetQueries({
                 queryKey: ["distribution-inbox", modernSortField, modernSortOrder, searchQuery, mainTypeFilter, professionalFilter],
@@ -491,7 +360,7 @@ function DistributionContent() {
     };
 
     // ==========================================
-    // ===== INFINITE SCROLL (MODERN) =====
+    // ===== INFINITE SCROLL =====
     // ==========================================
 
     const observerRef = useRef<IntersectionObserver | null>(null);
@@ -519,132 +388,6 @@ function DistributionContent() {
     // ===== RENDER =====
     // ==========================================
 
-    // ===== CLASSIC MODE =====
-    if (!isModernMode) {
-        if (isLoadingClassic) return <MailListLoader />;
-        if (isErrorClassic) return <MailListError />;
-
-        return (
-            <AnimatePresence mode="wait">
-                {!isMailDetailsStoreShown ? (
-                    <motion.div
-                        key="mail-list"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex flex-col h-full w-full bg-gray-50"
-                        dir="rtl"
-                    >
-                        <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10 shadow-sm">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 shadow-sm">
-                                        <select
-                                            value={sortBy}
-                                            onChange={(e) =>
-                                                setSortBy(
-                                                    e.target.value as
-                                                        | "DistributedDate"
-                                                        | "title"
-                                                        | "number"
-                                                )
-                                            }
-                                            className="text-xs sm:text-sm bg-transparent outline-none text-gray-600 cursor-pointer"
-                                        >
-                                            <option value="DistributedDate">التاريخ</option>
-                                            <option value="title">العنوان</option>
-                                            <option value="number">الرقم</option>
-                                            <option value="status">الحالة</option>
-                                        </select>
-                                        <button
-                                            onClick={() => setSortDescending(!sortDescending)}
-                                            className="text-blue-600 p-1 hover:bg-blue-50 rounded transition"
-                                        >
-                                            <FontAwesomeIcon
-                                                icon={sortDescending ? faSortAmountDown : faSortAmountUp}
-                                                className="text-xs sm:text-sm"
-                                            />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon-sm" 
-                                        onClick={handleRefreshClassic}
-                                        className="text-blue-600 hover:text-blue-800"
-                                    >
-                                        <RefreshCw className={`h-4 w-4 ${isFetchingNextClassic ? "animate-spin" : ""}`} />
-                                    </Button>
-
-                                    <h2 className="text-xs sm:text-sm font-semibold text-blue-700">
-                                        {folder === "inbox" ? "البريد الوارد" : "البريد الصادر"}
-                                        <span className="text-gray-400 mr-1 font-normal">
-                                            (إجمالي {classicData?.pages[0]?.totalCount ?? 0} · عرض {classicMails.length})
-                                        </span>
-                                    </h2>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                            {classicMails.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                    <div className="text-5xl mb-3">📭</div>
-                                    <p className="text-base font-medium">
-                                        {searchQuery ? "لا توجد نتائج للبحث" : "لا توجد رسائل"}
-                                    </p>
-                                </div>
-                            ) : (
-                                classicMails.map((mail, index) => (
-                                    <MailCard
-                                        key={mail.id}
-                                        mail={normalizeMail(mail)}
-                                        index={index}
-                                        onClick={openMail}
-                                        onEdit={() => {}}
-                                        onDelete={() => {}}
-                                        editable={false}
-                                    />
-                                ))
-                            )}
-
-                            <div ref={classicBottomRef} className="py-2">
-                                {isFetchingNextClassic && (
-                                    <div className="flex items-center justify-center gap-2 text-blue-600 py-3">
-                                        <FontAwesomeIcon icon={faSpinner} spin className="text-sm" />
-                                        <span className="text-xs">جاري تحميل المزيد...</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </motion.div>
-                ) : (
-                    <motion.div
-                        key="mail-viewer"
-                        initial={{ opacity: 0, x: 40 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -40 }}
-                        className="p-4 w-full h-full"
-                        dir="rtl"
-                    >
-                        {selectedMailData && (
-                            <MailViewer
-                                data={selectedMailData}
-                                hideActions={true}
-                                onBack={() => {
-                                    triggerMailDetailsStoreShown();
-                                }}
-                            />
-                        )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        );
-    }
-
-    // ===== MODERN MODE =====
     if (isLoadingModern) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -657,7 +400,7 @@ function DistributionContent() {
         return (
             <div className="flex h-full flex-col items-center justify-center gap-4">
                 <p className="text-muted-foreground">حدث خطأ أثناء تحميل التوزيعات</p>
-                <Button onClick={handleRefreshModern}>
+                <Button onClick={handleRefresh}>
                     <RefreshCw className="ml-2 h-4 w-4" />
                     إعادة المحاولة
                 </Button>
@@ -665,7 +408,7 @@ function DistributionContent() {
         );
     }
 
-    // ========== MODERN - DESKTOP ==========
+    // ========== DESKTOP ==========
     if (!isMobile) {
         return (
             <TooltipProvider>
@@ -683,7 +426,7 @@ function DistributionContent() {
                                     </p>
                                 </div>
                                 <div className="flex gap-1">
-                                    <Button variant="ghost" size="icon-sm" onClick={handleRefreshModern}>
+                                    <Button variant="ghost" size="icon-sm" onClick={handleRefresh}>
                                         <RefreshCw className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -807,7 +550,7 @@ function DistributionContent() {
         );
     }
 
-    // ========== MODERN - MOBILE ==========
+    // ========== MOBILE ==========
     return (
         <TooltipProvider>
             <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden">
@@ -822,7 +565,7 @@ function DistributionContent() {
                                 {modernItems.length > 0 && ` · عرض ${modernItems.length}`}
                             </p>
                         </div>
-                        <Button variant="ghost" size="icon-sm" onClick={handleRefreshModern}>
+                        <Button variant="ghost" size="icon-sm" onClick={handleRefresh}>
                             <RefreshCw className="h-4 w-4" />
                         </Button>
                     </div>

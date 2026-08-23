@@ -7,9 +7,6 @@ import { ar } from "date-fns/locale";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  StarIcon,
-  ReplyIcon,
-  ForwardIcon,
   ShieldIcon,
   XIcon,
   FileTextIcon,
@@ -26,19 +23,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { DistributionInboxDto } from "@/types/api/distribution";
 import { downloadAttachment } from "@/services/correspondence.service";
 import toast from "react-hot-toast";
@@ -90,11 +79,16 @@ export function InboxEmailDetail({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<string>("");
   const [previewName, setPreviewName] = useState<string>("");
-  const [isStarred, setIsStarred] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // ============================================================
+  // ===== View - معاينة الملف =====
+  // ============================================================
   const handleView = async (attachmentId: number, fileName: string, mimeType: string) => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -104,11 +98,13 @@ export function InboxEmailDetail({
     setPreviewName(fileName);
 
     try {
-      const blob = await downloadAttachment(attachmentId, controller.signal);
+      const blob = await downloadAttachment(attachmentId, fileName, controller.signal);
       const url = URL.createObjectURL(blob);
       setPreviewUrl(url);
     } catch (error: any) {
-      if (error.name !== "AbortError") toast.error("فشل في تحميل الملف للمعاينة");
+      if (error.name !== "AbortError") {
+        toast.error("فشل في تحميل الملف للمعاينة");
+      }
       closePreview();
     } finally {
       setPreviewLoading(false);
@@ -116,60 +112,66 @@ export function InboxEmailDetail({
     }
   };
 
+  // ============================================================
+  // ===== Download - تحميل الملف =====
+  // ============================================================
+  const handleDownload = async (attachmentId: number, fileName: string) => {
+    setDownloading(attachmentId);
+    try {
+      const blob = await downloadAttachment(attachmentId, fileName);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || `attachment_${attachmentId}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("تم تحميل المرفق");
+    } catch (error: any) {
+      if (error.name !== "AbortError") {
+        toast.error("فشل التحميل");
+      }
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  // ============================================================
+  // ===== Close Preview =====
+  // ============================================================
   const closePreview = () => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setPreviewUrl(null);
     setPreviewLoading(false);
     setPreviewType("");
     setPreviewName("");
   };
 
-  const handleDownload = async (attachmentId: number) => {
-    setDownloading(attachmentId);
-    try {
-      const blob = await downloadAttachment(attachmentId);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = attachmentId.toString();
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("تم تحميل المرفق");
-    } catch {
-      toast.error("فشل التحميل");
-    } finally {
-      setDownloading(null);
+  // ============================================================
+  // ===== Helpers =====
+  // ============================================================
+  const getTypeBadge = (mainType: string | number) => {
+    if (typeof mainType === 'number') {
+      switch (mainType) {
+        case 1: return <Badge variant="incoming">وارد</Badge>;
+        case 2: return <Badge variant="outgoing">صادر</Badge>;
+        case 3: return <Badge variant="internal">داخلي</Badge>;
+        default: return null;
+      }
+    }
+    switch (mainType) {
+      case "Incoming": return <Badge variant="incoming">وارد</Badge>;
+      case "Outgoing": return <Badge variant="outgoing">صادر</Badge>;
+      case "Internal": return <Badge variant="internal">داخلي</Badge>;
+      default: return null;
     }
   };
-
- const getTypeBadge = (mainType: string | number) => {
-  if (typeof mainType === 'number') {
-    switch (mainType) {
-      case 1:
-        return <Badge variant="incoming">وارد</Badge>;
-      case 2:
-        return <Badge variant="outgoing">صادر</Badge>;
-      case 3:
-        return <Badge variant="internal">داخلي</Badge>;
-      default:
-        return null;
-    }
-  }
-  
-  switch (mainType) {
-    case "Incoming":
-      return <Badge variant="incoming">وارد</Badge>;
-    case "Outgoing":
-      return <Badge variant="outgoing">صادر</Badge>;
-    case "Internal":
-      return <Badge variant="internal">داخلي</Badge>;
-    default:
-      return null;
-  }
-};
 
   const getStatusBadge = () => {
     if (item.isRead) {
@@ -206,7 +208,7 @@ export function InboxEmailDetail({
             <TooltipContent>إغلاق</TooltipContent>
           </Tooltip>
 
-          {item.status === "Pending"  && !item.isRead && (
+          {item.status === "Pending" && !item.isRead && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon-sm" onClick={onMarkAsRead}>
@@ -265,28 +267,6 @@ export function InboxEmailDetail({
               </p>
             </div>
           </div>
-
-          {/* <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon-sm" onClick={() => setIsStarred(!isStarred)}>
-              <StarIcon className={cn("h-4 w-4", isStarred && "fill-yellow-500 text-yellow-500")} />
-            </Button>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm">
-                  <ReplyIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>رد</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm">
-                  <ForwardIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>إعادة توجيه</TooltipContent>
-            </Tooltip>
-          </div> */}
         </div>
       </div>
 
@@ -349,31 +329,37 @@ export function InboxEmailDetail({
             <div dangerouslySetInnerHTML={{ __html: item.correspondenceContent || "<p class='text-muted-foreground'>لا يوجد محتوى</p>" }} />
           </div>
         </div>
-{/* Notes - ملاحظات */}
-{item.notes && (
-    <div className="border-b border-border p-4">
-        <div className="flex items-start gap-2">
-            <span className="text-sm font-medium text-foreground">📝 ملاحظات:</span>
-            <p className="text-sm text-muted-foreground">{item.notes}</p>
-        </div>
-    </div>
-)}
+
+        {/* Notes */}
+        {item.notes && (
+          <div className="border-b border-border p-4">
+            <div className="flex items-start gap-2">
+              <span className="text-sm font-medium text-foreground">📝 ملاحظات:</span>
+              <p className="text-sm text-muted-foreground">{item.notes}</p>
+            </div>
+          </div>
+        )}
+
         {/* Attachments */}
-        {item.attachments.length > 0 && (
+        {item.attachments && item.attachments.length > 0 && (
           <div className="p-4">
             <div className="mb-3 flex items-center gap-2">
               <ShieldIcon className="h-4 w-4 text-emerald-500" />
               <h3 className="font-semibold text-foreground">المرفقات</h3>
-              <Badge variant="secondary">{item.attachments.length}</Badge>
+              <Badge variant="secondary">{item.attachments.filter(a => a !== null).length}</Badge>
             </div>
 
             <div className="flex flex-wrap gap-2">
               {item.attachments.map((att) => {
-                const Icon = getFileIcon(att.mimeType);
-                const gradient = getFileGradient(att.mimeType);
+                if (!att) return null;
+
+                const Icon = getFileIcon(att.mimeType || "");
+                const gradient = getFileGradient(att.mimeType || "");
+                const displayName = att.fileName || `ملف_${att.id}`;
+
                 return (
                   <div
-                    key={att.id}
+                    key={att.id }
                     className="group flex w-full max-w-[260px] items-center justify-between rounded-lg border border-border bg-muted/30 p-2 transition-all hover:shadow-md"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -384,10 +370,12 @@ export function InboxEmailDetail({
                         <Icon className="h-4 w-4 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground" title={att.fileName}>
-                          {att.fileName}
+                        <p className="truncate text-sm font-medium text-foreground" title={displayName}>
+                          {displayName}
                         </p>
-                        <p className="text-xs text-muted-foreground">{Math.round(att.fileSize / 1024)} KB</p>
+                        <p className="text-xs text-muted-foreground">
+                          {att.fileSize ? Math.round(att.fileSize / 1024) : 0} KB
+                        </p>
                       </div>
                     </div>
                     <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">
@@ -396,7 +384,7 @@ export function InboxEmailDetail({
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            onClick={() => handleView(att.id, att.fileName, att.mimeType)}
+                            onClick={() => handleView(att.id, displayName, att.mimeType || "")}
                           >
                             <EyeIcon className="h-4 w-4" />
                           </Button>
@@ -408,7 +396,7 @@ export function InboxEmailDetail({
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            onClick={() => handleDownload(att.id)}
+                            onClick={() => handleDownload(att.id, displayName)}
                             disabled={downloading === att.id}
                           >
                             <DownloadIcon className="h-4 w-4" />
@@ -436,7 +424,7 @@ export function InboxEmailDetail({
               <XIcon className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex min-h-[300px] items-center justify-center  bg-white p-2 sm:p-4">
+          <div className="flex min-h-[300px] items-center justify-center bg-white p-2 sm:p-4">
             {previewLoading ? (
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
