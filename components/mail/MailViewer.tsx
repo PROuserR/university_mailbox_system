@@ -133,75 +133,107 @@ export default function MailViewer({
         return '📎';
     };
 
-    // عرض الملف
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleViewFile = async (attachment: any) => {
-        try {
-            setIsLoadingFile(true);
+// ============================================================
+// ===== View - عرض الملف في Modal =====
+// ============================================================
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handleViewFile = async (attachment: any) => {
+    try {
+        setIsLoadingFile(true);
 
-            const response = await apiWrapper.get(
-                `/v2/Medias/view/attachment/${attachment.id}`,
-                {},
-                {
-                    responseType: 'blob',
-                }
-            );
-
-            if (!response.success || !response.data) {
-                throw new Error('فشل تحميل الملف');
+        const response = await apiWrapper.get(
+            `/attachments/${attachment.id}/view?t=${Date.now()}`,
+            {},
+            {
+                responseType: 'blob',
             }
+        );
 
-            const blob = response.data as Blob;
-            const url = URL.createObjectURL(blob);
-
-            setSelectedFile({
-                url,
-                name: attachment.fileName,
-                type: attachment.mimeType || '',
-                id: attachment.id,
-            });
-        } catch (error) {
-            toast.error('فشل تحميل الملف للعرض');
-        } finally {
-            setIsLoadingFile(false);
+        // ✅ التحقق من النجاح
+        if (!response.success) {
+            throw new Error(response.error || 'فشل تحميل الملف');
         }
-    };
 
-    // تحميل الملف
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleDownload = async (attachment: any) => {
-        try {
-            const response = await apiWrapper.get(
-                `/v2/Medias/download/attachment/${attachment.id}`,
-                {},
-                {
-                    responseType: 'blob',
-                }
-            );
+        // ✅ التحقق من وجود البيانات
+        if (!response.data) {
+            throw new Error('لم يتم استلام الملف');
+        }
 
-            if (!response.success || !response.data) {
-                throw new Error('فشل تحميل الملف');
+        const blob = response.data as Blob;
+        
+        // ✅ التحقق من أن Blob صالح
+        if (blob.size === 0) {
+            throw new Error('الملف فارغ');
+        }
+
+        const url = URL.createObjectURL(blob);
+
+        setSelectedFile({
+            url,
+            name: attachment.fileName,
+            type: attachment.mimeType || '',
+            id: attachment.id,
+        });
+
+        toast.success('تم عرض الملف بنجاح');
+    } catch (error) {
+        console.error('View error:', error);
+        toast.error(error instanceof Error ? error.message : 'فشل تحميل الملف للعرض');
+    } finally {
+        setIsLoadingFile(false);
+    }
+};
+
+// ============================================================
+// ===== Download - تحميل الملف =====
+// ============================================================
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handleDownload = async (attachment: any) => {
+    try {
+        const response = await apiWrapper.get(
+            `/attachments/${attachment.id}/download`,
+            {},
+            {
+                responseType: 'blob',
             }
+        );
 
-            const blob = response.data as Blob;
-            const url = URL.createObjectURL(blob);
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = attachment.fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            setTimeout(() => {
-                URL.revokeObjectURL(url);
-            }, 1000);
-
-            toast.success('تم تحميل الملف بنجاح');
-        } catch (error) {
-            toast.error('فشل تحميل الملف');
+        // ✅ التحقق من النجاح
+        if (!response.success) {
+            throw new Error(response.error || 'فشل تحميل الملف');
         }
-    };
+
+        // ✅ التحقق من وجود البيانات
+        if (!response.data) {
+            throw new Error('لم يتم استلام الملف');
+        }
+
+        const blob = response.data as Blob;
+        
+        // ✅ التحقق من أن Blob صالح
+        if (blob.size === 0) {
+            throw new Error('الملف فارغ');
+        }
+
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = attachment.fileName || `attachment_${attachment.id}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 1000);
+
+        toast.success('تم تحميل الملف بنجاح');
+    } catch (error) {
+        console.error('Download error:', error);
+        toast.error(error instanceof Error ? error.message : 'فشل تحميل الملف');
+    }
+};
 
     if (!isMailDetailsStoreShown && !onBack) return null;
 

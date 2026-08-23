@@ -5,7 +5,6 @@ import axios, { AxiosRequestConfig, AxiosError } from "axios";
 // TYPES
 // ==============================
 
-//  ApiResult من Backend
 export interface ApiResult<T> {
     isSuccess: boolean;
     data: T;
@@ -14,12 +13,12 @@ export interface ApiResult<T> {
     statusCode: number;
 }
 
-//  استجابة الـ API من الـ wrapper
 export type ApiResponse<T> = {
     status: number;
     data: T | null;
     error: string | null;
     success: boolean;
+    isBlob?: boolean; // ✅ إضافة flag للـ Blob
 };
 
 // ==============================
@@ -32,10 +31,21 @@ async function request<T>(
     try {
         const res = await myAPI.request<T>(config);
 
+        // ✅ إذا كان responseType هو blob، نعيد البيانات كما هي
+        if (config.responseType === 'blob') {
+            return {
+                data: res.data as T,
+                error: null,
+                success: true,
+                status: res.status,
+                isBlob: true,
+            };
+        }
+
+        // ✅ للـ JSON العادي
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = res.data as any;
         if (data && typeof data === 'object' && 'isSuccess' in data) {
-            // ApiResult<T> من Backend
             if (data.isSuccess) {
                 return {
                     data: data,
@@ -44,7 +54,6 @@ async function request<T>(
                     status: res.status,
                 };
             } else {
-                // ApiResult مع isSuccess === false
                 return {
                     data: data,
                     error: data.message || "Request failed",
@@ -54,7 +63,6 @@ async function request<T>(
             }
         }
 
-        //  استجابة عادية (بدون ApiResult)
         return {
             data: res.data,
             error: null,
@@ -67,8 +75,6 @@ async function request<T>(
 
         if (axios.isAxiosError(err)) {
             const axiosError = err as AxiosError;
-            
-            //  محاولة قراءة رسالة الخطأ من ApiResult
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const responseData = axiosError.response?.data as any;
             if (responseData && typeof responseData === 'object') {
@@ -83,7 +89,6 @@ async function request<T>(
                 }
             }
 
-            // ✅ إذا لم نجد رسالة، استخدم الرسالة الافتراضية
             if (message === "حدث خطأ غير متوقع") {
                 message = axiosError.message || "فشل الاتصال بالخادم";
             }
@@ -176,9 +181,6 @@ export const apiWrapper = {
 // HELPERS
 // ==============================
 
-/**
- * استخراج البيانات من ApiResult
- */
 export function extractData<T>(response: ApiResponse<ApiResult<T>>): T | null {
     if (response.success && response.data) {
         return response.data.data;
@@ -186,9 +188,6 @@ export function extractData<T>(response: ApiResponse<ApiResult<T>>): T | null {
     return null;
 }
 
-/**
- * استخراج رسالة من ApiResult
- */
 export function extractMessage<T>(response: ApiResponse<ApiResult<T>>): string {
     if (response.success && response.data) {
         return response.data.message || "تم بنجاح";
@@ -196,9 +195,6 @@ export function extractMessage<T>(response: ApiResponse<ApiResult<T>>): string {
     return response.error || "حدث خطأ";
 }
 
-/**
- * التحقق من نجاح ApiResult
- */
 export function isApiSuccess<T>(response: ApiResponse<ApiResult<T>>): boolean {
     return response.success && response.data?.isSuccess === true;
 }
