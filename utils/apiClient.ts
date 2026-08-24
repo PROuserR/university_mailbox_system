@@ -16,26 +16,25 @@ export interface ApiResult<T> {
 export type ApiResponse<T> = {
     status: number;
     data: T | null;
-    error: string | null;
+    message: string | null;
     success: boolean;
-    isBlob?: boolean; // ✅ إضافة flag للـ Blob
+    isBlob?: boolean; 
 };
 
 // ==============================
 // CORE REQUEST WRAPPER
 // ==============================
 
-async function request<T>(
+export async function request<T>(
     config: AxiosRequestConfig
 ): Promise<ApiResponse<T>> {
     try {
         const res = await myAPI.request<T>(config);
 
-        // ✅ إذا كان responseType هو blob، نعيد البيانات كما هي
         if (config.responseType === 'blob') {
             return {
                 data: res.data as T,
-                error: null,
+                message: null,
                 success: true,
                 status: res.status,
                 isBlob: true,
@@ -49,14 +48,14 @@ async function request<T>(
             if (data.isSuccess) {
                 return {
                     data: data,
-                    error: null,
+                    message: null,
                     success: true,
                     status: res.status,
                 };
             } else {
                 return {
                     data: data,
-                    error: data.message || "Request failed",
+                    message: data.message || "Request failed",
                     success: false,
                     status: res.status,
                 };
@@ -65,7 +64,7 @@ async function request<T>(
 
         return {
             data: res.data,
-            error: null,
+            message: null,
             success: true,
             status: res.status,
         };
@@ -100,7 +99,7 @@ async function request<T>(
 
         return {
             data: null,
-            error: message,
+            message: message,
             success: false,
             status,
         };
@@ -135,8 +134,8 @@ export const apiWrapper = {
             headers:
                 data instanceof FormData
                     ? {
-                          "Content-Type": "multipart/form-data",
-                      }
+                        "Content-Type": "multipart/form-data",
+                    }
                     : undefined,
         }),
 
@@ -161,8 +160,8 @@ export const apiWrapper = {
             headers:
                 data instanceof FormData
                     ? {
-                          "Content-Type": "multipart/form-data",
-                      }
+                        "Content-Type": "multipart/form-data",
+                    }
                     : undefined,
         }),
 
@@ -192,7 +191,7 @@ export function extractMessage<T>(response: ApiResponse<ApiResult<T>>): string {
     if (response.success && response.data) {
         return response.data.message || "تم بنجاح";
     }
-    return response.error || "حدث خطأ";
+    return response.message || "حدث خطأ";
 }
 
 export function isApiSuccess<T>(response: ApiResponse<ApiResult<T>>): boolean {

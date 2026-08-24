@@ -66,7 +66,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7236/
 // ===== Helpers =====
 // ============================================================
 
-function getFileIcon(type: string) {
+function getFileIcon(type: string | null) {
+  if (!type) return FileIcon;
   if (type.includes("pdf")) return FileTextIcon;
   if (type.includes("word") || type.includes("document")) return FileTextIcon;
   if (type.includes("excel") || type.includes("spreadsheet")) return FileSpreadsheetIcon;
@@ -75,7 +76,8 @@ function getFileIcon(type: string) {
   return FileIcon;
 }
 
-function getFileGradient(type: string) {
+function getFileGradient(type: string | null) {
+  if (!type) return { start: "#6b7280", end: "#4b5563" };
   if (type.includes("pdf")) return { start: "#ef4444", end: "#b91c1c" };
   if (type.includes("word") || type.includes("document")) return { start: "#3b82f6", end: "#1d4ed8" };
   if (type.includes("excel") || type.includes("spreadsheet")) return { start: "#22c55e", end: "#166534" };

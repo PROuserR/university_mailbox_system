@@ -99,9 +99,29 @@ export interface DistributionResponseByIdDto {
   issuedDate?: string;
   receivedDate?: string;
   sentDate?: string;
-  attachments: Attachment[];
+
+   approvedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  departmentId: number | null;
+  isFromHead: boolean | null;
+
+  attachments: AttachmentDto[];
 }
 
+export interface AttachmentDto {
+  id: number;
+  fileName: string;
+  fileIdentifier: string;
+  fileSize: number;
+  mimeType: string | null;
+  isPrimary: boolean;
+  uploadedAt: string;
+  uploadedBy: string;
+  attachmentType: string;
+  updatedAt: string | null;
+  createdAt: string | null;
+}
 export interface DistributeResponseDto {
   correspondenceId: number;
   correspondenceNumber: string;
@@ -119,6 +139,38 @@ export interface DistributeResponseDto {
   distributedAt?: string;
   attachments: Attachment[];
   receivers: DistributionReceiverDto[];
+}
+
+export interface DistributionFilterDto {
+  page: number;
+  pageSize: number;
+  sortBy?: string;
+  sortDescending?: boolean;
+  search?: string;
+  distributionId?: number;
+  correspondenceId?: number;
+  receiverId?: number;
+  distributedBy?: number;
+  departmentId?: number;
+  status?: string;
+  isFromHead?: boolean;
+  isAutoDistributed?: boolean;
+  correspondenceNumber?: number;
+  correspondenceMainType?: number;
+  correspondenceStatus?: number;
+  isProfessional?: boolean;
+  documentTypeId?: number;
+  senderEntityId?: number;
+  distributedDateFrom?: string;
+  distributedDateTo?: string;
+  readAtFrom?: string;
+  readAtTo?: string;
+  approvedAtFrom?: string;
+  approvedAtTo?: string;
+  rejectedAtFrom?: string;
+  rejectedAtTo?: string;
+  revokedAtFrom?: string;
+  revokedAtTo?: string;
 }
 
 export interface DistributionReceiverDto {
@@ -183,7 +235,7 @@ export interface PendingApprovalCorrespondenceDto {
   distributedDate: string;
   distributedBy: string;
   distributorName: string;
-  attachments: Attachment[];
+  attachments: AttachmentDto[];
   pendingReceivers: PendingReceiverDto[];
 }
 
@@ -268,4 +320,9 @@ export interface ReceiverStatusDetail {
   notes?: string;
   rejectionReason?: string;
   daysPending: number;
+}
+
+export interface ApproveRejectResult {
+  approvedCount: number;
+  rejectedCount: number;
 }

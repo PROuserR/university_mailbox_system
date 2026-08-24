@@ -35,7 +35,7 @@ export const getCorrespondencesPaged = async (
   );
 
   if (!res.success) {
-    throw new Error(res.error || "فشل تحميل المراسلات");
+    throw new Error(res.message || "فشل تحميل المراسلات");
   }
 
   if (!res.data) {
@@ -61,7 +61,7 @@ export const getCorrespondenceById = async (
   );
 
   if (!res.success) {
-    throw new Error(res.error || "فشل تحميل المراسلة");
+    throw new Error(res.message || "فشل تحميل المراسلة");
   }
 
   if (!res.data) {
@@ -130,7 +130,7 @@ export const updateCorrespondence = async (
   );
 
   if (!res.success) {
-    throw new Error(res.error || "فشل تحديث المراسلة");
+    throw new Error(res.message || "فشل تحديث المراسلة");
   }
 
   if (!res.data) {
@@ -154,7 +154,7 @@ export const deleteCorrespondence = async (id: number): Promise<void> => {
   );
 
   if (!res.success) {
-    throw new Error(res.error || "فشل حذف المراسلة");
+    throw new Error(res.message || "فشل حذف المراسلة");
   }
 
   if (!res.data) {

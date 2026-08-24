@@ -88,7 +88,7 @@ export default function NotificationsDropdown() {
         mutationFn: async (notificationId: number) => {
             const response = await apiWrapper.post(`/Notifications/${notificationId}/read`);
             if (!response.success) {
-                throw new Error(response.error || "فشل في تحديد الإشعار كمقروء");
+                throw new Error(response.message || "فشل في تحديد الإشعار كمقروء");
             }
             return response;
         },
@@ -104,7 +104,7 @@ export default function NotificationsDropdown() {
         mutationFn: async () => {
             const response = await apiWrapper.post("/Notifications/read-all");
             if (!response.success) {
-                throw new Error(response.error || "فشل في تحديد جميع الإشعارات كمقروءة");
+                throw new Error(response.message || "فشل في تحديد جميع الإشعارات كمقروءة");
             }
             return response;
         },
@@ -121,7 +121,7 @@ export default function NotificationsDropdown() {
         mutationFn: async (notificationId: number) => {
             const response = await apiWrapper.delete(`/Notifications/${notificationId}`);
             if (!response.success) {
-                throw new Error(response.error || "فشل في حذف الإشعار");
+                throw new Error(response.message || "فشل في حذف الإشعار");
             }
             return response;
         },

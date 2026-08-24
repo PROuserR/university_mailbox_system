@@ -147,7 +147,7 @@ export default function DistributionPageClient() {
             });
 
             if (!res.success) {
-                throw new Error(res.error || "فشل حفظ التوزيع");
+                throw new Error(res.message || "فشل حفظ التوزيع");
             }
 
             return res.data;

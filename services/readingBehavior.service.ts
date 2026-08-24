@@ -11,7 +11,7 @@ export const getReadingBehavior = async (): Promise<ReadingBehaviorDto> => {
     }>(`${BASE_URL}/dean/reading-behavior`);
 
     if (!res.success || !res.data) {
-        throw new Error(res.error || "Failed to load reading behavior");
+        throw new Error(res.message || "Failed to load reading behavior");
     }
 
     return res.data.data;

@@ -110,7 +110,7 @@ export default function IgnoredReportPage() {
       if (response.success && response.data) {
         setData(response.data.data);
       } else {
-        toast.error(response.error || "فشل تحميل التقرير");
+        toast.error(response.message || "فشل تحميل التقرير");
       }
     } catch {
       toast.error("حدث خطأ أثناء تحميل التقرير");
@@ -146,7 +146,7 @@ export default function IgnoredReportPage() {
         toast.success("تمت معالجة المراسلات المتجاهلة بنجاح");
         await fetchData();
       } else {
-        toast.error(response.error || "فشل معالجة المراسلات");
+        toast.error(response.message || "فشل معالجة المراسلات");
       }
     } catch {
       toast.error("حدث خطأ أثناء المعالجة");

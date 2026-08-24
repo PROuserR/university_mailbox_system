@@ -633,7 +633,7 @@ export default function MailComposeOverlay() {
                 resetForm();
                 triggerMailCompose();
             } else {
-                throw new Error(res.error || "فشل إرسال المراسلة");
+                throw new Error(res.message || "فشل إرسال المراسلة");
             }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {

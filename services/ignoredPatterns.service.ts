@@ -11,7 +11,7 @@ export const getIgnoredPatterns = async (): Promise<IgnoredPatternsDto> => {
     }>(`${BASE_URL}/dean/ignored-patterns`);
 
     if (!res.success || !res.data) {
-        throw new Error(res.error || "Failed to load ignored patterns");
+        throw new Error(res.message || "Failed to load ignored patterns");
     }
 
     return res.data.data;

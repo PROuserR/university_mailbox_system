@@ -21,7 +21,7 @@ export const getDeanDashboard = async (): Promise<DeanDashboardFullDto> => {
     }>(`${BASE_URL}/dean/dashboard`);
 
     if (!res.success || !res.data) {
-        throw new Error(res.error || "Failed to load dean dashboard");
+        throw new Error(res.message || "Failed to load dean dashboard");
     }
 
     return res.data.data;
@@ -39,7 +39,7 @@ export const getDistributionData = async (
     }>(`${BASE_URL}/distribution`, { by });
 
     if (!res.success || !res.data) {
-        throw new Error(res.error || "Failed to load distribution data");
+        throw new Error(res.message || "Failed to load distribution data");
     }
 
     return res.data.data;
@@ -63,7 +63,7 @@ export const getTimeSeriesData = async (
     }>(`${BASE_URL}/time-series`, params);
 
     if (!res.success || !res.data) {
-        throw new Error(res.error || "Failed to load time series data");
+        throw new Error(res.message || "Failed to load time series data");
     }
 
     return res.data.data;
@@ -86,7 +86,7 @@ export const getReadingPerformance = async (
     }>(`${BASE_URL}/reading-performance`, params);
 
     if (!res.success || !res.data) {
-        throw new Error(res.error || "Failed to load reading performance");
+        throw new Error(res.message || "Failed to load reading performance");
     }
 
     return res.data.data;

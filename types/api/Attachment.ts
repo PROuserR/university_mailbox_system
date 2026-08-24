@@ -1,13 +1,15 @@
 // types/api/Attachment.ts
 
 export type Attachment = {
-    id: number;
-    fileName: string;
-    filePath: string;
-    fileSize: number;        
-    mimeType: string ; 
-    isPrimary: boolean;      
-    uploadedAt: string;      
-    uploadedBy: string;      
-    downloadUrl?: string ; 
+      id: number;
+  fileName: string;
+  fileIdentifier: string;
+  fileSize: number;
+  mimeType: string | null;
+  isPrimary: boolean;
+  uploadedAt: string;
+  uploadedBy: string;
+  attachmentType: string;
+  updatedAt: string | null;
+  createdAt: string | null;
 };

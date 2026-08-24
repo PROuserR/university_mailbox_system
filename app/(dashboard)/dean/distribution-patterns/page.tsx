@@ -136,7 +136,7 @@ export default function DistributionPatternsPage() {
             if (response.success && response.data) {
                 setData(response.data.data);
             } else {
-                toast.error(response.error || "فشل تحميل البيانات");
+                toast.error(response.message || "فشل تحميل البيانات");
             }
         } catch {
             toast.error("حدث خطأ أثناء تحميل البيانات");

@@ -150,7 +150,7 @@ export default function MailList() {
         );
         toast.success("تم حذف البريد بنجاح");
       } else {
-        toast.error(res.error || "لا يمكن حذف البريد بعد توزيعه");
+        toast.error(res.message || "لا يمكن حذف البريد بعد توزيعه");
       }
     } catch (error) {
       toast.error("فشل حذف البريد");

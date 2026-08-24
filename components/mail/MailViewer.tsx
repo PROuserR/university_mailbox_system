@@ -142,6 +142,7 @@ const handleViewFile = async (attachment: any) => {
         setIsLoadingFile(true);
 
         const response = await apiWrapper.get(
+            // eslint-disable-next-line react-hooks/purity
             `/attachments/${attachment.id}/view?t=${Date.now()}`,
             {},
             {
@@ -151,7 +152,7 @@ const handleViewFile = async (attachment: any) => {
 
         // ✅ التحقق من النجاح
         if (!response.success) {
-            throw new Error(response.error || 'فشل تحميل الملف');
+            throw new Error(response.message || 'فشل تحميل الملف');
         }
 
         // ✅ التحقق من وجود البيانات
@@ -200,7 +201,7 @@ const handleDownload = async (attachment: any) => {
 
         // ✅ التحقق من النجاح
         if (!response.success) {
-            throw new Error(response.error || 'فشل تحميل الملف');
+            throw new Error(response.message || 'فشل تحميل الملف');
         }
 
         // ✅ التحقق من وجود البيانات
