@@ -66,3 +66,11 @@ export interface CurrentUserResponse {
   updatedAt?: string;
   profileImageUrl?: string;
 }
+
+export enum UserRole {
+  ADMIN = 'Admin',
+  DEAN = 'Dean',
+  EMPLOYEE = 'Employee',
+  USER = 'User'
+}
+

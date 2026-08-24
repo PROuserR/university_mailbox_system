@@ -19,6 +19,7 @@ import {
     faPlus,
     faXmark,
     faFile,
+    faUserCog,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailFilterStore from "@/store/mailFilterStore";
 import { useQuery } from "@tanstack/react-query";
@@ -30,7 +31,6 @@ import useUserInfoStore from "@/store/userInfoStore";
 import useSidebarToggleStore from "@/store/sidebarToggleStore";
 import { useEffect, useState, Suspense } from "react";
 
-// ✅ مكون منفصل يستخدم useSearchParams مع Suspense
 function SidebarContentWrapper() {
     const router = useRouter();
     const pathname = usePathname();
@@ -161,6 +161,7 @@ function SidebarContentWrapper() {
                 },
                 { icon: faGear, label: "إعدادات النظام", path: "/dean/settings" },
                 { icon: faUser, label: "الملف الشخصي", path: "/profile" },
+                 { icon: faUserCog, label: "التفويضات", path: "/delegations" },
             ];
         }
 

@@ -70,7 +70,6 @@
   }
 }
 
-/* ✅ أضف هذه الكلاسات المخصصة */
 @layer components {
   .bg-background {
     background-color: rgb(var(--background));
@@ -90,4 +89,12 @@
   .border-border {
     border-color: rgb(var(--border));
   }
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
 }

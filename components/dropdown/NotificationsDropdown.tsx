@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/dropdown/NotificationsDropdown.tsx
 
 "use client";
@@ -23,14 +24,16 @@ import {
     faCheckDouble,
     faTrash,
     faInbox,
+    faSync,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { apiWrapper } from "@/utils/apiClient";
-import { NotificationsResponse } from "@/types/api/Notifications/NotificationsResponse";
-import { NotificationItem } from "@/types/api/Notifications/NotificationItem";
+import { NotificationItem, NotificationsResponse } from "@/types/api/notification";
+import { authService } from "@/services/auth.service";
 
 export default function NotificationsDropdown() {
     const [open, setOpen] = useState(false);
+    const [isRefreshingPermissions, setIsRefreshingPermissions] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const queryClient = useQueryClient();
 
@@ -44,58 +47,90 @@ export default function NotificationsDropdown() {
         queryFn: async (): Promise<NotificationsResponse> => {
             try {
                 const response = await apiWrapper.get<NotificationsResponse>(
-                    "/Notifications"
+                    "/Notifications",
+                    { page: 1, pageSize: 20 }
                 );
 
-                if (!response.data) {
+                if (!response.success || !response.data) {
                     throw new Error("لم يتم العثور على بيانات الإشعارات");
+                }
+
+                if (!response.data.isSuccess) {
+                    throw new Error(response.data.message || "فشل تحميل الإشعارات");
                 }
 
                 return response.data;
             } catch (error) {
+                console.error("❌ Failed to fetch notifications:", error);
                 toast.error("فشل في تحميل الإشعارات");
                 throw error;
             }
         },
         refetchInterval: 30000,
         enabled: true,
+        staleTime: 10000,
     });
+
+    const handleRefreshPermissions = async () => {
+        setIsRefreshingPermissions(true);
+        try {
+            await authService.refreshDelegatedPermissions();
+            toast.success("تم تحديث الصلاحيات بنجاح", { icon: "🔑" });
+        } catch (error) {
+            toast.error("فشل تحديث الصلاحيات");
+            console.error("Failed to refresh permissions:", error);
+        } finally {
+            setIsRefreshingPermissions(false);
+        }
+    };
 
     const markAsReadMutation = useMutation({
         mutationFn: async (notificationId: number) => {
-            await apiWrapper.post(`/Notifications/${notificationId}/read`);
+            const response = await apiWrapper.post(`/Notifications/${notificationId}/read`);
+            if (!response.success) {
+                throw new Error(response.error || "فشل في تحديد الإشعار كمقروء");
+            }
+            return response;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["notifications"] });
         },
-        onError: () => {
-            toast.error("فشل في تحديد الإشعار كمقروء");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل في تحديد الإشعار كمقروء");
         },
     });
 
     const markAllAsReadMutation = useMutation({
         mutationFn: async () => {
-            await apiWrapper.post("/Notifications/read-all");
+            const response = await apiWrapper.post("/Notifications/read-all");
+            if (!response.success) {
+                throw new Error(response.error || "فشل في تحديد جميع الإشعارات كمقروءة");
+            }
+            return response;
         },
         onSuccess: () => {
             toast.success("تم تحديد جميع الإشعارات كمقروءة");
             queryClient.invalidateQueries({ queryKey: ["notifications"] });
         },
-        onError: () => {
-            toast.error("فشل في تحديد جميع الإشعارات كمقروءة");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل في تحديد جميع الإشعارات كمقروءة");
         },
     });
 
     const deleteNotificationMutation = useMutation({
         mutationFn: async (notificationId: number) => {
-            await apiWrapper.delete(`Notifications/${notificationId}`);
+            const response = await apiWrapper.delete(`/Notifications/${notificationId}`);
+            if (!response.success) {
+                throw new Error(response.error || "فشل في حذف الإشعار");
+            }
+            return response;
         },
         onSuccess: () => {
             toast.success("تم حذف الإشعار");
             queryClient.invalidateQueries({ queryKey: ["notifications"] });
         },
-        onError: () => {
-            toast.error("فشل في حذف الإشعار");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل في حذف الإشعار");
         },
     });
 
@@ -155,7 +190,10 @@ export default function NotificationsDropdown() {
         <div className="relative z-10" ref={dropdownRef} dir="rtl">
             {/* ===== زر الجرس ===== */}
             <button
-                onClick={() => setOpen((prev) => !prev)}
+                onClick={() => {
+                    setOpen((prev) => !prev);
+                    if (!open) refetch();
+                }}
                 className="relative w-8 h-8 rounded-xl bg-white/80 border border-blue-200/50 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center"
             >
                 <FontAwesomeIcon icon={faBell} className="text-sm" />
@@ -172,19 +210,19 @@ export default function NotificationsDropdown() {
             </button>
 
             {/* ===== القائمة المنسدلة ===== */}
-           <AnimatePresence>
-    {open && (
-        <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: "easeInOut" }}
-            className="absolute mt-2 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-xl
-                w-[360px]
-                max-sm:w-[calc(100vw-32px)] max-sm:max-w-[300px]
-                left-0 max-sm:left-[-20px] max-sm:-translate-x-1/2
-                max-sm:origin-top"
-        >
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                        transition={{ duration: 0.15, ease: "easeInOut" }}
+                        className="absolute mt-2 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-xl
+                            w-[360px]
+                            max-sm:w-[calc(100vw-32px)] max-sm:max-w-[300px]
+                            left-0 max-sm:left-[-20px] max-sm:-translate-x-1/2
+                            max-sm:origin-top"
+                    >
                         {/* ===== الهيدر ===== */}
                         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white">
                             <div className="flex items-center gap-1.5">
@@ -200,6 +238,21 @@ export default function NotificationsDropdown() {
                             </div>
 
                             <div className="flex items-center gap-1">
+                                {/* ✅ زر تحديث الصلاحيات */}
+                                <button
+                                    onClick={handleRefreshPermissions}
+                                    disabled={isRefreshingPermissions}
+                                    className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-500 text-white text-[9px] font-medium hover:bg-purple-600 transition disabled:opacity-50"
+                                    title="تحديث الصلاحيات"
+                                >
+                                    {isRefreshingPermissions ? (
+                                        <FontAwesomeIcon icon={faSpinner} spin className="text-[7px]" />
+                                    ) : (
+                                        <FontAwesomeIcon icon={faSync} className="text-[7px]" />
+                                    )}
+                                    تحديث
+                                </button>
+
                                 {unreadCount > 0 && (
                                     <button
                                         onClick={() => markAllAsReadMutation.mutate()}

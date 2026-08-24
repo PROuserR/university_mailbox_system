@@ -29,8 +29,11 @@ const cleanText = (text: string): string => {
   return text.replace(/\s+/g, " ").trim();
 };
 
- function CorrespondencesContent() {
-  useAuthGuard();
+function CorrespondencesContent() {
+  const { isLoading: isAuthLoading, isAuthorized } = useAuthGuard({
+    requiredPermissions: ['ViewCorrespondence'],
+    redirectTo: '/auth/login'
+  });
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -59,24 +62,26 @@ const cleanText = (text: string): string => {
     sortDirection: "desc",
   });
 
- const searchParams2 = useSearchParams();
-    const correspondenceId = searchParams2.get("id");
-  
-    useEffect(() => {
-        if (correspondenceId) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setSelectedId(Number(correspondenceId));
-            setDetailOpen(true);
-        }
-    }, [correspondenceId]);
-
+  const searchParams2 = useSearchParams();
+  const correspondenceId = searchParams2.get("id");
 
   const { data: documentTypesData } = useDocumentTypes();
   const { data: senderEntitiesData } = useSenderEntities();
 
   const documentTypes = documentTypesData || [];
   const senderEntities = senderEntitiesData || [];
-   useEffect(() => {
+
+  const hasSetFromUrl = useRef(false);
+
+  useEffect(() => {
+    if (correspondenceId && !hasSetFromUrl.current) {
+      hasSetFromUrl.current = true;
+      setSelectedId(Number(correspondenceId));
+      setDetailOpen(true);
+    }
+  }, [correspondenceId]);
+
+  useEffect(() => {
     const cleaned = cleanText(searchQuery);
     setSearchText(cleaned);
   }, [searchQuery, setSearchText]);
@@ -136,15 +141,16 @@ const cleanText = (text: string): string => {
     refetch();
   }, [refetch]);
 
+  const isApplyingFilters = useRef(false);
+  const isResetting = useRef(false);
+  const previousApiParams = useRef<string>("");
+  const hasSetInitialSelection = useRef(false);
+
   useEffect(() => {
     if (error) {
       toast.error(error.message || "حدث خطأ أثناء تحميل المراسلات");
     }
   }, [error]);
-
-  const isApplyingFilters = useRef(false);
-  const isResetting = useRef(false);
-  const previousApiParams = useRef<string>("");
 
   useEffect(() => {
     const currentParams = JSON.stringify(apiParams);
@@ -157,8 +163,6 @@ const cleanText = (text: string): string => {
       isResetting.current = false;
     }
   }, [apiParams]);
-
-  const hasSetInitialSelection = useRef(false);
 
   useEffect(() => {
     if (
@@ -226,6 +230,37 @@ const cleanText = (text: string): string => {
     return count;
   }, [searchParams]);
 
+
+  if (isAuthLoading) {
+    return (
+      <div
+        className="flex items-center justify-center"
+        style={{ height: PAGE_HEIGHT }}
+      >
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div
+        className="flex items-center justify-center"
+        style={{ height: PAGE_HEIGHT }}
+      >
+        <div className="text-center">
+          <p className="text-red-500 text-lg">ليس لديك صلاحية لعرض هذه الصفحة</p>
+          <Button
+            onClick={() => window.location.href = "/"}
+            className="mt-4"
+          >
+            العودة للرئيسية
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
   if (isLoading && items.length === 0) {
     return (
       <div
@@ -362,7 +397,6 @@ const cleanText = (text: string): string => {
   // ========== Desktop View ==========
   return (
     <div className="flex overflow-hidden" style={{ height: PAGE_HEIGHT }}>
-      {/* ===== القائمة ===== */}
       <div className="w-96 shrink-0 border-l border-border flex flex-col h-full overflow-hidden">
         <div className="shrink-0 p-3 space-y-3">
           <div className="flex items-center justify-between">
@@ -417,7 +451,6 @@ const cleanText = (text: string): string => {
         </div>
       </div>
 
-      {/* ===== التفاصيل ===== */}
       <div className="flex-1 overflow-hidden">
         {selectedItem ? (
           <CorrespondenceEmailDetail
@@ -463,12 +496,17 @@ const cleanText = (text: string): string => {
     </div>
   );
 }
+
 export default function CorrespondencesPage() {
-    return (
-        <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>}>
-            <CorrespondencesContent />
-        </Suspense>
-    );
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <CorrespondencesContent />
+    </Suspense>
+  );
 }

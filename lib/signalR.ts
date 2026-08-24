@@ -1,23 +1,25 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/signalR.ts
 import * as signalR from "@microsoft/signalr";
+import { authService } from "@/services/auth.service";
+import toast from "react-hot-toast";
 
 let connection: signalR.HubConnection | null = null;
 let connectionPromise: Promise<signalR.HubConnection | null> | null = null;
+
 const getHubUrl = (): string => {
-    return process.env.NEXT_PUBLIC_SIGNALR_URL || "https://universitymailbox.runasp.net/hubs/notification";
+    return process.env.NEXT_PUBLIC_SIGNALR_URL || "https://localhost:7236/hubs/notification";
 };
+
 export const startSignalRConnection = async (onNotificationReceived: (notification: any) => void) => {
-  // إذا كان هناك اتصال قيد الإنشاء بالفعل
   if (connectionPromise) {
     return connectionPromise;
   }
 
-  // إذا كان الاتصال موجوداً ومتصل
   if (connection && connection.state === signalR.HubConnectionState.Connected) {
     return connection;
   }
 
-  // تنظيف الاتصال القديم
   if (connection && connection.state !== signalR.HubConnectionState.Disconnected) {
     try {
       await connection.stop();
@@ -39,21 +41,41 @@ export const startSignalRConnection = async (onNotificationReceived: (notificati
     .configureLogging(signalR.LogLevel.Information)
     .build();
 
-  connection.on("ReceiveNotification", (notification) => {
-    // console.log("🔔✅ ReceiveNotification received:", notification);
+  connection.on("ReceiveNotification", async (notification: any) => {
+    console.log("🔔✅ ReceiveNotification received:", notification);
+
+    const notificationType = notification?.Type || notification?.type;
+
+    if (notificationType === "PermissionsUpdated") {
+      console.log("🔄 Permissions update detected, refreshing permissions...");
+      try {
+        await authService.refreshDelegatedPermissions();
+        console.log("✅ Permissions refreshed successfully");
+        
+        toast.success("تم تحديث صلاحياتك", {
+          duration: 3000,
+          icon: "🔑",
+        });
+      } catch (error) {
+        console.error("❌ Failed to refresh permissions:", error);
+        toast.error("فشل تحديث الصلاحيات، يرجى تحديث الصفحة");
+      }
+      return;
+    }
+
     onNotificationReceived(notification);
   });
 
   connection.onreconnecting((error) => {
-    // console.warn("🔄 SignalR reconnecting...", error);
+    console.warn("🔄 SignalR reconnecting...", error);
   });
 
   connection.onreconnected((connectionId) => {
-    // console.log("✅ SignalR reconnected successfully! ConnectionId:", connectionId);
+    console.log("✅ SignalR reconnected successfully! ConnectionId:", connectionId);
   });
 
   connection.onclose((error) => {
-    // console.warn("❌ SignalR connection closed:", error);
+    console.warn("❌ SignalR connection closed:", error);
     connection = null;
     connectionPromise = null;
   });
@@ -61,10 +83,10 @@ export const startSignalRConnection = async (onNotificationReceived: (notificati
   connectionPromise = (async () => {
     try {
       await connection!.start();
-      // console.log("✅ SignalR Connected successfully! State:", connection!.state);
+      console.log("✅ SignalR Connected successfully! State:", connection!.state);
       return connection;
     } catch (err) {
-      // console.error("❌ SignalR Connection failed:", err);
+      console.error("❌ SignalR Connection failed:", err);
       connection = null;
       setTimeout(() => {
         connectionPromise = null;
@@ -88,10 +110,10 @@ export const stopSignalRConnection = async () => {
     try {
       await connection.stop();
     } catch (err) {
-      // console.warn("Error stopping connection:", err);
+      console.warn("Error stopping connection:", err);
     }
     connection = null;
-    // console.log("SignalR Disconnected");
+    console.log("SignalR Disconnected");
   }
 };
 

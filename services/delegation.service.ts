@@ -1,0 +1,272 @@
+// services/delegation.service.ts
+import { apiWrapper, ApiResult, extractData, isApiSuccess } from '@/utils/apiClient';
+import {
+  DelegationDto,
+  CreateDelegationDto,
+  UpdateDelegationDto,
+  RevokeDelegationDto,
+  AvailablePermissionDto,
+  PermissionDto,
+  DelegationStatisticsDto,
+  DelegationUsageDto,
+  UserResponseDto,
+} from '@/types/api/Delegation';
+
+class DelegationService {
+  // ============================================================
+  // ===== Users =====
+  // ============================================================
+
+  async getEmployees(): Promise<UserResponseDto[]> {
+    const response = await apiWrapper.get<ApiResult<UserResponseDto[]>>(
+      '/Users/role/Employee'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل الموظفين');
+    }
+
+    return extractData(response) || [];
+  }
+
+  async getDeans(): Promise<UserResponseDto[]> {
+    const response = await apiWrapper.get<ApiResult<UserResponseDto[]>>(
+      '/Users/role/Dean'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل العمداء');
+    }
+
+    return extractData(response) || [];
+  }
+
+  // ============================================================
+  // ===== Create Delegation =====
+  // ============================================================
+
+  async createDelegation(dto: CreateDelegationDto): Promise<DelegationDto> {
+    const response = await apiWrapper.post<ApiResult<DelegationDto>>(
+      '/Delegations',
+      dto
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل إنشاء التفويض');
+    }
+
+    return extractData(response)!;
+  }
+
+  // ============================================================
+  // ===== Update Delegation =====
+  // ============================================================
+
+  async updateDelegation(id: number, dto: UpdateDelegationDto): Promise<DelegationDto> {
+    const response = await apiWrapper.put<ApiResult<DelegationDto>>(
+      `/Delegations/${id}`,
+      dto
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحديث التفويض');
+    }
+
+    return extractData(response)!;
+  }
+
+  async addPermissionsToDelegation(id: number, permissionIds: number[]): Promise<DelegationDto> {
+    const response = await apiWrapper.post<ApiResult<DelegationDto>>(
+      `/Delegations/${id}/add-permissions`,
+      permissionIds
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل إضافة الصلاحيات');
+    }
+
+    return extractData(response)!;
+  }
+
+  // ============================================================
+  // ===== Revoke Delegation =====
+  // ============================================================
+
+  async revokeDelegation(id: number, reason?: string): Promise<void> {
+    const response = await apiWrapper.post<ApiResult<void>>(
+      `/Delegations/${id}/revoke`,
+      { reason } as RevokeDelegationDto
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل إلغاء التفويض');
+    }
+  }
+
+  // ============================================================
+  // ===== Get Delegations =====
+  // ============================================================
+
+  async getDelegationById(id: number): Promise<DelegationDto> {
+    const response = await apiWrapper.get<ApiResult<DelegationDto>>(
+      `/Delegations/${id}`
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل التفويض');
+    }
+
+    return extractData(response)!;
+  }
+
+  async getAllDelegations(): Promise<DelegationDto[]> {
+    const response = await apiWrapper.get<ApiResult<DelegationDto[]>>(
+      '/Delegations'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل التفويضات');
+    }
+
+    return extractData(response) || [];
+  }
+
+  async getDelegationsByDelegate(userId: number): Promise<DelegationDto[]> {
+    const response = await apiWrapper.get<ApiResult<DelegationDto[]>>(
+      `/Delegations/by-delegate/${userId}`
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل تفويضات المستخدم');
+    }
+
+    return extractData(response) || [];
+  }
+
+  async getMyDelegations(): Promise<DelegationDto[]> {
+    const response = await apiWrapper.get<ApiResult<DelegationDto[]>>(
+      '/Delegations/my-delegations'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل تفويضاتي');
+    }
+
+    return extractData(response) || [];
+  }
+
+  // ============================================================
+  // ===== Permissions =====
+  // ============================================================
+
+  async getMyPermissions(): Promise<PermissionDto[]> {
+    const response = await apiWrapper.get<ApiResult<PermissionDto[]>>(
+      '/Delegations/my-permissions'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل الصلاحيات');
+    }
+
+    return extractData(response) || [];
+  }
+
+  async hasPermission(permissionName: string): Promise<boolean> {
+    const response = await apiWrapper.get<ApiResult<boolean>>(
+      '/Delegations/has-permission',
+      { permissionName }
+    );
+
+    if (!isApiSuccess(response)) {
+      return false;
+    }
+
+    return extractData(response) || false;
+  }
+
+  async getAvailablePermissions(): Promise<AvailablePermissionDto[]> {
+    const response = await apiWrapper.get<ApiResult<AvailablePermissionDto[]>>(
+      '/Delegations/available-permissions'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل الصلاحيات المتاحة');
+    }
+
+    return extractData(response) || [];
+  }
+
+  // ============================================================
+  // ===== Usage & Statistics =====
+  // ============================================================
+
+  async getDelegationStatistics(): Promise<DelegationStatisticsDto> {
+    const response = await apiWrapper.get<ApiResult<DelegationStatisticsDto>>(
+      '/Delegations/statistics'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل الإحصائيات');
+    }
+
+    return extractData(response)!;
+  }
+
+  async getDelegationUsage(delegationId: number): Promise<DelegationUsageDto[]> {
+    const response = await apiWrapper.get<ApiResult<DelegationUsageDto[]>>(
+      `/Delegations/${delegationId}/usage`
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل تحميل سجل الاستخدام');
+    }
+
+    return extractData(response) || [];
+  }
+
+  // ============================================================
+  // ===== Management =====
+  // ============================================================
+
+  async revokeExpiredDelegations(): Promise<number> {
+    const response = await apiWrapper.post<ApiResult<number>>(
+      '/Delegations/revoke-expired'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل إلغاء التفويضات المنتهية');
+    }
+
+    return extractData(response) || 0;
+  }
+
+  // ============================================================
+  // ===== Default Delegations =====
+  // ============================================================
+
+  async addDefaultDelegations(): Promise<number> {
+    const response = await apiWrapper.post<ApiResult<number>>(
+      '/Delegations/default-delegations/add'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل إضافة التفويضات الافتراضية');
+    }
+
+    return extractData(response) || 0;
+  }
+
+  async resetDefaultDelegations(): Promise<number> {
+    const response = await apiWrapper.post<ApiResult<number>>(
+      '/Delegations/default-delegations/reset'
+    );
+
+    if (!isApiSuccess(response)) {
+      throw new Error(response.data?.message || 'فشل إعادة تعيين التفويضات الافتراضية');
+    }
+
+    return extractData(response) || 0;
+  }
+}
+
+export const delegationService = new DelegationService();

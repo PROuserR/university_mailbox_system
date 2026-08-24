@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
 import { notificationService } from "@/services/notification.service";
 import { startSignalRConnection, stopSignalRConnection } from "@/lib/signalR";
+import { authService } from "@/services/auth.service";
 import type { Notification, NotificationPageResponse } from "@/types/api/notification";
 
 export function useNotifications(pageSize: number = 10) {
@@ -21,7 +22,6 @@ export function useNotifications(pageSize: number = 10) {
   const signalRInitialized = useRef(false);
   const isLoadingMoreRef = useRef(false);
 
-  // جلب الصفحة الأولى أو Refresh
   const fetchNotifications = useCallback(async (page: number = 1, isLoadMore: boolean = false) => {
     if (isLoadMore && isLoadingMoreRef.current) return;
     
@@ -56,21 +56,18 @@ export function useNotifications(pageSize: number = 10) {
     }
   }, [pageSize]);
 
-  // تحميل المزيد (الصفحة التالية)
   const loadMore = useCallback(() => {
     if (!hasMore || loadingMore || loading || isLoadingMoreRef.current) return;
     const nextPage = currentPage + 1;
     fetchNotifications(nextPage, true);
   }, [hasMore, loadingMore, loading, currentPage, fetchNotifications]);
 
-  // إعادة تحميل الصفحة الأولى
   const refresh = useCallback(() => {
     setCurrentPage(1);
     setHasMore(true);
     fetchNotifications(1, false);
   }, [fetchNotifications]);
 
-  // جلب عدد غير المقروء فقط
   const fetchUnreadCount = useCallback(async () => {
     try {
       const count = await notificationService.getUnreadCount();
@@ -80,36 +77,48 @@ export function useNotifications(pageSize: number = 10) {
     }
   }, []);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchNotifications(1, false);
-    fetchUnreadCount();
-  }, [fetchNotifications, fetchUnreadCount]);
+  const handleNewNotification = useCallback(async (notification: any) => {
+    console.log("🔔 Real-time notification received:", notification);
 
-  // SignalR for real-time notifications
-  useEffect(() => {
-    if (signalRInitialized.current) return;
-    signalRInitialized.current = true;
+    const notificationType = notification?.Type || notification?.type;
 
-    const handleNewNotification = async (notification: Notification) => {
-      console.log("🔔 Real-time notification received:", notification);
+    if (notificationType === "PermissionsUpdated") {
+      toast.success("تم تحديث صلاحياتك", {
+        duration: 3000,
+        icon: "🔑",
+      });
       
-      // تحديث العدد غير المقروء
+      try {
+        await authService.refreshDelegatedPermissions();
+      } catch (error) {
+        console.error("Failed to refresh permissions:", error);
+      }
+      return;
+    }
+
+    if (notification && notification.title) {
       setUnreadCount(prev => prev + 1);
       setTotalCount(prev => prev + 1);
       
-      // إضافة الإشعار الجديد إلى بداية القائمة (إذا كنا في الصفحة الأولى)
       if (currentPage === 1) {
         setNotifications(prev => [notification, ...prev]);
       }
       
-      // عرض Toast
       toast.success(notification.title, {
-        duration: 5000,
+        duration: 3000,
         position: "top-center",
         icon: "🔔",
       });
-    };
+    }
+  }, [currentPage]);
+
+  // ============================================================
+  // ===== SignalR Initialization =====
+  // ============================================================
+
+  useEffect(() => {
+    if (signalRInitialized.current) return;
+    signalRInitialized.current = true;
 
     startSignalRConnection(handleNewNotification);
 
@@ -117,12 +126,24 @@ export function useNotifications(pageSize: number = 10) {
       stopSignalRConnection();
       signalRInitialized.current = false;
     };
-  }, [currentPage]);
+  }, [handleNewNotification]);
+
+  // ============================================================
+  // ===== Initial Fetch =====
+  // ============================================================
+
+  useEffect(() => {
+    fetchNotifications(1, false);
+    fetchUnreadCount();
+  }, [fetchNotifications, fetchUnreadCount]);
+
+  // ============================================================
+  // ===== Actions =====
+  // ============================================================
 
   const markAsRead = useCallback(async (id: number) => {
     try {
       await notificationService.markAsRead(id);
-      // تحديث القائمة محلياً
       setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, isRead: true } : n)
       );
@@ -135,7 +156,6 @@ export function useNotifications(pageSize: number = 10) {
   const markAllAsRead = useCallback(async () => {
     try {
       await notificationService.markAllAsRead();
-      // تحديث القائمة محلياً
       setNotifications(prev =>
         prev.map(n => ({ ...n, isRead: true }))
       );
@@ -161,6 +181,16 @@ export function useNotifications(pageSize: number = 10) {
     }
   }, [notifications]);
 
+  const refreshPermissions = useCallback(async () => {
+    try {
+      await authService.refreshDelegatedPermissions();
+      toast.success("تم تحديث الصلاحيات", { icon: "🔑" });
+    } catch (error) {
+      toast.error("فشل تحديث الصلاحيات");
+      console.error("Failed to refresh permissions:", error);
+    }
+  }, []);
+
   return {
     notifications,
     totalCount,
@@ -176,6 +206,7 @@ export function useNotifications(pageSize: number = 10) {
     loadMore,
     refresh,
     refetchUnreadCount: fetchUnreadCount,
+    refreshPermissions,
   };
 }
 
@@ -200,12 +231,20 @@ export function useUnreadCount() {
     fetchUnreadCount();
   }, [fetchUnreadCount]);
 
-  // SignalR for real-time updates
   useEffect(() => {
     if (signalRInitialized.current) return;
     signalRInitialized.current = true;
 
-    const handleNewNotification = () => {
+    const handleNewNotification = (notification: any) => {
+      const notificationType = notification?.Type || notification?.type;
+      
+      if (notificationType === "PermissionsUpdated") {
+        authService.refreshDelegatedPermissions().catch(console.error);
+        toast.success("تم تحديث صلاحياتك", {
+          duration: 5000,
+          icon: "🔑",
+        });
+      }
       fetchUnreadCount();
     };
 

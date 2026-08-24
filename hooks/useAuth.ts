@@ -2,26 +2,64 @@
 // hooks/useAuth.ts
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { authService} from "@/services/auth.service";
+import { authService } from "@/services/auth.service";
 import userInfoStore from "@/store/userInfoStore";
+import { UserRole } from "@/types/api/user";
 
 export function useAuth() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const initializedRef = useRef(false);
+  
   const { 
     setId, setEmail, setFirstname, setLastname, setRole, setRoles,
-    setIsLoggedIn, clearUser, setPhone, setIsActive, setIsPermanentReceiver, setProfileImageUrl
+    setIsLoggedIn, clearUser, setPhone, setIsActive, setIsPermanentReceiver, 
+    setProfileImageUrl, setPermissions, permissions
   } = userInfoStore();
+
+  const initializeUser = useCallback(async () => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    
+    try {
+      const user = await authService.getCurrentUser();
+      
+      if (user) {
+        setId(user.id);
+        setEmail(user.email);
+        setFirstname(user.firstName);
+        setLastname(user.lastName);
+        setRole(user.role);
+        setRoles(user.roles);
+        setPhone(user.phone || null);
+        setIsActive(user.isActive);
+        setIsPermanentReceiver(user.isPermanentReceiver);
+        setProfileImageUrl(user.profileImageUrl || null);
+        setIsLoggedIn(true);
+        
+        await authService.loadDelegatedPermissions();
+      }
+    } catch (err) {
+      console.error("Failed to initialize user", err);
+      clearUser();
+    } finally {
+      setIsInitialized(true);
+    }
+  }, [
+    setId, setEmail, setFirstname, setLastname, setRole, setRoles,
+    setPhone, setIsActive, setIsPermanentReceiver, setProfileImageUrl,
+    setIsLoggedIn, clearUser, setPermissions
+  ]);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
       const user = await authService.login(email, password);
       
-      // تخزين معلومات المستخدم الأساسية
       setEmail(user.email);
       setFirstname(user.firstName);
       setLastname(user.lastName);
@@ -30,21 +68,10 @@ export function useAuth() {
       
       toast.success(`مرحباً ${user.firstName} ${user.lastName}`);
       
-      // التوجيه حسب الدور
-      // switch (user.role) {
-      //   case "Dean":
-      //     router.push("/dean/dashboard");
-      //     break;
-      //   case "Employee":
-      //     router.push("/dashboard");
-      //     break;
-      //   default:
-      //     router.push("/receiver/dashboard");
-      // }
-      router.push("/")
+      router.push("/");
       return user;
     } catch (err: any) {
-      toast.error(err.message ||"حدث خطأ في تسجيل الدخول");
+      toast.error(err.message || "حدث خطأ في تسجيل الدخول");
       throw err;
     } finally {
       setIsLoading(false);
@@ -67,24 +94,30 @@ export function useAuth() {
 
   const getCurrentUser = useCallback(async () => {
     try {
-      const user = await authService.getCurrentUser();
-      setId(user.id);
-      setEmail(user.email);
-      setFirstname(user.firstName);
-      setLastname(user.lastName);
-      setRole(user.role);
-      setRoles(user.roles);
-      setPhone(user.phone || null);
-      setIsActive(user.isActive);
-      setIsPermanentReceiver(user.isPermanentReceiver);
-      setProfileImageUrl(user.profileImageUrl || null);
-      setIsLoggedIn(true);
-      return user;
+      return await authService.getCurrentUser();
     } catch (err) {
       console.error("Failed to get current user", err);
       return null;
     }
-  }, [setId, setEmail, setFirstname, setLastname, setRole, setRoles, setPhone, setIsActive, setIsPermanentReceiver, setProfileImageUrl, setIsLoggedIn]);
+  }, []);
+
+  const hasPermission = useCallback(async (permissionName: string): Promise<boolean> => {
+    return await authService.hasPermission(permissionName);
+  }, []);
+
+  const refreshPermissions = useCallback(async (): Promise<void> => {
+    await authService.refreshDelegatedPermissions();
+  }, []);
+
+  const hasRole = useCallback((role: UserRole | UserRole[]): boolean => {
+    const state = userInfoStore.getState();
+    if (!state.role) return false;
+    
+    if (Array.isArray(role)) {
+      return role.includes(state.role as UserRole);
+    }
+    return state.role === role;
+  }, []);
 
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     setIsLoading(true);
@@ -128,13 +161,25 @@ export function useAuth() {
     }
   }, []);
 
+  const isAuthenticated = useCallback(() => {
+    const state = userInfoStore.getState();
+    return state.isLoggedIn && state.id > 0;
+  }, []);
+
   return {
     login,
     logout,
     getCurrentUser,
+    initializeUser,
     changePassword,
     forgotPassword,
     resetPassword,
     isLoading,
+    isInitialized,
+    permissions,
+    hasPermission,
+    refreshPermissions,
+    hasRole,
+    isAuthenticated,
   };
 }
