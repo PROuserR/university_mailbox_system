@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 
 const myAPI = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "https://localhost:7236/api",
-  withCredentials: true
+  withCredentials: true,
 });
 
 let isRefreshingPermissions = false;

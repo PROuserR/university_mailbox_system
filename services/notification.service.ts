@@ -21,6 +21,11 @@ export const notificationService = {
         params: { page, pageSize },
       }
     );
+    
+    if (!response.data?.isSuccess) {
+      throw new Error(response.data?.message || "فشل تحميل الإشعارات");
+    }
+    
     return response.data.data;
   },
 
@@ -32,6 +37,11 @@ export const notificationService = {
     const response = await myAPI.get<ApiResult<Notification[]>>(
       "/Notifications/unread"
     );
+    
+    if (!response.data?.isSuccess) {
+      throw new Error(response.data?.message || "فشل تحميل الإشعارات غير المقروءة");
+    }
+    
     return response.data.data;
   },
 
@@ -43,6 +53,11 @@ export const notificationService = {
     const response = await myAPI.get<ApiResult<number>>(
       "/Notifications/unread-count"
     );
+    
+    if (!response.data?.isSuccess) {
+      throw new Error(response.data?.message || "فشل تحميل عدد الإشعارات غير المقروءة");
+    }
+    
     return response.data.data;
   },
 
@@ -51,7 +66,11 @@ export const notificationService = {
    * POST /api/Notification/{id}/read
    */
   async markAsRead(id: number): Promise<void> {
-    await myAPI.post(`/Notifications/${id}/read`);
+    const response = await myAPI.post<ApiResult<void>>(`/Notifications/${id}/read`);
+    
+    if (!response.data?.isSuccess) {
+      throw new Error(response.data?.message || "فشل تحديث حالة الإشعار");
+    }
   },
 
   /**
@@ -59,7 +78,11 @@ export const notificationService = {
    * POST /api/Notification/read-all
    */
   async markAllAsRead(): Promise<void> {
-    await myAPI.post("/Notifications/read-all");
+    const response = await myAPI.post<ApiResult<void>>("/Notifications/read-all");
+    
+    if (!response.data?.isSuccess) {
+      throw new Error(response.data?.message || "فشل تحديث حالة جميع الإشعارات");
+    }
   },
 
   /**
@@ -67,6 +90,10 @@ export const notificationService = {
    * DELETE /api/Notification/{id}
    */
   async deleteNotification(id: number): Promise<void> {
-    await myAPI.delete(`/Notifications/${id}`);
+    const response = await myAPI.delete<ApiResult<void>>(`/Notifications/${id}`);
+    
+    if (!response.data?.isSuccess) {
+      throw new Error(response.data?.message || "فشل حذف الإشعار");
+    }
   },
 };

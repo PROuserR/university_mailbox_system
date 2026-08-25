@@ -48,7 +48,7 @@ export const distribute = async (
   );
 
   if (!res.success || !res.data) {
-    throw new Error(res.message || res.data?.message || "فشل حفظ التوزيع");
+    throw new Error(res.message || "فشل حفظ التوزيع");
   }
 
   if (!res.data.isSuccess) {
@@ -72,7 +72,7 @@ class DistributionService {
     >("/Distributions/pending-approval/grouped", { page, pageSize });
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || "فشل تحميل الموافقات المعلقة");
+      throw new Error(response?.message || "فشل تحميل الموافقات المعلقة");
     }
 
     return extractData(response)!;
@@ -87,7 +87,7 @@ class DistributionService {
     >("/Distributions/pending-approval", { page, pageSize });
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || "فشل تحميل الموافقات المعلقة");
+      throw new Error(response?.message || "فشل تحميل الموافقات المعلقة");
     }
 
     return extractData(response)!;
@@ -103,7 +103,7 @@ class DistributionService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || "فشل الموافقة على التوزيع");
+      throw new Error(response?.message || "فشل الموافقة على التوزيع");
     }
   }
 
@@ -118,7 +118,7 @@ class DistributionService {
     });
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || "فشل رفض التوزيع");
+      throw new Error(response?.message || "فشل رفض التوزيع");
     }
   }
 
@@ -129,7 +129,7 @@ class DistributionService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || "فشل الموافقة على التوزيعات");
+      throw new Error(response?.message || "فشل الموافقة على التوزيعات");
     }
 
     return extractData(response)!;
@@ -144,7 +144,7 @@ class DistributionService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || "فشل رفض التوزيعات");
+      throw new Error(response?.message || "فشل رفض التوزيعات");
     }
 
     return extractData(response)!;
@@ -156,9 +156,7 @@ class DistributionService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(
-        response.data?.message || "فشل الموافقة على جميع التوزيعات"
-      );
+      throw new Error(response?.message || "فشل الموافقة على جميع التوزيعات");
     }
 
     return extractData(response)!;
@@ -178,7 +176,7 @@ class DistributionService {
     });
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || "فشل رفض جميع التوزيعات");
+      throw new Error(response?.message || "فشل رفض جميع التوزيعات");
     }
 
     return extractData(response)!;
@@ -194,7 +192,7 @@ class DistributionService {
     >(`/Distributions/${id}`);
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || "فشل تحميل تفاصيل التوزيع");
+      throw new Error(response?.message || "فشل تحميل تفاصيل التوزيع");
     }
 
     return extractData(response)!;
@@ -212,7 +210,7 @@ class DistributionService {
     >("/Distributions", filter);
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || "فشل تحميل التوزيعات");
+      throw new Error(response?.message || "فشل تحميل التوزيعات");
     }
 
     return extractData(response)!;

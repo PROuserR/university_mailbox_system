@@ -153,10 +153,8 @@ export const createCorrespondence = async (
     );
 
     if (!isApiSuccess(response)) {
-        // ✅ استخدام response?.message مباشرة (من ApiResponse)
         let errorMessage = response?.message || 'فشل إنشاء المراسلة';
         
-        // ✅ إذا كانت هناك أخطاء تفصيلية في data.errors
         if (response.data?.errors) {
             const errors = response.data.errors;
             if (Array.isArray(errors) && errors.length > 0) {
@@ -195,7 +193,6 @@ export const updateCorrespondence = async (
     );
 
     if (!isApiSuccess(response)) {
-        // ✅ استخدام response?.message مباشرة
         let errorMessage = response?.message || 'فشل تحديث المراسلة';
         
         if (response.data?.errors) {
@@ -243,7 +240,6 @@ export const deleteCorrespondence = async (id: number): Promise<void> => {
 // ===== Status Management =====
 // ============================================================
 
-// ✅ FromBody: none
 export const requestApproval = async (id: number): Promise<void> => {
     const response = await apiWrapper.post<ApiResult<void>>(
         `${BASE_URL}/${id}/request-approval`
@@ -257,7 +253,6 @@ export const requestApproval = async (id: number): Promise<void> => {
     }
 };
 
-// ✅ FromBody: SignCorrespondenceOptionsDto (object)
 export const signCorrespondence = async (
     id: number,
     options: {
@@ -285,7 +280,6 @@ export const signCorrespondence = async (
     return extractData(response)!;
 };
 
-// ✅ FromQuery: Notes
 export const archiveCorrespondence = async (
     id: number,
     notes?: string
@@ -310,7 +304,6 @@ export const archiveCorrespondence = async (
     }
 };
 
-// ✅ FromQuery: Notes
 export const restoreFromArchive = async (
     id: number,
     notes?: string
@@ -335,7 +328,6 @@ export const restoreFromArchive = async (
     }
 };
 
-// ✅ FromBody: none
 export const revertToDraft = async (id: number): Promise<void> => {
     const response = await apiWrapper.post<ApiResult<void>>(
         `${BASE_URL}/${id}/revert-to-draft`
@@ -349,7 +341,6 @@ export const revertToDraft = async (id: number): Promise<void> => {
     }
 };
 
-// ✅ FromBody: string (نص مباشر)
 export const revertToDistributed = async (
     id: number,
     reason?: string
@@ -371,7 +362,6 @@ export const revertToDistributed = async (
     }
 };
 
-// ✅ FromBody: string (نص مباشر)
 export const requestRevertToDraft = async (
     id: number,
     reason?: string
@@ -393,7 +383,6 @@ export const requestRevertToDraft = async (
     }
 };
 
-// ✅ FromBody: string (نص مباشر)
 export const requestRevertToDistributed = async (
     id: number,
     reason?: string
@@ -415,7 +404,6 @@ export const requestRevertToDistributed = async (
     }
 };
 
-// ✅ FromBody: string (نص مباشر)
 export const approveRevertToDraft = async (
     id: number,
     reason?: string
@@ -437,7 +425,6 @@ export const approveRevertToDraft = async (
     }
 };
 
-// ✅ FromBody: string (نص مباشر)
 export const approveRevertToDistributed = async (
     id: number,
     reason?: string
@@ -459,7 +446,6 @@ export const approveRevertToDistributed = async (
     }
 };
 
-// ✅ FromBody: string (نص مباشر)
 export const rejectRevertToDraft = async (
     id: number,
     reason?: string
@@ -481,7 +467,6 @@ export const rejectRevertToDraft = async (
     }
 };
 
-// ✅ FromBody: string (نص مباشر)
 export const rejectRevertToDistributed = async (
     id: number,
     reason?: string
@@ -502,50 +487,6 @@ export const rejectRevertToDistributed = async (
         throw error;
     }
 };
-
-// ============================================================
-// ===== Attachments =====
-// ============================================================
-
-// export const viewAttachment = async (
-//     attachmentId: number,
-//     signal?: AbortSignal
-// ): Promise<Blob> => {
-//     const response = await fetch(
-//         `${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7236/api'}/Attachments/${attachmentId}/view`,
-//         {
-//             credentials: 'include',
-//             signal,
-//         }
-//     );
-
-//     if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-
-//     return response.blob();
-// };
-
-// export const downloadAttachment = async (
-//     attachmentId: number
-// ): Promise<Blob> => {
-//     const response = await fetch(
-//         `${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7236/api'}/Attachments/${attachmentId}/download`,
-//         {
-//             credentials: 'include',
-//         }
-//     );
-
-//     if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-
-//     return response.blob();
-// };
-
-
-
-
 
 // ============================================================
 // ===== Attachments =====
@@ -587,7 +528,6 @@ export const viewAttachment = async (
 
         return blob;
     } catch (error) {
-        console.error('View attachment error:', error);
         throw error;
     }
 };
@@ -615,7 +555,6 @@ export const downloadAttachment = async (
                     errorMessage = errorData.message;
                 }
             } catch {
-                // تجاهل خطأ تحويل JSON
             }
             throw new Error(errorMessage);
         }
@@ -627,7 +566,6 @@ export const downloadAttachment = async (
 
         return blob;
     } catch (error) {
-        console.error('Download attachment error:', error);
         throw error;
     }
 };

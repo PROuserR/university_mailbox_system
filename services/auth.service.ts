@@ -31,7 +31,6 @@ export const authService = {
       const response = await myAPI.get<ApiResult<PermissionDto[]>>("/Delegations/my-permissions");
       
       if (!response.data?.isSuccess) {
-        console.warn("Failed to load permissions:", response.data?.message);
         return [];
       }
       
@@ -43,7 +42,6 @@ export const authService = {
       userInfoStore.getState().setDelegatedPermissions(permissions);
       return permissions;
     } catch (error) {
-      console.warn("Failed to load permissions:", error);
       return [];
     }
   },
@@ -80,7 +78,6 @@ export const authService = {
       
       const userData = response.data.data;
       
-      // تحميل الصلاحيات بعد تسجيل الدخول
       await this.loadDelegatedPermissions();
       
       return userData;
@@ -100,26 +97,25 @@ export const authService = {
       const message = error.response?.data?.message || error.message || "حدث خطأ في الاتصال";
       throw new Error(message);
     } finally {
-      // تنظيف الصلاحيات عند تسجيل الخروج
       this.setDelegatedPermissions([]);
       userInfoStore.getState().setDelegatedPermissions([]);
     }
   },
 
-   async getCurrentUser(): Promise<CurrentUserResponse> {
-        try {
-            const response = await myAPI.get<ApiResult<CurrentUserResponse>>("/Auth/me");
-            
-            if (!response.data.isSuccess) {
-                throw new Error(response.data.message || "فشل في الحصول على معلومات المستخدم");
-            }
-            
-            return response.data.data;
-        } catch (error: any) {
-            const message = error.response?.data?.message || error.message || "حدث خطأ في الاتصال";
-            throw new Error(message);
-        }
-    },
+  async getCurrentUser(): Promise<CurrentUserResponse> {
+    try {
+      const response = await myAPI.get<ApiResult<CurrentUserResponse>>("/Auth/me");
+      
+      if (!response.data.isSuccess) {
+        throw new Error(response.data.message || "فشل في الحصول على معلومات المستخدم");
+      }
+      
+      return response.data.data;
+    } catch (error: any) {
+      const message = error.response?.data?.message || error.message || "حدث خطأ في الاتصال";
+      throw new Error(message);
+    }
+  },
 
   // ============================================================
   // ===== Password Management =====
