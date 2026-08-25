@@ -20,9 +20,11 @@ export function useProfile() {
       const data = await profileService.getProfile();
       setProfile(data);
     } catch (err: any) {
-      const message = err.response?.data?.message || "فشل في تحميل الملف الشخصي";
+      const message = err?.message || "فشل في تحميل الملف الشخصي";
       setError(message);
-      toast.error(message);
+      toast.error(message, {
+        duration: 3000,
+      });
     } finally {
       setLoading(false);
     }
@@ -36,11 +38,15 @@ export function useProfile() {
     try {
       const updated = await profileService.updateProfile(data);
       setProfile(updated);
-      toast.success("تم تحديث الملف الشخصي بنجاح");
+      toast.success("تم تحديث الملف الشخصي بنجاح", {
+        duration: 3000,
+      });
       return updated;
     } catch (err: any) {
-      const message = err.response?.data?.message || "فشل في تحديث الملف الشخصي";
-      toast.error(message);
+      const message = err?.message || "فشل في تحديث الملف الشخصي";
+      toast.error(message, {
+        duration: 3000,
+      });
       throw err;
     }
   }, []);
@@ -49,12 +55,12 @@ export function useProfile() {
     try {
       const result = await profileService.uploadProfilePicture(file);
       setProfile(prev => prev ? { ...prev, profileImageUrl: result } : null);
-      // toast.success("تم رفع الصورة الشخصية بنجاح");
-      // await fetchProfile();
       return result;
     } catch (err: any) {
-      const message = err.response?.data?.message || "فشل في رفع الصورة الشخصية";
-      toast.error(message);
+      const message = err?.message || "فشل في رفع الصورة الشخصية";
+      toast.error(message, {
+        duration: 3000,
+      });
       throw err;
     }
   }, []);
@@ -63,10 +69,11 @@ export function useProfile() {
     try {
       await profileService.removeProfilePicture();
       setProfile(prev => prev ? { ...prev, profileImageUrl: undefined } : null);
-      // toast.success("تم حذف الصورة الشخصية بنجاح");
     } catch (err: any) {
-      const message = err.response?.data?.message || "فشل في حذف الصورة الشخصية";
-      toast.error(message);
+      const message = err?.message || "فشل في حذف الصورة الشخصية";
+      toast.error(message, {
+        duration: 3000,
+      });
       throw err;
     }
   }, []);
@@ -94,9 +101,11 @@ export function useSettings() {
       const data = await profileService.getSettings();
       setSettings(data);
     } catch (err: any) {
-      const message = err.response?.data?.message || "فشل في تحميل الإعدادات";
+      const message = err?.message || "فشل في تحميل الإعدادات";
       setError(message);
-      toast.error(message);
+      toast.error(message, {
+        duration: 3000,
+      });
     } finally {
       setLoading(false);
     }
@@ -110,11 +119,12 @@ export function useSettings() {
     try {
       const updated = await profileService.updateSettings(data);
       setSettings(updated);
-      // toast.success("تم تحديث الإعدادات بنجاح");
       return updated;
     } catch (err: any) {
-      const message = err.response?.data?.message || "فشل في تحديث الإعدادات";
-      toast.error(message);
+      const message = err?.message || "فشل في تحديث الإعدادات";
+      toast.error(message, {
+        duration: 3000,
+      });
       throw err;
     }
   }, []);

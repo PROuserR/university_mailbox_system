@@ -36,7 +36,9 @@ export function useSettings() {
       const data = await settingsService.getSettings();
       setSettings(data);
     } catch (error: any) {
-      toast.error(error.message || "فشل تحميل الإعدادات");
+      toast.error(error?.message || "فشل تحميل الإعدادات", {
+        duration: 3000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -46,12 +48,10 @@ export function useSettings() {
     if (hasLoaded.current) return;
     hasLoaded.current = true;
     
-    // ✅ استخدام IIFE لتجنب setState المباشر
     (async () => {
       await loadSettings();
     })();
   }, [loadSettings]);
-  
 
   // ============================================================
   // ===== Update Functions =====
@@ -63,10 +63,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.updateDistributionSettings(dto);
         setSettings(data);
-        toast.success("تم تحديث إعدادات التوزيع بنجاح");
+        toast.success("تم تحديث إعدادات التوزيع بنجاح", {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات التوزيع");
+        toast.error(error?.message || "فشل تحديث إعدادات التوزيع", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -81,10 +85,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.updateFileSettings(dto);
         setSettings(data);
-        toast.success("تم تحديث إعدادات الملفات بنجاح");
+        toast.success("تم تحديث إعدادات الملفات بنجاح", {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات الملفات");
+        toast.error(error?.message || "فشل تحديث إعدادات الملفات", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -99,10 +107,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.updateEmailIncomingSettings(dto);
         setSettings(data);
-        toast.success("تم تحديث إعدادات البريد الوارد بنجاح");
+        toast.success("تم تحديث إعدادات البريد الوارد بنجاح", {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات البريد الوارد");
+        toast.error(error?.message || "فشل تحديث إعدادات البريد الوارد", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -117,10 +129,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.toggleIncomingEmail(enabled);
         setSettings(data);
-        toast.success(`تم ${enabled ? 'تفعيل' : 'تعطيل'} البريد الوارد بنجاح`);
+        toast.success(`تم ${enabled ? 'تفعيل' : 'تعطيل'} البريد الوارد بنجاح`, {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تغيير حالة البريد الوارد");
+        toast.error(error?.message || "فشل تغيير حالة البريد الوارد", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -135,10 +151,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.updateEmailOutgoingSettings(dto);
         setSettings(data);
-        toast.success("تم تحديث إعدادات البريد الصادر بنجاح");
+        toast.success("تم تحديث إعدادات البريد الصادر بنجاح", {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات البريد الصادر");
+        toast.error(error?.message || "فشل تحديث إعدادات البريد الصادر", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -153,10 +173,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.toggleOutgoingEmail(enabled);
         setSettings(data);
-        toast.success(`تم ${enabled ? 'تفعيل' : 'تعطيل'} البريد الصادر بنجاح`);
+        toast.success(`تم ${enabled ? 'تفعيل' : 'تعطيل'} البريد الصادر بنجاح`, {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تغيير حالة البريد الصادر");
+        toast.error(error?.message || "فشل تغيير حالة البريد الصادر", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -171,10 +195,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.updateArchiveSettings(dto);
         setSettings(data);
-        toast.success("تم تحديث إعدادات الأرشفة بنجاح");
+        toast.success("تم تحديث إعدادات الأرشفة بنجاح", {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات الأرشفة");
+        toast.error(error?.message || "فشل تحديث إعدادات الأرشفة", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -188,11 +216,14 @@ export function useSettings() {
       try {
         setIsSaving(true);
         await settingsService.updateAttachmentNamingSettings(dto);
-        // ✅ إعادة تحميل الإعدادات للحصول على القيم المحدثة
         await loadSettings();
-        toast.success("تم تحديث إعدادات تسمية المرفقات بنجاح");
+        toast.success("تم تحديث إعدادات تسمية المرفقات بنجاح", {
+          duration: 3000,
+        });
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات تسمية المرفقات");
+        toast.error(error?.message || "فشل تحديث إعدادات تسمية المرفقات", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -207,10 +238,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.updateCleanupSettings(dto);
         setSettings(data);
-        toast.success("تم تحديث إعدادات التنظيف بنجاح");
+        toast.success("تم تحديث إعدادات التنظيف بنجاح", {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات التنظيف");
+        toast.error(error?.message || "فشل تحديث إعدادات التنظيف", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -225,10 +260,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.updateTempCleanupSettings(dto);
         setSettings(data);
-        toast.success("تم تحديث إعدادات التنظيف المؤقت بنجاح");
+        toast.success("تم تحديث إعدادات التنظيف المؤقت بنجاح", {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات التنظيف المؤقت");
+        toast.error(error?.message || "فشل تحديث إعدادات التنظيف المؤقت", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -243,10 +282,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.updateFilesBackupSettings(dto);
         setSettings(data);
-        toast.success("تم تحديث إعدادات النسخ الاحتياطي للملفات بنجاح");
+        toast.success("تم تحديث إعدادات النسخ الاحتياطي للملفات بنجاح", {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات النسخ الاحتياطي للملفات");
+        toast.error(error?.message || "فشل تحديث إعدادات النسخ الاحتياطي للملفات", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -261,10 +304,14 @@ export function useSettings() {
         setIsSaving(true);
         const data = await settingsService.updateDatabaseBackupSettings(dto);
         setSettings(data);
-        toast.success("تم تحديث إعدادات النسخ الاحتياطي لقاعدة البيانات بنجاح");
+        toast.success("تم تحديث إعدادات النسخ الاحتياطي لقاعدة البيانات بنجاح", {
+          duration: 3000,
+        });
         return data;
       } catch (error: any) {
-        toast.error(error.message || "فشل تحديث إعدادات النسخ الاحتياطي لقاعدة البيانات");
+        toast.error(error?.message || "فشل تحديث إعدادات النسخ الاحتياطي لقاعدة البيانات", {
+          duration: 3000,
+        });
         throw error;
       } finally {
         setIsSaving(false);
@@ -278,9 +325,13 @@ export function useSettings() {
       setIsSaving(true);
       await settingsService.resetSettings();
       await loadSettings();
-      toast.success("تم إعادة تعيين الإعدادات بنجاح");
+      toast.success("تم إعادة تعيين الإعدادات بنجاح", {
+        duration: 3000,
+      });
     } catch (error: any) {
-      toast.error(error.message || "فشل إعادة تعيين الإعدادات");
+      toast.error(error?.message || "فشل إعادة تعيين الإعدادات", {
+        duration: 3000,
+      });
       throw error;
     } finally {
       setIsSaving(false);
@@ -290,7 +341,6 @@ export function useSettings() {
   // ============================================================
   // ===== Initialize =====
   // ============================================================
-
 
   return {
     settings,

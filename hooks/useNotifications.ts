@@ -47,8 +47,11 @@ export function useNotifications(pageSize: number = 10) {
       setCurrentPage(result.pageNumber);
       setHasMore(result.pageNumber < result.totalPages);
     } catch (err: any) {
-      console.error("Failed to fetch notifications:", err);
-      toast.error(err.response?.data?.message || "فشل في تحميل الإشعارات");
+      if (err?.message && !err.message.includes("لم يتم العثور")) {
+        toast.error(err.message || "فشل في تحميل الإشعارات", {
+          duration: 3000,
+        });
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -73,13 +76,11 @@ export function useNotifications(pageSize: number = 10) {
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
     } catch (err) {
-      console.error("Failed to fetch unread count", err);
+      // تجاهل الخطأ بهدوء
     }
   }, []);
 
   const handleNewNotification = useCallback(async (notification: any) => {
-    console.log("🔔 Real-time notification received:", notification);
-
     const notificationType = notification?.Type || notification?.type;
 
     if (notificationType === "PermissionsUpdated") {
@@ -91,7 +92,7 @@ export function useNotifications(pageSize: number = 10) {
       try {
         await authService.refreshDelegatedPermissions();
       } catch (error) {
-        console.error("Failed to refresh permissions:", error);
+        // تجاهل الخطأ بهدوء
       }
       return;
     }
@@ -149,7 +150,11 @@ export function useNotifications(pageSize: number = 10) {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "فشل في تحديد الإشعار كمقروء");
+      if (err?.message) {
+        toast.error(err.message, {
+          duration: 3000,
+        });
+      }
     }
   }, []);
 
@@ -160,9 +165,15 @@ export function useNotifications(pageSize: number = 10) {
         prev.map(n => ({ ...n, isRead: true }))
       );
       setUnreadCount(0);
-      toast.success("تم تحديد جميع الإشعارات كمقروءة");
+      toast.success("تم تحديد جميع الإشعارات كمقروءة", {
+        duration: 3000,
+      });
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "فشل في تحديد الإشعارات كمقروءة");
+      if (err?.message) {
+        toast.error(err.message, {
+          duration: 3000,
+        });
+      }
     }
   }, []);
 
@@ -175,19 +186,27 @@ export function useNotifications(pageSize: number = 10) {
       if (deletedNotif && !deletedNotif.isRead) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
-      toast.success("تم حذف الإشعار");
+      toast.success("تم حذف الإشعار", {
+        duration: 3000,
+      });
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "فشل في حذف الإشعار");
+      if (err?.message) {
+        toast.error(err.message, {
+          duration: 3000,
+        });
+      }
     }
   }, [notifications]);
 
   const refreshPermissions = useCallback(async () => {
     try {
       await authService.refreshDelegatedPermissions();
-      toast.success("تم تحديث الصلاحيات", { icon: "🔑" });
+      toast.success("تم تحديث الصلاحيات", {
+        duration: 3000,
+        icon: "🔑",
+      });
     } catch (error) {
-      toast.error("فشل تحديث الصلاحيات");
-      console.error("Failed to refresh permissions:", error);
+      // تجاهل الخطأ بهدوء
     }
   }, []);
 
@@ -221,7 +240,7 @@ export function useUnreadCount() {
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
     } catch (err) {
-      console.error("Failed to fetch unread count", err);
+      // تجاهل الخطأ بهدوء
     } finally {
       setLoading(false);
     }
@@ -239,9 +258,9 @@ export function useUnreadCount() {
       const notificationType = notification?.Type || notification?.type;
       
       if (notificationType === "PermissionsUpdated") {
-        authService.refreshDelegatedPermissions().catch(console.error);
+        authService.refreshDelegatedPermissions().catch(() => {});
         toast.success("تم تحديث صلاحياتك", {
-          duration: 5000,
+          duration: 3000,
           icon: "🔑",
         });
       }

@@ -64,12 +64,16 @@ export function useAuth() {
       setRole(user.role);
       setIsLoggedIn(true);
       
-      toast.success(`مرحباً ${user.firstName} ${user.lastName}`);
+      toast.success(`مرحباً ${user.firstName} ${user.lastName}`, {
+        duration: 3000,
+      });
       
       router.push("/");
       return user;
     } catch (err: any) {
-      toast.error(err.message || "حدث خطأ في تسجيل الدخول");
+      toast.error(err?.message || "حدث خطأ في تسجيل الدخول", {
+        duration: 3000,
+      });
       throw err;
     } finally {
       setIsLoading(false);
@@ -81,10 +85,14 @@ export function useAuth() {
     try {
       await authService.logout();
       clearUser();
-      toast.success("تم تسجيل الخروج بنجاح");
+      toast.success("تم تسجيل الخروج بنجاح", {
+        duration: 3000,
+      });
       router.push("/auth/login");
     } catch (err: any) {
-      toast.error(err.message || "حدث خطأ في تسجيل الخروج");
+      toast.error(err?.message || "حدث خطأ في تسجيل الخروج", {
+        duration: 3000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +102,6 @@ export function useAuth() {
     try {
       return await authService.getCurrentUser();
     } catch (err) {
-      console.error("Failed to get current user", err);
       return null;
     }
   }, []);
@@ -121,10 +128,14 @@ export function useAuth() {
     setIsLoading(true);
     try {
       await authService.changePassword(currentPassword, newPassword);
-      toast.success("تم تغيير كلمة المرور بنجاح");
+      toast.success("تم تغيير كلمة المرور بنجاح", {
+        duration: 3000,
+      });
       return true;
     } catch (err: any) {
-      toast.error(err.message || "فشل في تغيير كلمة المرور");
+      toast.error(err?.message || "فشل في تغيير كلمة المرور", {
+        duration: 3000,
+      });
       return false;
     } finally {
       setIsLoading(false);
@@ -135,10 +146,14 @@ export function useAuth() {
     setIsLoading(true);
     try {
       await authService.forgotPassword(email);
-      toast.success("تم إرسال رمز التأكيد. يرجى التحقق من بريدك الإلكتروني");
+      toast.success("تم إرسال رمز التأكيد. يرجى التحقق من بريدك الإلكتروني", {
+        duration: 4000,
+      });
       return true;
     } catch (err: any) {
-      toast.error(err.message || "فشل في إرسال رمز التأكيد");
+      toast.error(err?.message || "فشل في إرسال رمز التأكيد", {
+        duration: 3000,
+      });
       return false;
     } finally {
       setIsLoading(false);
@@ -149,10 +164,14 @@ export function useAuth() {
     setIsLoading(true);
     try {
       await authService.resetPassword(email, code, newPassword);
-      toast.success("تم إعادة تعيين كلمة المرور بنجاح");
+      toast.success("تم إعادة تعيين كلمة المرور بنجاح", {
+        duration: 3000,
+      });
       return true;
     } catch (err: any) {
-      toast.error("فشل في إعادة تعيين كلمة المرور");
+      toast.error(err?.message || "فشل في إعادة تعيين كلمة المرور", {
+        duration: 3000,
+      });
       return false;
     } finally {
       setIsLoading(false);

@@ -199,14 +199,18 @@ export function useDelegation() {
 
   const createDelegation = useCallback(async (dto: CreateDelegationDto) => {
     if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لإنشاء تفويض');
+      toast.error('ليس لديك صلاحية لإنشاء تفويض', {
+        duration: 3000,
+      });
       return;
     }
     
     setIsLoading(true);
     try {
       const result = await delegationService.createDelegation(dto);
-      toast.success('تم إنشاء التفويض بنجاح');
+      toast.success('تم إنشاء التفويض بنجاح', {
+        duration: 3000,
+      });
       await Promise.all([
         loadAllDelegations(),
         loadMyDelegations(),
@@ -214,7 +218,9 @@ export function useDelegation() {
       ]);
       return result;
     } catch (error: any) {
-      toast.error(error.message || 'فشل إنشاء التفويض');
+      toast.error(error?.message || 'فشل إنشاء التفويض', {
+        duration: 3000,
+      });
       throw error;
     } finally {
       if (isMounted.current) {
@@ -225,14 +231,18 @@ export function useDelegation() {
 
   const updateDelegation = useCallback(async (id: number, dto: UpdateDelegationDto) => {
     if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لتحديث التفويض');
+      toast.error('ليس لديك صلاحية لتحديث التفويض', {
+        duration: 3000,
+      });
       return;
     }
     
     setIsLoading(true);
     try {
       const result = await delegationService.updateDelegation(id, dto);
-      toast.success('تم تحديث التفويض بنجاح');
+      toast.success('تم تحديث التفويض بنجاح', {
+        duration: 3000,
+      });
       await Promise.all([
         loadAllDelegations(),
         loadMyDelegations(),
@@ -241,7 +251,9 @@ export function useDelegation() {
       ]);
       return result;
     } catch (error: any) {
-      toast.error(error.message || 'فشل تحديث التفويض');
+      toast.error(error?.message || 'فشل تحديث التفويض', {
+        duration: 3000,
+      });
       throw error;
     } finally {
       if (isMounted.current) {
@@ -252,21 +264,27 @@ export function useDelegation() {
 
   const addPermissions = useCallback(async (id: number, permissionIds: number[]) => {
     if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لإضافة صلاحيات');
+      toast.error('ليس لديك صلاحية لإضافة صلاحيات', {
+        duration: 3000,
+      });
       return;
     }
     
     setIsLoading(true);
     try {
       const result = await delegationService.addPermissionsToDelegation(id, permissionIds);
-      toast.success('تم إضافة الصلاحيات بنجاح');
+      toast.success('تم إضافة الصلاحيات بنجاح', {
+        duration: 3000,
+      });
       await Promise.all([
         loadAllDelegations(),
         loadDelegationById(id)
       ]);
       return result;
     } catch (error: any) {
-      toast.error(error.message || 'فشل إضافة الصلاحيات');
+      toast.error(error?.message || 'فشل إضافة الصلاحيات', {
+        duration: 3000,
+      });
       throw error;
     } finally {
       if (isMounted.current) {
@@ -277,14 +295,18 @@ export function useDelegation() {
 
   const revokeDelegation = useCallback(async (id: number, reason?: string) => {
     if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لإلغاء التفويض');
+      toast.error('ليس لديك صلاحية لإلغاء التفويض', {
+        duration: 3000,
+      });
       return;
     }
     
     setIsLoading(true);
     try {
       await delegationService.revokeDelegation(id, reason);
-      toast.success('تم إلغاء التفويض بنجاح');
+      toast.success('تم إلغاء التفويض بنجاح', {
+        duration: 3000,
+      });
       await Promise.all([
         loadAllDelegations(),
         loadMyDelegations(),
@@ -295,7 +317,9 @@ export function useDelegation() {
         setUsageLogs([]);
       }
     } catch (error: any) {
-      toast.error(error.message || 'فشل إلغاء التفويض');
+      toast.error(error?.message || 'فشل إلغاء التفويض', {
+        duration: 3000,
+      });
       throw error;
     } finally {
       if (isMounted.current) {
@@ -306,18 +330,24 @@ export function useDelegation() {
 
   const revokeExpiredDelegations = useCallback(async () => {
     if (!isAdmin) {
-      toast.error('ليس لديك صلاحية لإلغاء التفويضات المنتهية');
+      toast.error('ليس لديك صلاحية لإلغاء التفويضات المنتهية', {
+        duration: 3000,
+      });
       return;
     }
     
     setIsLoading(true);
     try {
       const count = await delegationService.revokeExpiredDelegations();
-      toast.success(`تم إلغاء ${count} تفويض منتهي`);
+      toast.success(`تم إلغاء ${count} تفويض منتهي`, {
+        duration: 3000,
+      });
       await loadStatistics();
       return count;
     } catch (error: any) {
-      toast.error(error.message || 'فشل إلغاء التفويضات المنتهية');
+      toast.error(error?.message || 'فشل إلغاء التفويضات المنتهية', {
+        duration: 3000,
+      });
       throw error;
     } finally {
       if (isMounted.current) {
@@ -328,14 +358,18 @@ export function useDelegation() {
 
   const addDefaultDelegations = useCallback(async () => {
     if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لإضافة التفويضات الافتراضية');
+      toast.error('ليس لديك صلاحية لإضافة التفويضات الافتراضية', {
+        duration: 3000,
+      });
       return;
     }
     
     setIsLoading(true);
     try {
       const count = await delegationService.addDefaultDelegations();
-      toast.success(`تم إضافة ${count} تفويض افتراضي`);
+      toast.success(`تم إضافة ${count} تفويض افتراضي`, {
+        duration: 3000,
+      });
       await Promise.all([
         loadAllDelegations(),
         loadMyDelegations(),
@@ -343,7 +377,9 @@ export function useDelegation() {
       ]);
       return count;
     } catch (error: any) {
-      toast.error(error.message || 'فشل إضافة التفويضات الافتراضية');
+      toast.error(error?.message || 'فشل إضافة التفويضات الافتراضية', {
+        duration: 3000,
+      });
       throw error;
     } finally {
       if (isMounted.current) {
@@ -354,14 +390,18 @@ export function useDelegation() {
 
   const resetDefaultDelegations = useCallback(async () => {
     if (!isAdmin) {
-      toast.error('ليس لديك صلاحية لإعادة تعيين التفويضات الافتراضية');
+      toast.error('ليس لديك صلاحية لإعادة تعيين التفويضات الافتراضية', {
+        duration: 3000,
+      });
       return;
     }
     
     setIsLoading(true);
     try {
       const count = await delegationService.resetDefaultDelegations();
-      toast.success(`تم إعادة تعيين ${count} تفويض افتراضي`);
+      toast.success(`تم إعادة تعيين ${count} تفويض افتراضي`, {
+        duration: 3000,
+      });
       await Promise.all([
         loadAllDelegations(),
         loadMyDelegations(),
@@ -369,7 +409,9 @@ export function useDelegation() {
       ]);
       return count;
     } catch (error: any) {
-      toast.error(error.message || 'فشل إعادة تعيين التفويضات الافتراضية');
+      toast.error(error?.message || 'فشل إعادة تعيين التفويضات الافتراضية', {
+        duration: 3000,
+      });
       throw error;
     } finally {
       if (isMounted.current) {

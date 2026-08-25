@@ -36,19 +36,21 @@ import {
 // ============================================================
 // ===== Queries =====
 // ============================================================
+
 export const useParentSelector = (search: string = '', page: number = 1, pageSize: number = 10) => {
     return useQuery({
         queryKey: ["parent-selector", search, page, pageSize],
         queryFn: () => getCorrespondencesForParentSelector({ search, page, pageSize }),
         staleTime: 5 * 60 * 1000,
-        enabled: false, 
+        enabled: false,
     });
 };
+
 export const useCorrespondences = (searchDto: CorrespondenceSearchDto) => {
     return useQuery({
         queryKey: ["correspondences", searchDto],
         queryFn: () => getCorrespondencesPaged(searchDto),
-        staleTime: 0, // ✅ تغيير إلى 0 لضمان جلب بيانات جديدة
+        staleTime: 0,
         refetchOnWindowFocus: true,
         refetchOnMount: true,
     });
@@ -59,7 +61,7 @@ export const useCorrespondence = (id: number | null) => {
         queryKey: ["correspondence", id],
         queryFn: () => getCorrespondenceById(id!),
         enabled: !!id,
-        staleTime: 0, // ✅ تغيير إلى 0
+        staleTime: 0,
         refetchOnWindowFocus: true,
         refetchOnMount: true,
     });
@@ -86,16 +88,11 @@ export const useCorrespondenceWithReplies = (id: number | null) => {
         queryKey: ["correspondence", id, "with-replies"],
         queryFn: () => getCorrespondenceWithReplies(id!),
         enabled: !!id,
-        staleTime: 0, // ✅ تغيير إلى 0
+        staleTime: 0,
         refetchOnWindowFocus: true,
         refetchOnMount: true,
     });
 };
-
-// ============================================================
-// ===== Mutations - Delete =====
-// ============================================================
-
 
 // ============================================================
 // ===== Mutation - Create Correspondence =====
@@ -107,34 +104,17 @@ export const useCreateCorrespondence = (onSuccess?: () => void) => {
     return useMutation({
         mutationFn: (payload: FormData) => createCorrespondence(payload),
         onSuccess: (data: CorrespondenceResponse) => {
-            toast.success("تم إنشاء المراسلة بنجاح");
+            toast.success("تم إنشاء المراسلة بنجاح", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence", data.id] });
             if (onSuccess) onSuccess();
         },
         onError: (error: any) => {
-            let message = "فشل إنشاء المراسلة";
-            
-            if (error?.response?.data?.message) {
-                message = error.response.data.message;
-            } 
-            else if (error?.message) {
-                message = error.message;
-            }
-            
-            if (error?.response?.data?.errors) {
-                const errors = error.response.data.errors;
-                if (Array.isArray(errors) && errors.length > 0) {
-                    message = errors.join(" • ");
-                } else if (typeof errors === 'object') {
-                    const errorMessages = Object.values(errors).flat();
-                    if (errorMessages.length > 0) {
-                        message = errorMessages.join(" • ");
-                    }
-                }
-            }
-            
-            toast.error(message);
+            toast.error(error?.message || "فشل إنشاء المراسلة", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -151,13 +131,17 @@ export const useUpdateCorrespondence = (onSuccess?: () => void) => {
             payload: FormData;
         }) => updateCorrespondence(id, payload),
         onSuccess: (data: CorrespondenceResponse) => {
-            toast.success("تم تحديث المراسلة بنجاح");
+            toast.success("تم تحديث المراسلة بنجاح", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence", data.id] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل تحديث المراسلة");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل تحديث المراسلة", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -168,12 +152,16 @@ export const useDeleteCorrespondence = (onSuccess?: () => void) => {
     return useMutation({
         mutationFn: (id: number) => deleteCorrespondence(id),
         onSuccess: () => {
-            toast.success("تم حذف المراسلة بنجاح");
+            toast.success("تم حذف المراسلة بنجاح", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل حذف المراسلة");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل حذف المراسلة", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -188,13 +176,17 @@ export const useRequestApproval = (onSuccess?: () => void) => {
     return useMutation({
         mutationFn: (id: number) => requestApproval(id),
         onSuccess: () => {
-            toast.success("تم طلب الموافقة بنجاح");
+            toast.success("تم طلب الموافقة بنجاح", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل طلب الموافقة");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل طلب الموافقة", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -215,13 +207,17 @@ export const useSignCorrespondence = (onSuccess?: () => void) => {
             };
         }) => signCorrespondence(id, options),
         onSuccess: (data: SignCorrespondenceResultDto) => {
-            toast.success(data.message || "تم توقيع المراسلة بنجاح");
+            toast.success(data.message || "تم توقيع المراسلة بنجاح", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل توقيع المراسلة");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل توقيع المراسلة", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -233,13 +229,17 @@ export const useArchiveCorrespondence = (onSuccess?: () => void) => {
         mutationFn: ({ id, notes }: { id: number; notes?: string }) =>
             archiveCorrespondence(id, notes),
         onSuccess: () => {
-            toast.success("تم أرشفة المراسلة بنجاح");
+            toast.success("تم أرشفة المراسلة بنجاح", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل أرشفة المراسلة");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل أرشفة المراسلة", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -251,13 +251,17 @@ export const useRestoreFromArchive = (onSuccess?: () => void) => {
         mutationFn: ({ id, notes }: { id: number; notes?: string }) =>
             restoreFromArchive(id, notes),
         onSuccess: () => {
-            toast.success("تم استرجاع المراسلة بنجاح");
+            toast.success("تم استرجاع المراسلة بنجاح", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل استرجاع المراسلة");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل استرجاع المراسلة", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -268,13 +272,17 @@ export const useRevertToDraft = (onSuccess?: () => void) => {
     return useMutation({
         mutationFn: (id: number) => revertToDraft(id),
         onSuccess: () => {
-            toast.success("تم استرجاع المراسلة إلى مسودة");
+            toast.success("تم استرجاع المراسلة إلى مسودة", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل استرجاع المراسلة");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل استرجاع المراسلة", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -286,13 +294,17 @@ export const useRevertToDistributed = (onSuccess?: () => void) => {
         mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
             revertToDistributed(id, reason),
         onSuccess: () => {
-            toast.success("تم استرجاع المراسلة إلى موزعة");
+            toast.success("تم استرجاع المراسلة إلى موزعة", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل استرجاع المراسلة");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل استرجاع المراسلة", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -308,13 +320,17 @@ export const useRequestRevertToDraft = (onSuccess?: () => void) => {
         mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
             requestRevertToDraft(id, reason),
         onSuccess: () => {
-            toast.success("تم إرسال طلب الاسترجاع للعميد");
+            toast.success("تم إرسال طلب الاسترجاع للعميد", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل إرسال طلب الاسترجاع");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل إرسال طلب الاسترجاع", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -326,13 +342,17 @@ export const useApproveRevertToDraft = (onSuccess?: () => void) => {
         mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
             approveRevertToDraft(id, reason),
         onSuccess: () => {
-            toast.success("تمت الموافقة على استرجاع المراسلة");
+            toast.success("تمت الموافقة على استرجاع المراسلة", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل الموافقة على الاسترجاع");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل الموافقة على الاسترجاع", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -344,13 +364,17 @@ export const useRejectRevertToDraft = (onSuccess?: () => void) => {
         mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
             rejectRevertToDraft(id, reason),
         onSuccess: () => {
-            toast.success("تم رفض طلب الاسترجاع");
+            toast.success("تم رفض طلب الاسترجاع", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل رفض طلب الاسترجاع");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل رفض طلب الاسترجاع", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -362,13 +386,17 @@ export const useRequestRevertToDistributed = (onSuccess?: () => void) => {
         mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
             requestRevertToDistributed(id, reason),
         onSuccess: () => {
-            toast.success("تم إرسال طلب الاسترجاع للعميد");
+            toast.success("تم إرسال طلب الاسترجاع للعميد", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل إرسال طلب الاسترجاع");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل إرسال طلب الاسترجاع", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -380,13 +408,17 @@ export const useApproveRevertToDistributed = (onSuccess?: () => void) => {
         mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
             approveRevertToDistributed(id, reason),
         onSuccess: () => {
-            toast.success("تمت الموافقة على استرجاع المراسلة");
+            toast.success("تمت الموافقة على استرجاع المراسلة", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل الموافقة على الاسترجاع");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل الموافقة على الاسترجاع", {
+                duration: 3000,
+            });
         },
     });
 };
@@ -398,14 +430,17 @@ export const useRejectRevertToDistributed = (onSuccess?: () => void) => {
         mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
             rejectRevertToDistributed(id, reason),
         onSuccess: () => {
-            toast.success("تم رفض طلب الاسترجاع");
+            toast.success("تم رفض طلب الاسترجاع", {
+                duration: 3000,
+            });
             queryClient.invalidateQueries({ queryKey: ["correspondences"] });
             queryClient.invalidateQueries({ queryKey: ["correspondence"] });
             if (onSuccess) onSuccess();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل رفض طلب الاسترجاع");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل رفض طلب الاسترجاع", {
+                duration: 3000,
+            });
         },
     });
 };
-

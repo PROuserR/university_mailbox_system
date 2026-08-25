@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/useDistribute.ts
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +36,9 @@ export const useDistributeMutation = (
             });
         },
         onSuccess: (data) => {
-            toast.success("تم حفظ التوزيع بنجاح");
+            toast.success("تم حفظ التوزيع بنجاح", {
+                duration: 3000,
+            });
 
             queryClient.invalidateQueries({
                 queryKey: ["distribution-editor", correspondenceId],
@@ -47,8 +50,10 @@ export const useDistributeMutation = (
             if (onSuccess) onSuccess();
             if (onClose) onClose();
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "فشل حفظ التوزيع");
+        onError: (error: any) => {
+            toast.error(error?.message || "فشل حفظ التوزيع", {
+                duration: 3000,
+            });
         },
     });
 };
