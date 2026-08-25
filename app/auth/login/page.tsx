@@ -12,9 +12,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { apiWrapper, ApiResult } from "@/utils/apiClient";
+import { apiWrapper } from "@/utils/apiClient";
 import { UserLoginData } from "@/types/api/User/UserLoginData";
 import useUserInfoStore from "@/store/userInfoStore";
+import { ApiResult } from "@/types/api/ApiResult";
 
 export default function LoginPage() {
     const [emailInput, setEmailInput] = useState("");

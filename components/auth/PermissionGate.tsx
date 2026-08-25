@@ -6,6 +6,7 @@
 import { ReactNode, useEffect, useState, useCallback, useRef, Children, cloneElement, isValidElement } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/api/user';
+import userInfoStore from '@/store/userInfoStore';
 
 interface PermissionGateProps {
     children: ReactNode;
@@ -14,10 +15,6 @@ interface PermissionGateProps {
     fallback?: ReactNode;
     requireAll?: boolean;
     loadingFallback?: ReactNode;
-    /** 
-     * إذا كان true: يتم تعطيل الأزرار (تظهر معطلة)
-     * إذا كان false أو غير موجود: يتم إخفاء الأزرار تماماً
-     */
     disableOnUnauthorized?: boolean;
 }
 
@@ -28,9 +25,9 @@ export function PermissionGate({
     fallback = null,
     requireAll = true,
     loadingFallback,
-    disableOnUnauthorized = false, // ✅ افتراضي: إخفاء
+    disableOnUnauthorized = false,
 }: PermissionGateProps) {
-    const { hasPermission, hasRole, isLoading, refreshPermissions } = useAuth();
+    const { hasPermission, hasRole, isLoading } = useAuth();
     const [hasAccess, setHasAccess] = useState<boolean | null>(null);
     const isMounted = useRef(true);
 
@@ -43,36 +40,23 @@ export function PermissionGate({
             }
         }
 
-        if (permissions.length > 0) {
-            let permissionCheck: boolean;
-            if (requireAll) {
-                const results = await Promise.all(permissions.map(p => hasPermission(p)));
-                permissionCheck = results.every(r => r === true);
-            } else {
-                const results = await Promise.all(permissions.map(p => hasPermission(p)));
-                permissionCheck = results.some(r => r === true);
-            }
-
-            if (!permissionCheck) {
-                await refreshPermissions();
-                if (requireAll) {
-                    const results = await Promise.all(permissions.map(p => hasPermission(p)));
-                    permissionCheck = results.every(r => r === true);
-                } else {
-                    const results = await Promise.all(permissions.map(p => hasPermission(p)));
-                    permissionCheck = results.some(r => r === true);
-                }
-            }
-
-            if (!permissionCheck) {
-                if (isMounted.current) setHasAccess(false);
-                return;
-            }
+        if (permissions.length === 0) {
+            if (isMounted.current) setHasAccess(true);
+            return;
         }
+         const state = userInfoStore.getState();
+  const delegatedPermissions = state.delegatedPermissions || [];
+  
+  let permissionCheck: boolean;
+  if (requireAll) {
+    permissionCheck = permissions.every(p => delegatedPermissions.includes(p));
+  } else {
+    permissionCheck = permissions.some(p => delegatedPermissions.includes(p));
+  }
 
-        if (isMounted.current) setHasAccess(true);
-    }, [permissions, roles, requireAll, hasPermission, hasRole, refreshPermissions]);
-
+  if (isMounted.current) setHasAccess(permissionCheck);
+  
+}, [permissions, roles, requireAll, hasRole]);
     useEffect(() => {
         isMounted.current = true;
         checkAccess();
@@ -89,12 +73,10 @@ export function PermissionGate({
         );
     }
 
-    // ✅ لديه صلاحية → عرض المحتوى
     if (hasAccess) {
         return <>{children}</>;
     }
 
-    // ✅ ليس لديه صلاحية + وضع التعطيل مفعل → تعطيل الأزرار
     if (disableOnUnauthorized) {
         return (
             <>
@@ -117,12 +99,11 @@ export function PermissionGate({
         );
     }
 
-    // ✅ ليس لديه صلاحية والإخفاء مفعل (الافتراضي) → إخفاء
     return <>{fallback}</>;
 }
 
 // ============================================================
-// ===== المكونات المساعدة =====
+// ===== المكونات المساعدة - تعتمد فقط على الأدوار =====
 // ============================================================
 
 export const IsAdmin = ({ children, fallback, disableOnUnauthorized = false }: any) => (
@@ -149,6 +130,10 @@ export const IsEmployee = ({ children, fallback, disableOnUnauthorized = false }
     </PermissionGate>
 );
 
+// ============================================================
+// ===== المكونات المساعدة - تعتمد على الصلاحيات الأساسية =====
+// ============================================================
+
 export const CanManageDelegations = ({ children, fallback, disableOnUnauthorized = false }: any) => (
     <PermissionGate
         permissions={['CreateDelegation', 'UpdateDelegation', 'RevokeDelegation']}
@@ -163,63 +148,6 @@ export const CanManageDelegations = ({ children, fallback, disableOnUnauthorized
 export const CanManageCorrespondence = ({ children, fallback, disableOnUnauthorized = false }: any) => (
     <PermissionGate
         permissions={['CreateCorrespondence', 'EditCorrespondence', 'DeleteCorrespondence']}
-        requireAll={false}
-        fallback={fallback}
-        disableOnUnauthorized={disableOnUnauthorized}
-    >
-        {children}
-    </PermissionGate>
-);
-
-export const CanManageDistribution = ({ children, fallback, disableOnUnauthorized = false }: any) => (
-    <PermissionGate
-        permissions={['CreateDistribution', 'ApproveDistribution', 'RejectDistribution', 'RevokeDistribution']}
-        requireAll={false}
-        fallback={fallback}
-        disableOnUnauthorized={disableOnUnauthorized}
-    >
-        {children}
-    </PermissionGate>
-);
-
-export const CanViewDistribution = ({ children, fallback, disableOnUnauthorized = false }: any) => (
-    <PermissionGate permissions={['ViewDistribution']} fallback={fallback} disableOnUnauthorized={disableOnUnauthorized}>
-        {children}
-    </PermissionGate>
-);
-
-export const CanApprove = ({ children, fallback, disableOnUnauthorized = false }: any) => (
-    <PermissionGate
-        permissions={['ApproveDistribution', 'ApproveIncomingEmail', 'ApproveOutgoingEmail', 'ApproveCorrespondence']}
-        requireAll={false}
-        fallback={fallback}
-        disableOnUnauthorized={disableOnUnauthorized}
-    >
-        {children}
-    </PermissionGate>
-);
-
-export const CanReject = ({ children, fallback, disableOnUnauthorized = false }: any) => (
-    <PermissionGate
-        permissions={['RejectDistribution', 'RejectIncomingEmail', 'RejectCorrespondence']}
-        requireAll={false}
-        fallback={fallback}
-        disableOnUnauthorized={disableOnUnauthorized}
-    >
-        {children}
-    </PermissionGate>
-);
-
-export const CanApproveOrReject = ({ children, fallback, disableOnUnauthorized = false }: any) => (
-    <PermissionGate
-        permissions={[
-            'ApproveDistribution',
-            'RejectDistribution',
-            'ApproveIncomingEmail',
-            'RejectIncomingEmail',
-            'ApproveCorrespondence',
-            'RejectCorrespondence',
-        ]}
         requireAll={false}
         fallback={fallback}
         disableOnUnauthorized={disableOnUnauthorized}

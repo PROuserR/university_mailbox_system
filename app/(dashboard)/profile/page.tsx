@@ -29,9 +29,10 @@ import {
     faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { apiWrapper, ApiResult } from "@/utils/apiClient";
+import { apiWrapper } from "@/utils/apiClient";
 import Link from "next/link";
 import myAPI from "@/utils/myAPI";
+import { ApiResult } from "@/types/api/ApiResult";
 
 // ==============================
 // TYPES - مطابقة للـ DTOs

@@ -27,6 +27,7 @@ import { useDelegation } from "@/hooks/useDelegation";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import useUserInfoStore from "@/store/userInfoStore";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { cn } from "@/lib/utils";
 
 // ==============================
 // HELPERS
@@ -80,7 +81,6 @@ export default function DelegationsPage() {
     const [showEdit, setShowEdit] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // ✅ ref لحاوية الصلاحيات (لحل مشكلة التمرير)
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const savedScrollTop = useRef<number>(0);
 
@@ -101,7 +101,7 @@ export default function DelegationsPage() {
     });
 
     // Form states
-    const [delegateUserId, setDelegateUserId] = useState("");
+    const [delegateUserId, setDelegateUserId] = useState<number | undefined>();
     const [endDate, setEndDate] = useState("");
     const [notes, setNotes] = useState("");
     const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
@@ -169,7 +169,13 @@ export default function DelegationsPage() {
     // HANDLERS
     // ==============================
 
-    const handleRevokeClick = (id: number) => {
+    const handleRevokeClick = (id: number, delegateUserId: number) => {
+      
+        if (delegateUserId === currentUserId) {
+            toast.error("لا يمكنك إلغاء تفويضك الخاص");
+            return;
+        }
+
         setConfirmModal({
             isOpen: true,
             title: "إلغاء التفويض",
@@ -192,7 +198,7 @@ export default function DelegationsPage() {
     };
 
     const resetForm = () => {
-        setDelegateUserId("");
+        setDelegateUserId(undefined);
         setEndDate("");
         setNotes("");
         setSelectedPermissionIds([]);
@@ -218,7 +224,7 @@ export default function DelegationsPage() {
         }
 
         setSelectedDelegation(delegation);
-        setDelegateUserId(delegation.delegateUserId.toString());
+        setDelegateUserId(delegation.delegateUserId);
         setEndDate(delegation.endDate || "");
         setNotes(delegation.notes || "");
         setSelectedPermissionIds(delegation.permissions?.map((p: any) => p.id) || []);
@@ -280,7 +286,6 @@ export default function DelegationsPage() {
         }
     };
 
-    // ✅ دالة togglePermission مع حفظ موضع التمرير
     const togglePermission = (id: number) => {
         // حفظ موضع التمرير الحالي قبل التغيير
         if (scrollContainerRef.current) {
@@ -335,7 +340,8 @@ export default function DelegationsPage() {
     const filteredPermissions = useMemo(() => {
         if (!delegateUserId) {
             return availablePermissions;
-        } if (showEdit && selectedDelegation) {
+        }
+        if (showEdit && selectedDelegation) {
             const targetUser = allUsers.find(u => u.id === Number(delegateUserId));
             
             if (targetUser) {
@@ -351,7 +357,6 @@ export default function DelegationsPage() {
             
             return availablePermissions.filter(p => p.isDelegatable === true);
         }
-
 
         const selectedUser = allUsers.find(u => u.id === Number(delegateUserId));
         
@@ -417,7 +422,7 @@ export default function DelegationsPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                    <PermissionGate permissions={['ManageDelegations']}>
+                    <PermissionGate permissions={['CreateDelegation']}>
                         <button
                             onClick={() => {
                                 setConfirmModal({
@@ -441,29 +446,32 @@ export default function DelegationsPage() {
                         </button>
                     </PermissionGate>
 
-                    <PermissionGate permissions={['ManageDelegations']}>
-                        <button
-                            onClick={() => {
-                                setConfirmModal({
-                                    isOpen: true,
-                                    title: "إعادة تعيين التفويضات الافتراضية",
-                                    message: "هل أنت متأكد من إعادة تعيين التفويضات الافتراضية لجميع المستخدمين؟",
-                                    onConfirm: async () => {
-                                        await resetDefaultDelegations();
-                                        await loadAllData();
-                                        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                                    },
-                                    variant: "warning",
-                                    icon: faRefresh,
-                                });
-                            }}
-                            disabled={isLoading}
-                            className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-50 flex items-center gap-1.5"
-                        >
-                            <FontAwesomeIcon icon={faRefresh} />
-                            إعادة تعيين
-                        </button>
-                    </PermissionGate>
+                    {/* ✅ زر إعادة تعيين - يظهر فقط للمدير (Admin) */}
+{isAdmin && (
+    <PermissionGate permissions={['CreateDelegation']}>
+        <button
+            onClick={() => {
+                setConfirmModal({
+                    isOpen: true,
+                    title: "إعادة تعيين التفويضات الافتراضية",
+                    message: "هل أنت متأكد من إعادة تعيين التفويضات الافتراضية لجميع المستخدمين؟",
+                    onConfirm: async () => {
+                        await resetDefaultDelegations();
+                        await loadAllData();
+                        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    },
+                    variant: "warning",
+                    icon: faRefresh,
+                });
+            }}
+            disabled={isLoading}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-50 flex items-center gap-1.5"
+        >
+            <FontAwesomeIcon icon={faRefresh} />
+            إعادة تعيين
+        </button>
+    </PermissionGate>
+)}
 
                     <PermissionGate permissions={['RevokeDelegation']}>
                         <button
@@ -672,8 +680,13 @@ export default function DelegationsPage() {
                                                     <button
                                                         onClick={() => handleEditClick(item)}
                                                         disabled={!item.isActive || item.delegateUserId === currentUserId || (isDean && allUsers.find(u => u.id === item.delegateUserId)?.roles?.includes('Dean'))}
-                                                        className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="تعديل"
+                                                        className={cn(
+                                                            "w-8 h-8 rounded-xl transition flex items-center justify-center",
+                                                            !item.isActive || item.delegateUserId === currentUserId
+                                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                                : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                                                        )}
+                                                        title={item.delegateUserId === currentUserId ? "لا يمكن تعديل تفويضك الخاص" : "تعديل"}
                                                     >
                                                         <FontAwesomeIcon icon={faEdit} className="text-sm" />
                                                     </button>
@@ -681,10 +694,15 @@ export default function DelegationsPage() {
 
                                                 <PermissionGate permissions={['RevokeDelegation']}>
                                                     <button
-                                                        onClick={() => handleRevokeClick(item.id)}
-                                                        disabled={!item.isActive}
-                                                        className="w-8 h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="إلغاء"
+                                                        onClick={() => handleRevokeClick(item.id, item.delegateUserId)}
+                                                        disabled={!item.isActive || item.delegateUserId === currentUserId}
+                                                        className={cn(
+                                                            "w-8 h-8 rounded-xl transition flex items-center justify-center",
+                                                            !item.isActive || item.delegateUserId === currentUserId
+                                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                                : "bg-red-100 text-red-600 hover:bg-red-200"
+                                                        )}
+                                                        title={item.delegateUserId === currentUserId ? "لا يمكن إلغاء تفويضك الخاص" : "إلغاء"}
                                                     >
                                                         <FontAwesomeIcon icon={faTrash} className="text-sm" />
                                                     </button>
@@ -799,7 +817,7 @@ export default function DelegationsPage() {
                                 <select
                                     value={delegateUserId}
                                     onChange={(e) => {
-                                        setDelegateUserId(e.target.value);
+                                        setDelegateUserId(Number(e.target.value));
                                         setSelectedPermissionIds([]);
                                     }}
                                     className="w-full mt-1 border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:border-blue-400"
@@ -842,7 +860,7 @@ export default function DelegationsPage() {
                                     {sortedPermissions.length === 0 ? (
                                         <p className="text-xs text-slate-400 col-span-2 text-center py-2">
                                             {isLoading ? 'جاري التحميل...' : 
-                                             delegateUserId ? 'لا توجد صلاحيات متاحة لهذا المستخدم' : 'يرجى اختيار المستخدم أولاً'}
+                                            delegateUserId ? 'لا توجد صلاحيات متاحة لهذا المستخدم' : 'يرجى اختيار المستخدم أولاً'}
                                         </p>
                                     ) : (
                                         sortedPermissions.map((p) => (

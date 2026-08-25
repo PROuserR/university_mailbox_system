@@ -1,20 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/utils/apiClient.ts
 
+import { ApiResult } from "@/types/api/ApiResult";
 import myAPI from "./myAPI";
 import axios, { AxiosRequestConfig, AxiosError } from "axios";
 
 // ==============================
 // TYPES
 // ==============================
-
-export interface ApiResult<T> {
-    isSuccess: boolean;
-    data: T;
-    message: string;
-    errors: string[] | null;
-    statusCode: number;
-}
 
 export type ApiResponse<T> = {
     status: number;

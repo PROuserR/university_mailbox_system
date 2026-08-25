@@ -1,5 +1,5 @@
 // services/settings.service.ts
-import { apiWrapper, ApiResult } from "@/utils/apiClient";
+import { apiWrapper } from "@/utils/apiClient";
 import {
   SystemSettingsDto,
   UpdateDistributionSettingsDto,
@@ -13,6 +13,7 @@ import {
   UpdateFilesBackupSettingsDto,
   UpdateDatabaseBackupSettingsDto,
 } from "@/types/api/settings";
+import { ApiResult } from "@/types/api/ApiResult";
 
 class SettingsService {
   // ============================================================
@@ -25,7 +26,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحميل الإعدادات");
+      throw new Error(response.message || "فشل تحميل الإعدادات");
     }
 
     return response.data.data;
@@ -44,7 +45,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات التوزيع");
+      throw new Error(response.message || "فشل تحديث إعدادات التوزيع");
     }
 
     return response.data.data;
@@ -61,7 +62,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات الملفات");
+      throw new Error(response.message || "فشل تحديث إعدادات الملفات");
     }
 
     return response.data.data;
@@ -80,7 +81,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات البريد الوارد");
+      throw new Error(response.message || "فشل تحديث إعدادات البريد الوارد");
     }
 
     return response.data.data;
@@ -92,7 +93,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تغيير حالة البريد الوارد");
+      throw new Error(response.message || "فشل تغيير حالة البريد الوارد");
     }
 
     return response.data.data;
@@ -111,7 +112,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات البريد الصادر");
+      throw new Error(response.message || "فشل تحديث إعدادات البريد الصادر");
     }
 
     return response.data.data;
@@ -123,7 +124,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تغيير حالة البريد الصادر");
+      throw new Error(response.message || "فشل تغيير حالة البريد الصادر");
     }
 
     return response.data.data;
@@ -142,7 +143,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات الأرشفة");
+      throw new Error(response.message || "فشل تحديث إعدادات الأرشفة");
     }
 
     return response.data.data;
@@ -161,7 +162,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات تسمية المرفقات");
+      throw new Error(response.message || "فشل تحديث إعدادات تسمية المرفقات");
     }
   }
 
@@ -178,7 +179,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات التنظيف");
+      throw new Error(response.message || "فشل تحديث إعدادات التنظيف");
     }
 
     return response.data.data;
@@ -197,7 +198,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات التنظيف المؤقت");
+      throw new Error(response.message || "فشل تحديث إعدادات التنظيف المؤقت");
     }
 
     return response.data.data;
@@ -216,7 +217,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات النسخ الاحتياطي للملفات");
+      throw new Error(response.message || "فشل تحديث إعدادات النسخ الاحتياطي للملفات");
     }
 
     return response.data.data;
@@ -235,7 +236,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل تحديث إعدادات النسخ الاحتياطي لقاعدة البيانات");
+      throw new Error(response.message || "فشل تحديث إعدادات النسخ الاحتياطي لقاعدة البيانات");
     }
 
     return response.data.data;
@@ -251,7 +252,7 @@ class SettingsService {
     );
 
     if (!response.success || !response.data?.isSuccess) {
-      throw new Error(response.data?.message || "فشل إعادة تعيين الإعدادات");
+      throw new Error(response.message || "فشل إعادة تعيين الإعدادات");
     }
   }
 }

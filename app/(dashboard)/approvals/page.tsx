@@ -33,7 +33,7 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { usePendingApprovals } from "@/hooks/usePendingApprovals";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { distributionService } from "@/services/distribution.service";
-import ConfirmationModal from "@/components/ui/ConfirmationModal"; // ✅ إضافة
+import ConfirmationModal from "@/components/ui/ConfirmationModal"; 
 import { useAuth } from "@/hooks/useAuth";
 
 // ==============================

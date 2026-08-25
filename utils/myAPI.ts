@@ -1,9 +1,7 @@
 // utils/myAPI.ts
 import axios from "axios";
 import { authService } from "@/services/auth.service";
-import { delegationService } from "@/services/delegation.service";
 import userInfoStore from "@/store/userInfoStore";
-// import { authorizationService } from "@/services/authorization.service";
 import toast from "react-hot-toast";
 
 const myAPI = axios.create({   
@@ -11,14 +9,15 @@ const myAPI = axios.create({
   withCredentials: true
 });
 
+let isRefreshingPermissions = false;
+let refreshPermissionPromise: Promise<void> | null = null;
+
 // ============================================================
-// ===== Request Interceptor - مبسط =====
+// ===== Request Interceptor =====
 // ============================================================
 
 myAPI.interceptors.request.use(
-  (config) => {
-    return config;
-  },
+  (config) => config,
   (error) => Promise.reject(error)
 );
 
@@ -31,7 +30,7 @@ myAPI.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // ===== معالجة 401 - محاولة تجديد التوكن مرة واحدة فقط =====
+    // ===== معالجة 401 =====
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
@@ -45,44 +44,53 @@ myAPI.interceptors.response.use(
     }
 
     // ===== معالجة 403 =====
+    if (error.response?.status === 403 && !originalRequest._permissionRetry) {
+      originalRequest._permissionRetry = true;
 
-if (error.response?.status === 403 && !originalRequest._permissionRetry) {
-  originalRequest._permissionRetry = true;
+      const permissionName = error.response?.data?.requiredPermission || 
+                            error.response?.data?.permission ||
+                            error.response?.data?.policy;
 
-  const permissionName = error.response?.data?.requiredPermission || 
-                        error.response?.data?.permission ||
-                        error.response?.data?.policy;
+      if (isRefreshingPermissions) {
+        await refreshPermissionPromise;
+        return myAPI(originalRequest);
+      }
 
-  console.log(`🔒 403 Forbidden - Permission: ${permissionName || 'unknown'}`);
+      isRefreshingPermissions = true;
+      
+      try {
+        refreshPermissionPromise = authService.refreshDelegatedPermissions();
+        await refreshPermissionPromise;
+        
+        const state = userInfoStore.getState();
+        const delegatedPermissions = state.delegatedPermissions || [];
+        
+        if (permissionName && delegatedPermissions.includes(permissionName)) {
+          return myAPI(originalRequest);
+        }
+        
+        if (delegatedPermissions.length > 0) {
+          return myAPI(originalRequest);
+        }
 
-  try {
-    const permissions = await delegationService.getMyPermissions();
-    const grantedPermissions = permissions
-      .filter(p => p.isGranted)
-      .map(p => p.name);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('redirectAfterAuth', window.location.pathname);
+          window.location.href = '/unauthorized';
+        }
+        
+        return Promise.reject(error);
 
-    const store = userInfoStore.getState();
-    store.setPermissions(grantedPermissions);
-    
-    authService.setDelegatedPermissions(grantedPermissions);
-
-    if (permissionName && grantedPermissions.includes(permissionName)) {
-      console.log(`✅ Permission "${permissionName}" granted, retrying`);
-      return myAPI(originalRequest);
+      } catch {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('redirectAfterAuth', window.location.pathname);
+          window.location.href = '/unauthorized';
+        }
+        return Promise.reject(error);
+      } finally {
+        isRefreshingPermissions = false;
+        refreshPermissionPromise = null;
+      }
     }
-
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('redirectAfterAuth', window.location.pathname);
-      window.location.href = '/unauthorized';
-    }
-    
-    return Promise.reject(error);
-
-  } catch (refreshError) {
-    console.error("Failed to refresh permissions:", refreshError);
-    return Promise.reject(error);
-  }
-}
 
     // ===== معالجة أخطاء الشبكة =====
     if (!error.response) {

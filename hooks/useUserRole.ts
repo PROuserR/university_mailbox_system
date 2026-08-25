@@ -7,56 +7,64 @@ import userInfoStore from "@/store/userInfoStore";
 import { authService } from "@/services/auth.service";
 
 export function useUserRole() {
-  const { 
-    role, 
-    firstname, 
-    lastname, 
-    email, 
-    isLoggedIn,
-    setRole, 
-    setFirstname, 
-    setLastname, 
-    setEmail, 
-    setIsLoggedIn 
-  } = userInfoStore();
-  
-  const [loading, setLoading] = useState(!isLoggedIn); // ✅ إذا لم يكن مسجل، يكون التحميل true
-
-  useEffect(() => {
-    if (isLoggedIn && role) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchUser = async () => {
-      setLoading(true);
-      try {
-        const user = await authService.getCurrentUser();
-        setRole(user.role);
-        setFirstname(user.firstName);
-        setLastname(user.lastName);
-        setEmail(user.email);
-        setIsLoggedIn(true);
-      } catch (error) {
-        console.error("Failed to fetch user", error);
-        setIsLoggedIn(false);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const { 
+        id,
+        role, 
+        roles,
+        firstname, 
+        lastname, 
+        email, 
+        isLoggedIn,
+        isHeadOfDepartment,
+        isPermanentReceiver,
+        departmentId,
+        setUser,
+        clearUser,
+    } = userInfoStore();
     
-    fetchUser();
-  }, [isLoggedIn, role, setRole, setFirstname, setLastname, setEmail, setIsLoggedIn]);
+    const [loading, setLoading] = useState(!isLoggedIn);
 
-  return {
-    role,
-    isDean: role === "Dean",
-    isEmployee: role === "Employee",
-    isReceiver: role === "User" || role === "",
-    firstname,
-    lastname,
-    email,
-    isLoggedIn,
-    loading, 
-  };
+    useEffect(() => {
+        if (isLoggedIn && role) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchUser = async () => {
+            setLoading(true);
+            try {
+                const user = await authService.getCurrentUser();
+                setUser(user);
+            } catch (error) {
+                console.error("Failed to fetch user", error);
+                clearUser();
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchUser();
+    }, [isLoggedIn, role, setUser, clearUser]);
+
+    const isDean = roles.includes('Dean');
+    const isAdmin = roles.includes('Admin');
+    const isEmployee = roles.includes('Employee');
+
+    return {
+        userId: id,
+        role,
+        roles,
+        firstname,
+        lastname,
+        email,
+        isLoggedIn,
+        loading,
+        isPermanentReceiver,
+        isHeadOfDepartment: isHeadOfDepartment || false,
+        departmentId: departmentId || null,
+        isDean,
+        isAdmin,
+        isEmployee,
+        hasRole: (roleToCheck: string) => roles.includes(roleToCheck),
+    };
 }

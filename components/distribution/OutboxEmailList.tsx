@@ -6,7 +6,7 @@ import { forwardRef } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { DistributionOutboxDto } from "@/types/api/distribution";
+import { DistributionOutboxDto } from "@/types/api/distribution.types";
 import { Loader2 } from "lucide-react";
 
 interface OutboxEmailListProps {

@@ -158,14 +158,6 @@ export type CreateCorrespondencePayload = {
 // ApiResult<T>
 // =========================
 
-export type ApiResult<T> = {
-    isSuccess: boolean;
-    data: T;
-    message: string;
-    errors: string[] | null;
-    statusCode: number;
-};
-
 export interface CorrespondenceSearchDto {
     number?: number;
     mainType?: CorrespondenceMainType;

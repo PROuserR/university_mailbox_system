@@ -1,10 +1,10 @@
-// types/ApiResult.ts
+
 export interface ApiResult<T> {
-  isSuccess: boolean;
-  message: string;
-  data: T;
-  errors?: string[];
-  statusCode: number;
+    isSuccess: boolean;
+    data: T;
+    message: string;
+    errors: string[] | null;
+    statusCode: number;
 }
 
 export interface ApiResultWithoutData {

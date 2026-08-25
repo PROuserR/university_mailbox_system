@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { DistributionOutboxDto } from "@/types/api/distribution";
+import { DistributionOutboxDto } from "@/types/api/distribution.types";
 import { downloadAttachment, viewAttachment } from "@/services/correspondence.service";
 import toast from "react-hot-toast";
 import { useState, useRef } from "react";

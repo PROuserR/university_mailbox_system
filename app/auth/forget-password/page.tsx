@@ -8,7 +8,8 @@ import toast, { Toaster } from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
-import { apiWrapper, ApiResult } from "@/utils/apiClient";
+import { apiWrapper } from "@/utils/apiClient";
+import { ApiResult } from "@/types/api/ApiResult";
 
 export default function ForgotPasswordPage() {
     const router = useRouter();

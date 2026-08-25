@@ -5,7 +5,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiWrapper, ApiResult } from "@/utils/apiClient";
+import { apiWrapper } from "@/utils/apiClient";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faInbox,
@@ -33,6 +33,7 @@ import {
   Bar,
   Cell,
 } from "recharts";
+import { ApiResult } from "@/types/api/ApiResult";
 
 // ==============================
 // TYPES

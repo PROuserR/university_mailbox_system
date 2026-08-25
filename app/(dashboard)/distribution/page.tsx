@@ -44,8 +44,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import type { DistributionInboxDto, DistributionOutboxDto } from "@/types/api/distribution";
-import type { ApiResult } from "@/utils/apiClient";
+import type { DistributionInboxDto, DistributionOutboxDto } from "@/types/api/distribution.types";
+import { ApiResult } from "@/types/api/ApiResult";
 
 // ================= TYPES =================
 

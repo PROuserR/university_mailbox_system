@@ -28,7 +28,8 @@ import {
     faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { apiWrapper, ApiResult } from "@/utils/apiClient";
+import { apiWrapper } from "@/utils/apiClient";
+import { ApiResult } from "@/types/api/ApiResult";
 
 // ==============================
 // TYPES

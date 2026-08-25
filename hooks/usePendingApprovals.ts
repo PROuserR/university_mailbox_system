@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { distributionService } from "@/services/distribution.service";
-import { PendingApprovalCorrespondenceDto } from "@/types/api/distribution";
+import { PendingApprovalCorrespondenceDto } from "@/types/api/distribution.types";
 import toast from "react-hot-toast";
 import PagedResult from "@/types/api/PagedResponse";
 

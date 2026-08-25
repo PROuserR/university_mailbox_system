@@ -5,19 +5,19 @@ import {
   extractData,
   isApiSuccess,
   request,
-} from "@/utils/apiClient"; // ← تمت الإضافة
+} from "@/utils/apiClient";
 import {
   DistributionEditorData,
   CreateDistributionPayload,
   DistributeResponseDto,
-  ApiResult,
 } from "@/types/api/distribution.types";
 import {
   DistributionFilterDto,
   DistributionResponseByIdDto,
   PendingApprovalCorrespondenceDto,
-} from "@/types/api/distribution";
+} from "@/types/api/distribution.types";
 import PagedResult from "@/types/api/PagedResponse";
+import { ApiResult } from "@/types/api/ApiResult";
 
 const BASE_URL = "Distributions";
 

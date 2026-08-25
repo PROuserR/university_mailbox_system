@@ -7,11 +7,12 @@ import { getDistributionEditorData, distribute } from "@/services/distribution.s
 /**
  * Hook لجلب بيانات التوزيع
  */
-export const useDistributionEditor = (correspondenceId: number) => {
+export const useDistributionEditor = (correspondenceId: number | null) => {
     return useQuery({
         queryKey: ["distribution-editor", correspondenceId],
-        queryFn: () => getDistributionEditorData(correspondenceId),
-        enabled: !!correspondenceId,
+        queryFn: () => getDistributionEditorData(correspondenceId!),
+        enabled: !!correspondenceId && correspondenceId > 0,
+        staleTime: 5 * 60 * 1000,
     });
 };
 
@@ -29,17 +30,18 @@ export const useDistributeMutation = (
         mutationFn: (payload: { receiverIds: number[]; notes?: string }) => {
             return distribute({
                 correspondenceId,
-                ...payload,
+                receiverIds: payload.receiverIds,
+                notes: payload.notes,
             });
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             toast.success("تم حفظ التوزيع بنجاح");
 
             queryClient.invalidateQueries({
                 queryKey: ["distribution-editor", correspondenceId],
             });
             queryClient.invalidateQueries({
-                queryKey: ["distribution-mails"],
+                queryKey: ["correspondences"],
             });
 
             if (onSuccess) onSuccess();

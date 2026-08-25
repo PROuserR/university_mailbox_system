@@ -3,7 +3,6 @@
 
 import { apiWrapper, extractData, isApiSuccess, request } from "@/utils/apiClient";
 import {
-    ApiResult,
     CorrespondenceResponse,
     CorrespondenceSearchDto,
     UpdateCorrespondencePayload,
@@ -12,6 +11,7 @@ import {
     CorrespondenceParentSelectorSearchDto,
     CorrespondenceParentSelectorDto,
 } from "@/types/api/correspondence.types";
+import { ApiResult } from "@/types/api/ApiResult";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7236/api";
 const BASE_URL = "Correspondences";
 

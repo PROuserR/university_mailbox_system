@@ -1,5 +1,5 @@
 // services/delegation.service.ts
-import { apiWrapper, ApiResult, extractData, isApiSuccess } from '@/utils/apiClient';
+import { apiWrapper, extractData, isApiSuccess } from '@/utils/apiClient';
 import {
   DelegationDto,
   CreateDelegationDto,
@@ -11,6 +11,7 @@ import {
   DelegationUsageDto,
   UserResponseDto,
 } from '@/types/api/Delegation';
+import { ApiResult } from '@/types/api/ApiResult';
 
 class DelegationService {
   // ============================================================
@@ -23,7 +24,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل الموظفين');
+      throw new Error(response.message || 'فشل تحميل الموظفين');
     }
 
     return extractData(response) || [];
@@ -35,7 +36,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل العمداء');
+      throw new Error(response.message || 'فشل تحميل العمداء');
     }
 
     return extractData(response) || [];
@@ -52,7 +53,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل إنشاء التفويض');
+      throw new Error(response.message || 'فشل إنشاء التفويض');
     }
 
     return extractData(response)!;
@@ -69,7 +70,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحديث التفويض');
+      throw new Error(response.message || 'فشل تحديث التفويض');
     }
 
     return extractData(response)!;
@@ -82,7 +83,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل إضافة الصلاحيات');
+      throw new Error(response.message || 'فشل إضافة الصلاحيات');
     }
 
     return extractData(response)!;
@@ -99,7 +100,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل إلغاء التفويض');
+      throw new Error(response.message || 'فشل إلغاء التفويض');
     }
   }
 
@@ -113,7 +114,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل التفويض');
+      throw new Error(response.message || 'فشل تحميل التفويض');
     }
 
     return extractData(response)!;
@@ -125,7 +126,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل التفويضات');
+      throw new Error(response.message || 'فشل تحميل التفويضات');
     }
 
     return extractData(response) || [];
@@ -137,7 +138,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل تفويضات المستخدم');
+      throw new Error(response.message || 'فشل تحميل تفويضات المستخدم');
     }
 
     return extractData(response) || [];
@@ -149,7 +150,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل تفويضاتي');
+      throw new Error(response.message || 'فشل تحميل تفويضاتي');
     }
 
     return extractData(response) || [];
@@ -165,7 +166,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل الصلاحيات');
+      throw new Error(response.message || 'فشل تحميل الصلاحيات');
     }
 
     return extractData(response) || [];
@@ -190,7 +191,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل الصلاحيات المتاحة');
+      throw new Error(response.message || 'فشل تحميل الصلاحيات المتاحة');
     }
 
     return extractData(response) || [];
@@ -206,7 +207,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل الإحصائيات');
+      throw new Error(response.message || 'فشل تحميل الإحصائيات');
     }
 
     return extractData(response)!;
@@ -218,7 +219,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل سجل الاستخدام');
+      throw new Error(response.message || 'فشل تحميل سجل الاستخدام');
     }
 
     return extractData(response) || [];
@@ -234,7 +235,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل إلغاء التفويضات المنتهية');
+      throw new Error(response.message || 'فشل إلغاء التفويضات المنتهية');
     }
 
     return extractData(response) || 0;
@@ -250,7 +251,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل إضافة التفويضات الافتراضية');
+      throw new Error(response.message || 'فشل إضافة التفويضات الافتراضية');
     }
 
     return extractData(response) || 0;
@@ -262,7 +263,7 @@ class DelegationService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل إعادة تعيين التفويضات الافتراضية');
+      throw new Error(response.message || 'فشل إعادة تعيين التفويضات الافتراضية');
     }
 
     return extractData(response) || 0;

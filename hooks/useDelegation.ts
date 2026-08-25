@@ -4,7 +4,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { delegationService } from '@/services/delegation.service';
-// import { authorizationService } from '@/services/authorization.service';
 import {
   DelegationDto,
   AvailablePermissionDto,
@@ -17,6 +16,7 @@ import {
 } from '@/types/api/Delegation';
 import useUserInfoStore from '@/store/userInfoStore';
 import toast from 'react-hot-toast';
+import { authService } from '@/services/auth.service';
 
 export function useDelegation() {
   const { role } = useUserInfoStore();
@@ -67,7 +67,7 @@ export function useDelegation() {
         }
       }
     } catch (error: any) {
-      console.warn('Failed to load users:', error?.message || error);
+      // Silent error
     }
   }, [isAdmin]);
 
@@ -79,14 +79,12 @@ export function useDelegation() {
     if (!canManageDelegations) return;
     
     try {
-      console.log('🔄 Loading available permissions...');
       const data = await delegationService.getAvailablePermissions();
       if (isMounted.current) {
-        console.log('✅ Available permissions loaded:', data.length);
         setAvailablePermissions(data);
       }
     } catch (error: any) {
-      console.warn('Failed to load available permissions:', error?.message || error);
+      // Silent error
     }
   }, [canManageDelegations]);
 
@@ -103,10 +101,10 @@ export function useDelegation() {
         const permissionNames = data
           .filter(p => p.isGranted)
           .map(p => p.name);
-        // authorizationService.setDelegatedPermissions(permissionNames);
+        await authService.setDelegatedPermissions(permissionNames);
       }
     } catch (error: any) {
-      console.warn('Failed to load my permissions:', error?.message || error);
+      // Silent error
     }
   }, []);
 
@@ -116,19 +114,16 @@ export function useDelegation() {
 
   const loadAllDelegations = useCallback(async () => {
     if (!canManageDelegations) {
-      console.log('⏭️ Skipping loadAllDelegations - not Dean or Admin');
       return;
     }
     
     try {
-      console.log('🔄 Loading all delegations...');
       const data = await delegationService.getAllDelegations();
       if (isMounted.current) {
-        console.log('✅ All delegations loaded:', data.length);
         setAllDelegations(data);
       }
     } catch (error: any) {
-      console.warn('Failed to load all delegations:', error?.message || error);
+      // Silent error
     }
   }, [canManageDelegations]);
 
@@ -143,7 +138,7 @@ export function useDelegation() {
         setMyDelegations(data);
       }
     } catch (error: any) {
-      console.warn('Failed to load my delegations:', error?.message || error);
+      // Silent error
     }
   }, []);
 
@@ -160,7 +155,7 @@ export function useDelegation() {
         setStatistics(data);
       }
     } catch (error: any) {
-      console.warn('Failed to load statistics:', error?.message || error);
+      // Silent error
     }
   }, [canManageDelegations]);
 
@@ -177,7 +172,7 @@ export function useDelegation() {
         setUsageLogs(data);
       }
     } catch (error: any) {
-      console.warn('Failed to load usage logs:', error?.message || error);
+      // Silent error
     }
   }, [canManageDelegations]);
 
@@ -194,7 +189,6 @@ export function useDelegation() {
       }
       return data;
     } catch (error: any) {
-      console.warn('Failed to load delegation:', error?.message || error);
       return null;
     }
   }, [loadDelegationUsage]);
@@ -333,7 +327,7 @@ export function useDelegation() {
   }, [isAdmin, loadStatistics]);
 
   const addDefaultDelegations = useCallback(async () => {
-    if (!isAdmin) {
+    if (!canManageDelegations) {
       toast.error('ليس لديك صلاحية لإضافة التفويضات الافتراضية');
       return;
     }
@@ -356,7 +350,7 @@ export function useDelegation() {
         setIsLoading(false);
       }
     }
-  }, [isAdmin, loadAllDelegations, loadMyDelegations, loadStatistics]);
+  }, [canManageDelegations, loadAllDelegations, loadMyDelegations, loadStatistics]);
 
   const resetDefaultDelegations = useCallback(async () => {
     if (!isAdmin) {
@@ -383,14 +377,12 @@ export function useDelegation() {
       }
     }
   }, [isAdmin, loadAllDelegations, loadMyDelegations, loadStatistics]);
-
+  
   // ============================================================
   // ===== Load All Data =====
   // ============================================================
 
   const loadAllData = useCallback(async () => {
-    console.log('🔄 Loading all data...');
-    
     isMounted.current = true;
     
     const promises: Promise<any>[] = [
@@ -400,7 +392,6 @@ export function useDelegation() {
     ];
 
     if (canManageDelegations) {
-      console.log('✅ Loading admin/dean data...');
       promises.push(
         loadAvailablePermissions(),
         loadAllDelegations(),
@@ -409,7 +400,6 @@ export function useDelegation() {
     }
 
     await Promise.allSettled(promises);
-    console.log('✅ All data loaded');
   }, [
     loadMyPermissions,
     loadMyDelegations,

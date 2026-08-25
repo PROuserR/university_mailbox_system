@@ -18,7 +18,7 @@ export function useAuth() {
   const { 
     setId, setEmail, setFirstname, setLastname, setRole, setRoles,
     setIsLoggedIn, clearUser, setPhone, setIsActive, setIsPermanentReceiver, 
-    setProfileImageUrl, setPermissions, permissions
+    setProfileImageUrl
   } = userInfoStore();
 
   const initializeUser = useCallback(async () => {
@@ -33,7 +33,6 @@ export function useAuth() {
         setEmail(user.email);
         setFirstname(user.firstName);
         setLastname(user.lastName);
-        setRole(user.role);
         setRoles(user.roles);
         setPhone(user.phone || null);
         setIsActive(user.isActive);
@@ -44,15 +43,14 @@ export function useAuth() {
         await authService.loadDelegatedPermissions();
       }
     } catch (err) {
-      console.error("Failed to initialize user", err);
       clearUser();
     } finally {
       setIsInitialized(true);
     }
   }, [
-    setId, setEmail, setFirstname, setLastname, setRole, setRoles,
+    setId, setEmail, setFirstname, setLastname, setRoles,
     setPhone, setIsActive, setIsPermanentReceiver, setProfileImageUrl,
-    setIsLoggedIn, clearUser, setPermissions
+    setIsLoggedIn, clearUser
   ]);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -176,7 +174,6 @@ export function useAuth() {
     resetPassword,
     isLoading,
     isInitialized,
-    permissions,
     hasPermission,
     refreshPermissions,
     hasRole,
