@@ -4,7 +4,7 @@ import { authService } from "@/services/auth.service";
 import userInfoStore from "@/store/userInfoStore";
 import toast from "react-hot-toast";
 
-const myAPI = axios.create({   
+const myAPI = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "https://localhost:7236/api",
   withCredentials: true
 });
@@ -47,9 +47,10 @@ myAPI.interceptors.response.use(
     if (error.response?.status === 403 && !originalRequest._permissionRetry) {
       originalRequest._permissionRetry = true;
 
-      const permissionName = error.response?.data?.requiredPermission || 
-                            error.response?.data?.permission ||
-                            error.response?.data?.policy;
+      const permissionName =
+        error.response?.data?.requiredPermission ||
+        error.response?.data?.permission ||
+        error.response?.data?.policy;
 
       if (isRefreshingPermissions) {
         await refreshPermissionPromise;
@@ -57,33 +58,32 @@ myAPI.interceptors.response.use(
       }
 
       isRefreshingPermissions = true;
-      
+
       try {
         refreshPermissionPromise = authService.refreshDelegatedPermissions();
         await refreshPermissionPromise;
-        
+
         const state = userInfoStore.getState();
         const delegatedPermissions = state.delegatedPermissions || [];
-        
+
         if (permissionName && delegatedPermissions.includes(permissionName)) {
           return myAPI(originalRequest);
         }
-        
+
         if (delegatedPermissions.length > 0) {
           return myAPI(originalRequest);
         }
 
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('redirectAfterAuth', window.location.pathname);
-          window.location.href = '/unauthorized';
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("redirectAfterAuth", window.location.pathname);
+          window.location.href = "/unauthorized";
         }
-        
-        return Promise.reject(error);
 
+        return Promise.reject(error);
       } catch {
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('redirectAfterAuth', window.location.pathname);
-          window.location.href = '/unauthorized';
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("redirectAfterAuth", window.location.pathname);
+          window.location.href = "/unauthorized";
         }
         return Promise.reject(error);
       } finally {
