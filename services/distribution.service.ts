@@ -1,14 +1,23 @@
 // src/services/distribution.service.ts
 
-import { apiWrapper, extractData, isApiSuccess, request } from "@/utils/apiClient"; // ← تمت الإضافة
+import {
+  apiWrapper,
+  extractData,
+  isApiSuccess,
+  request,
+} from "@/utils/apiClient"; // ← تمت الإضافة
 import {
   DistributionEditorData,
   CreateDistributionPayload,
   DistributeResponseDto,
   ApiResult,
 } from "@/types/api/distribution.types";
-import { DistributionFilterDto, DistributionResponseByIdDto, PendingApprovalCorrespondenceDto } from "@/types/api/distribution";
-import { PagedResponse } from "@/types/api/PagedResponse";
+import {
+  DistributionFilterDto,
+  DistributionResponseByIdDto,
+  PendingApprovalCorrespondenceDto,
+} from "@/types/api/distribution";
+import PagedResult from "@/types/api/PagedResponse";
 
 const BASE_URL = "Distributions";
 
@@ -57,14 +66,13 @@ class DistributionService {
   async getPendingApprovalsGrouped(
     page: number = 1,
     pageSize: number = 20
-  ): Promise<PagedResponse<PendingApprovalCorrespondenceDto>> {
-    const response = await apiWrapper.get<ApiResult<PagedResponse<PendingApprovalCorrespondenceDto>>>(
-      '/Distributions/pending-approval/grouped',
-      { page, pageSize }
-    );
+  ): Promise<PagedResult<PendingApprovalCorrespondenceDto>> {
+    const response = await apiWrapper.get<
+      ApiResult<PagedResult<PendingApprovalCorrespondenceDto>>
+    >("/Distributions/pending-approval/grouped", { page, pageSize });
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل الموافقات المعلقة');
+      throw new Error(response.data?.message || "فشل تحميل الموافقات المعلقة");
     }
 
     return extractData(response)!;
@@ -73,14 +81,13 @@ class DistributionService {
   async getPendingApprovals(
     page: number = 1,
     pageSize: number = 20
-  ): Promise<PagedResponse<DistributionResponseByIdDto>> {
-    const response = await apiWrapper.get<ApiResult<PagedResponse<DistributionResponseByIdDto>>>(
-      '/Distributions/pending-approval',
-      { page, pageSize }
-    );
+  ): Promise<PagedResult<DistributionResponseByIdDto>> {
+    const response = await apiWrapper.get<
+      ApiResult<PagedResult<DistributionResponseByIdDto>>
+    >("/Distributions/pending-approval", { page, pageSize });
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل الموافقات المعلقة');
+      throw new Error(response.data?.message || "فشل تحميل الموافقات المعلقة");
     }
 
     return extractData(response)!;
@@ -96,7 +103,7 @@ class DistributionService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل الموافقة على التوزيع');
+      throw new Error(response.data?.message || "فشل الموافقة على التوزيع");
     }
   }
 
@@ -106,23 +113,23 @@ class DistributionService {
       url: `/Distributions/${id}/reject`,
       data: reason || null,
       headers: {
-        'Content-Type': 'application/json'
-      }
+        "Content-Type": "application/json",
+      },
     });
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل رفض التوزيع');
+      throw new Error(response.data?.message || "فشل رفض التوزيع");
     }
   }
 
   async approveDistributions(ids: number[]): Promise<number> {
     const response = await apiWrapper.post<ApiResult<number>>(
-      '/Distributions/batch/approve',
+      "/Distributions/batch/approve",
       ids
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل الموافقة على التوزيعات');
+      throw new Error(response.data?.message || "فشل الموافقة على التوزيعات");
     }
 
     return extractData(response)!;
@@ -130,12 +137,14 @@ class DistributionService {
 
   async rejectDistributions(ids: number[], reason?: string): Promise<number> {
     const response = await apiWrapper.post<ApiResult<number>>(
-      `/Distributions/batch/reject${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`,
+      `/Distributions/batch/reject${
+        reason ? `?reason=${encodeURIComponent(reason)}` : ""
+      }`,
       ids
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل رفض التوزيعات');
+      throw new Error(response.data?.message || "فشل رفض التوزيعات");
     }
 
     return extractData(response)!;
@@ -147,24 +156,29 @@ class DistributionService {
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل الموافقة على جميع التوزيعات');
+      throw new Error(
+        response.data?.message || "فشل الموافقة على جميع التوزيعات"
+      );
     }
 
     return extractData(response)!;
   }
 
-  async rejectAllByCorrespondence(correspondenceId: number, reason?: string): Promise<number> {
+  async rejectAllByCorrespondence(
+    correspondenceId: number,
+    reason?: string
+  ): Promise<number> {
     const response = await request<ApiResult<number>>({
       method: "POST",
       url: `/Distributions/correspondence/${correspondenceId}/reject-all`,
       data: reason || null,
       headers: {
-        'Content-Type': 'application/json'
-      }
+        "Content-Type": "application/json",
+      },
     });
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل رفض جميع التوزيعات');
+      throw new Error(response.data?.message || "فشل رفض جميع التوزيعات");
     }
 
     return extractData(response)!;
@@ -175,12 +189,12 @@ class DistributionService {
   // ============================================================
 
   async getDistributionById(id: number): Promise<DistributionResponseByIdDto> {
-    const response = await apiWrapper.get<ApiResult<DistributionResponseByIdDto>>(
-      `/Distributions/${id}`
-    );
+    const response = await apiWrapper.get<
+      ApiResult<DistributionResponseByIdDto>
+    >(`/Distributions/${id}`);
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل تفاصيل التوزيع');
+      throw new Error(response.data?.message || "فشل تحميل تفاصيل التوزيع");
     }
 
     return extractData(response)!;
@@ -190,14 +204,15 @@ class DistributionService {
   // ===== Filter Distributions =====
   // ============================================================
 
-  async getDistributions(filter: DistributionFilterDto): Promise<PagedResponse<DistributionResponseByIdDto>> {
-    const response = await apiWrapper.get<ApiResult<PagedResponse<DistributionResponseByIdDto>>>(
-      '/Distributions',
-      filter
-    );
+  async getDistributions(
+    filter: DistributionFilterDto
+  ): Promise<PagedResult<DistributionResponseByIdDto>> {
+    const response = await apiWrapper.get<
+      ApiResult<PagedResult<DistributionResponseByIdDto>>
+    >("/Distributions", filter);
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.data?.message || 'فشل تحميل التوزيعات');
+      throw new Error(response.data?.message || "فشل تحميل التوزيعات");
     }
 
     return extractData(response)!;

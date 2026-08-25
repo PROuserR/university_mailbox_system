@@ -33,7 +33,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { DistributionOutboxDto } from "@/types/api/distribution";
-import { downloadAttachment } from "@/services/correspondence.service";
+import { downloadAttachment, viewAttachment } from "@/services/correspondence.service";
 import toast from "react-hot-toast";
 import { useState, useRef } from "react";
 
@@ -83,61 +83,101 @@ export function OutboxEmailDetail({
   const [previewName, setPreviewName] = useState<string>("");
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // ============================================================
-  // ===== View - معاينة الملف =====
-  // ============================================================
   const handleView = async (attachmentId: number, fileName: string, mimeType: string) => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+        // ✅ إلغاء أي طلب سابق
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
 
-    setPreviewLoading(true);
-    setPreviewUrl(null);
-    setPreviewType(mimeType);
-    setPreviewName(fileName);
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
-    try {
-      const blob = await downloadAttachment(attachmentId, fileName, controller.signal);
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-    } catch (error: any) {
-      if (error.name !== "AbortError") {
-        toast.error("فشل في تحميل الملف للمعاينة");
-      }
-      closePreview();
-    } finally {
-      setPreviewLoading(false);
-      abortControllerRef.current = null;
-    }
-  };
+        setPreviewLoading(true);
+        setPreviewUrl(null);
+        setPreviewType(mimeType || "");
+        setPreviewName(fileName || "ملف");
 
-  // ============================================================
-  // ===== Download - تحميل الملف =====
-  // ============================================================
-  const handleDownload = async (attachmentId: number, fileName: string) => {
-    setDownloading(attachmentId);
-    try {
-      const blob = await downloadAttachment(attachmentId, fileName);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName || `attachment_${attachmentId}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("تم تحميل المرفق");
-    } catch (error: any) {
-      if (error.name !== "AbortError") {
-        toast.error("فشل التحميل");
-      }
-    } finally {
-      setDownloading(null);
-    }
-  };
+        try {
+            // ✅ استخدام viewAttachment مع signal
+            const blob = await viewAttachment(attachmentId, controller.signal);
+
+            if (!blob || blob.size === 0) {
+                throw new Error("الملف فارغ أو تالف");
+            }
+
+            const url = URL.createObjectURL(blob);
+            setPreviewUrl(url);
+            toast.success("تم تحميل الملف للمعاينة");
+        } catch (error: any) {
+            if (error.name !== "AbortError") {
+                console.error("View error:", error);
+                
+                // ✅ عرض رسالة خطأ مناسبة
+                if (error.message?.includes("403")) {
+                    toast.error("ليس لديك صلاحية لعرض هذا الملف");
+                } else if (error.message?.includes("404")) {
+                    toast.error("الملف غير موجود");
+                } else if (error.message?.includes("Network") || error.message?.includes("Failed to fetch")) {
+                    toast.error("حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى");
+                } else {
+                    toast.error(error.message || "فشل في تحميل الملف للمعاينة");
+                }
+                closePreview();
+            }
+        } finally {
+            setPreviewLoading(false);
+            if (abortControllerRef.current === controller) {
+                abortControllerRef.current = null;
+            }
+        }
+    };
+
+    // ============================================================
+    // ===== Download - تحميل الملف =====
+    // ============================================================
+    const handleDownload = async (attachmentId: number, fileName: string) => {
+        setDownloading(attachmentId);
+
+        try {
+            // ✅ استخدام downloadAttachment (بدون signal)
+            const blob = await downloadAttachment(attachmentId);
+
+            if (!blob || blob.size === 0) {
+                throw new Error("الملف فارغ أو تالف");
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = fileName || `attachment_${attachmentId}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            setTimeout(() => {
+                URL.revokeObjectURL(url);
+            }, 1000);
+
+            toast.success("تم تحميل المرفق بنجاح");
+        } catch (error: any) {
+            console.error("Download error:", error);
+
+            // ✅ عرض رسائل خطأ مناسبة
+            if (error.message?.includes("Network") ||
+                error.message?.includes("CORS") ||
+                error.message?.includes("Failed to fetch")) {
+                toast.error("حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى");
+            } else if (error.message?.includes("404")) {
+                toast.error("الملف غير موجود");
+            } else if (error.message?.includes("403")) {
+                toast.error("ليس لديك صلاحية لتحميل هذا الملف");
+            } else {
+                toast.error(error.message || "فشل تحميل المرفق");
+            }
+        } finally {
+            setDownloading(null);
+        }
+    };
 
   // ============================================================
   // ===== Close Preview =====

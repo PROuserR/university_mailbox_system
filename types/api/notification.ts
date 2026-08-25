@@ -1,6 +1,6 @@
 // types/notification.ts
 
-import { PagedResponse } from "./PagedResponse";
+import PagedResult from "./PagedResponse";
 
 export interface Notification {
   id: number;
@@ -13,15 +13,15 @@ export interface Notification {
   readAt?: string;
 }
 export type NotificationItem = {
-    id: number
-    title: string
-    message: string
-    type: "Info" | "Success" | "Warning" | "Error"
-    isRead: boolean
-    link: string | null
-    createdAt: string
-    readAt: string | null
-}
+  id: number;
+  title: string;
+  message: string;
+  type: "Info" | "Success" | "Warning" | "Error";
+  isRead: boolean;
+  link: string | null;
+  createdAt: string;
+  readAt: string | null;
+};
 
 export interface NotificationsResponse {
   isSuccess: boolean;
@@ -31,6 +31,6 @@ export interface NotificationsResponse {
   statusCode: number;
 }
 
-export interface NotificationPageResponse extends PagedResponse<Notification> {
+export interface NotificationPageResponse extends PagedResult<Notification> {
   unreadCount: number;
 }

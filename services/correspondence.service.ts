@@ -1,78 +1,184 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/services/correspondence.service.ts
 
-import { apiWrapper, ApiResult } from "@/utils/apiClient";
+import { apiWrapper, extractData, isApiSuccess, request } from "@/utils/apiClient";
 import {
-  CorrespondenceResponse,
-  UpdateCorrespondencePayload,
-  CorrespondenceMainType,
+    ApiResult,
+    CorrespondenceResponse,
+    CorrespondenceSearchDto,
+    UpdateCorrespondencePayload,
+    SignCorrespondenceResultDto,
+    CorrespondenceWithRepliesResponse,
+    CorrespondenceParentSelectorSearchDto,
+    CorrespondenceParentSelectorDto,
 } from "@/types/api/correspondence.types";
-import {
-  DocumentType,
-  DocumentTypeResponse,
-} from "@/types/api/DocumentTypesResponse";
-import { SenderEntity, SenderEntityResponse } from "@/types/api/SenderEntity";
-import type { CorrespondenceSearchDto } from "@/types/api/correspondence.types";
-import type { PagedResponse } from "@/types/api/PagedResponse";
-import axios from "axios";
-
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7236/api";
 const BASE_URL = "Correspondences";
 
 // ============================================================
-// ===== Base URL =====
+// ===== Types =====
 // ============================================================
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7236/api";
+
+interface PagedResult<T> {
+    items: T[];
+    totalCount: number;
+    pageNumber: number;
+    pageSize: number;
+    totalPages: number;
+}
 
 // ============================================================
 // ===== Get Correspondences =====
 // ============================================================
 
+export const getCorrespondencesForParentSelector = async (
+    searchDto: CorrespondenceParentSelectorSearchDto
+): Promise<PagedResult<CorrespondenceParentSelectorDto>> => {
+    const response = await apiWrapper.get<ApiResult<PagedResult<CorrespondenceParentSelectorDto>>>(
+        `${BASE_URL}/parent-selector`,
+        searchDto
+    );
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل تحميل المراسلات للاختيار';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+
+    return extractData(response)!;
+};
+
 export const getCorrespondencesPaged = async (
-  searchDto: CorrespondenceSearchDto
-): Promise<PagedResponse<CorrespondenceResponse>> => {
-  const res = await apiWrapper.get<ApiResult<PagedResponse<CorrespondenceResponse>>>(
-    `${BASE_URL}/paged`,
-    searchDto
-  );
+    searchDto: CorrespondenceSearchDto
+): Promise<PagedResult<CorrespondenceResponse>> => {
+    const response = await apiWrapper.get<ApiResult<PagedResult<CorrespondenceResponse>>>(
+        `${BASE_URL}/paged`,
+        searchDto
+    );
 
-  if (!res.success) {
-    throw new Error(res.message || "فشل تحميل المراسلات");
-  }
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل تحميل المراسلات';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
 
-  if (!res.data) {
-    throw new Error("لم يتم استلام بيانات من الخادم");
-  }
+    const data = extractData(response)!;
+    return {
+        items: data.items || [],
+        totalCount: data.totalCount || 0,
+        pageNumber: data.pageNumber || 1,
+        pageSize: data.pageSize || 10,
+        totalPages: data.totalPages || 0,
+    };
+};
 
-  if (!res.data.isSuccess) {
-    throw new Error(res.data.message || "فشل تحميل المراسلات");
-  }
+export const getCorrespondenceById = async (
+    id: number
+): Promise<CorrespondenceResponse> => {
+    const response = await apiWrapper.get<ApiResult<CorrespondenceResponse>>(
+        `${BASE_URL}/${id}`
+    );
 
-  return res.data.data;
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل تحميل المراسلة';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+
+    return extractData(response)!;
 };
 
 // ============================================================
-// ===== Get Correspondence By ID =====
+// ===== Get Correspondence With Replies (Full Chain) =====
 // ============================================================
 
-export const getCorrespondenceById = async (
-  id: number
+export const getCorrespondenceWithReplies = async (
+    id: number
+): Promise<CorrespondenceWithRepliesResponse> => {
+    const response = await apiWrapper.get<ApiResult<CorrespondenceWithRepliesResponse>>(
+        `${BASE_URL}/${id}/with-replies`
+    );
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل تحميل المراسلة مع الردود';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+
+    return extractData(response)!;
+};
+
+// ============================================================
+// ===== Document Types & Sender Entities =====
+// ============================================================
+
+export const getDocumentTypes = async (): Promise<{ id: number; name: string }[]> => {
+    const response = await apiWrapper.get<ApiResult<{ id: number; name: string }[]>>(
+        '/DocumentTypes'
+    );
+
+    if (!isApiSuccess(response)) {
+        return [];
+    }
+
+    return extractData(response) || [];
+};
+
+export const getSenderEntities = async (): Promise<{ id: number; name: string }[]> => {
+    const response = await apiWrapper.get<ApiResult<{ id: number; name: string }[]>>(
+        '/SenderEntities'
+    );
+
+    if (!isApiSuccess(response)) {
+        return [];
+    }
+
+    return extractData(response) || [];
+};
+
+// ============================================================
+// ===== Create Correspondence =====
+// ============================================================
+
+export const createCorrespondence = async (
+    payload: FormData
 ): Promise<CorrespondenceResponse> => {
-  const res = await apiWrapper.get<ApiResult<CorrespondenceResponse>>(
-    `${BASE_URL}/${id}`
-  );
+    const response = await apiWrapper.post<ApiResult<CorrespondenceResponse>>(
+        `${BASE_URL}`,
+        payload
+    );
 
-  if (!res.success) {
-    throw new Error(res.message || "فشل تحميل المراسلة");
-  }
+    if (!isApiSuccess(response)) {
+        // ✅ استخدام response?.message مباشرة (من ApiResponse)
+        let errorMessage = response?.message || 'فشل إنشاء المراسلة';
+        
+        // ✅ إذا كانت هناك أخطاء تفصيلية في data.errors
+        if (response.data?.errors) {
+            const errors = response.data.errors;
+            if (Array.isArray(errors) && errors.length > 0) {
+                errorMessage = errors.join(" • ");
+            } else if (typeof errors === 'object') {
+                const errorValues = Object.values(errors).flat();
+                if (errorValues.length > 0) {
+                    errorMessage = errorValues.join(" • ");
+                }
+            }
+        }
+        
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        (error as any).response = {
+            status: response.status,
+            data: response.data,
+        };
+        throw error;
+    }
 
-  if (!res.data) {
-    throw new Error("لم يتم استلام بيانات من الخادم");
-  }
-
-  if (!res.data.isSuccess) {
-    throw new Error(res.data.message || "فشل تحميل المراسلة");
-  }
-
-  return res.data.data;
+    return extractData(response)!;
 };
 
 // ============================================================
@@ -80,68 +186,40 @@ export const getCorrespondenceById = async (
 // ============================================================
 
 export const updateCorrespondence = async (
-  id: number,
-  data: UpdateCorrespondencePayload,
-  files?: File[],
-  primaryFile?: File
+    id: number,
+    payload: FormData
 ): Promise<CorrespondenceResponse> => {
-  const formData = new FormData();
+    const response = await apiWrapper.patch<ApiResult<CorrespondenceResponse>>(
+        `${BASE_URL}/${id}`,
+        payload
+    );
 
-  // إضافة البيانات النصية
-  if (data.number) formData.append("Number", data.number);
-  if (data.mainType !== undefined)
-    formData.append("MainType", String(data.mainType));
-  if (data.isProfessional !== undefined)
-    formData.append("IsProfessional", String(data.isProfessional));
-  if (data.documentTypeId)
-    formData.append("DocumentTypeId", String(data.documentTypeId));
-  if (data.senderEntityId)
-    formData.append("SenderEntityId", String(data.senderEntityId));
-  if (data.title) formData.append("Title", data.title);
-  if (data.content) formData.append("Content", data.content);
-  if (data.senderReference)
-    formData.append("SenderReference", data.senderReference);
-  if (data.issuedDate) formData.append("IssuedDate", data.issuedDate);
-  if (data.receivedDate) formData.append("ReceivedDate", data.receivedDate);
-  if (data.sentDate) formData.append("SentDate", data.sentDate);
-  if (data.notes) formData.append("Notes", data.notes);
+    if (!isApiSuccess(response)) {
+        // ✅ استخدام response?.message مباشرة
+        let errorMessage = response?.message || 'فشل تحديث المراسلة';
+        
+        if (response.data?.errors) {
+            const errors = response.data.errors;
+            if (Array.isArray(errors) && errors.length > 0) {
+                errorMessage = errors.join(" • ");
+            } else if (typeof errors === 'object') {
+                const errorValues = Object.values(errors).flat();
+                if (errorValues.length > 0) {
+                    errorMessage = errorValues.join(" • ");
+                }
+            }
+        }
+        
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        (error as any).response = {
+            status: response.status,
+            data: response.data,
+        };
+        throw error;
+    }
 
-  // إضافة الملفات
-  if (primaryFile) {
-    formData.append("PrimaryFile", primaryFile);
-  }
-
-  if (files) {
-    files.forEach((file) => {
-      formData.append("AdditionalFiles", file);
-    });
-  }
-
-  // إضافة IDs الملفات المراد حذفها
-  if (data.deletedAttachmentIds && data.deletedAttachmentIds.length > 0) {
-    data.deletedAttachmentIds.forEach((id) => {
-      formData.append("AttachmentIdsToDelete", String(id));
-    });
-  }
-
-  const res = await apiWrapper.patch<ApiResult<CorrespondenceResponse>>(
-    `${BASE_URL}/${id}`,
-    formData
-  );
-
-  if (!res.success) {
-    throw new Error(res.message || "فشل تحديث المراسلة");
-  }
-
-  if (!res.data) {
-    throw new Error("لم يتم استلام بيانات من الخادم");
-  }
-
-  if (!res.data.isSuccess) {
-    throw new Error(res.data.message || "فشل تحديث المراسلة");
-  }
-
-  return res.data.data;
+    return extractData(response)!;
 };
 
 // ============================================================
@@ -149,190 +227,407 @@ export const updateCorrespondence = async (
 // ============================================================
 
 export const deleteCorrespondence = async (id: number): Promise<void> => {
-  const res = await apiWrapper.delete<ApiResult<void>>(
-    `${BASE_URL}/${id}`
-  );
+    const response = await apiWrapper.delete<ApiResult<void>>(
+        `${BASE_URL}/${id}`
+    );
 
-  if (!res.success) {
-    throw new Error(res.message || "فشل حذف المراسلة");
-  }
-
-  if (!res.data) {
-    throw new Error("لم يتم استلام رد من الخادم");
-  }
-
-  if (!res.data.isSuccess) {
-    throw new Error(res.data.message || "فشل حذف المراسلة");
-  }
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل حذف المراسلة';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
 };
 
 // ============================================================
-// ===== Get Document Types =====
+// ===== Status Management =====
 // ============================================================
 
-export const getDocumentTypes = async (): Promise<DocumentType[]> => {
-  const res = await apiWrapper.get<DocumentTypeResponse>(
-    "/DocumentTypes/active"
-  );
+// ✅ FromBody: none
+export const requestApproval = async (id: number): Promise<void> => {
+    const response = await apiWrapper.post<ApiResult<void>>(
+        `${BASE_URL}/${id}/request-approval`
+    );
 
-  if (!res.success || !res.data) {
-    return [];
-  }
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل طلب الموافقة';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
 
-  return res.data.data;
+// ✅ FromBody: SignCorrespondenceOptionsDto (object)
+export const signCorrespondence = async (
+    id: number,
+    options: {
+        autoIgnoreUnread?: boolean;
+        autoRejectPendingApproval?: boolean;
+        forceSign?: boolean;
+    }
+): Promise<SignCorrespondenceResultDto> => {
+    const response = await apiWrapper.post<ApiResult<SignCorrespondenceResultDto>>(
+        `${BASE_URL}/${id}/sign`,
+        {
+            autoIgnoreUnread: options.autoIgnoreUnread || false,
+            autoRejectPendingApproval: options.autoRejectPendingApproval || false,
+            forceSign: options.forceSign || false,
+        }
+    );
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل توقيع المراسلة';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+
+    return extractData(response)!;
+};
+
+// ✅ FromQuery: Notes
+export const archiveCorrespondence = async (
+    id: number,
+    notes?: string
+): Promise<void> => {
+    const url = notes 
+        ? `${BASE_URL}/${id}/archive?Notes=${encodeURIComponent(notes)}`
+        : `${BASE_URL}/${id}/archive`;
+    
+    const response = await request<ApiResult<void>>({
+        method: "POST",
+        url,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل أرشفة المراسلة';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
+
+// ✅ FromQuery: Notes
+export const restoreFromArchive = async (
+    id: number,
+    notes?: string
+): Promise<void> => {
+    const url = notes 
+        ? `${BASE_URL}/${id}/restore?Notes=${encodeURIComponent(notes)}`
+        : `${BASE_URL}/${id}/restore`;
+    
+    const response = await request<ApiResult<void>>({
+        method: "POST",
+        url,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل استرجاع المراسلة';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
+
+// ✅ FromBody: none
+export const revertToDraft = async (id: number): Promise<void> => {
+    const response = await apiWrapper.post<ApiResult<void>>(
+        `${BASE_URL}/${id}/revert-to-draft`
+    );
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل استرجاع المراسلة';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
+
+// ✅ FromBody: string (نص مباشر)
+export const revertToDistributed = async (
+    id: number,
+    reason?: string
+): Promise<void> => {
+    const response = await request<ApiResult<void>>({
+        method: "POST",
+        url: `${BASE_URL}/${id}/revert-to-distributed`,
+        data: reason || null,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل استرجاع المراسلة';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
+
+// ✅ FromBody: string (نص مباشر)
+export const requestRevertToDraft = async (
+    id: number,
+    reason?: string
+): Promise<void> => {
+    const response = await request<ApiResult<void>>({
+        method: "POST",
+        url: `${BASE_URL}/${id}/request-revert`,
+        data: reason || null,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل طلب الاسترجاع';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
+
+// ✅ FromBody: string (نص مباشر)
+export const requestRevertToDistributed = async (
+    id: number,
+    reason?: string
+): Promise<void> => {
+    const response = await request<ApiResult<void>>({
+        method: "POST",
+        url: `${BASE_URL}/${id}/request-revert-to-distributed`,
+        data: reason || null,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل طلب الاسترجاع';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
+
+// ✅ FromBody: string (نص مباشر)
+export const approveRevertToDraft = async (
+    id: number,
+    reason?: string
+): Promise<void> => {
+    const response = await request<ApiResult<void>>({
+        method: "POST",
+        url: `${BASE_URL}/${id}/approve-revert`,
+        data: reason || null,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل الموافقة على الاسترجاع';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
+
+// ✅ FromBody: string (نص مباشر)
+export const approveRevertToDistributed = async (
+    id: number,
+    reason?: string
+): Promise<void> => {
+    const response = await request<ApiResult<void>>({
+        method: "POST",
+        url: `${BASE_URL}/${id}/approve-revert-to-distributed`,
+        data: reason || null,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل الموافقة على الاسترجاع';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
+
+// ✅ FromBody: string (نص مباشر)
+export const rejectRevertToDraft = async (
+    id: number,
+    reason?: string
+): Promise<void> => {
+    const response = await request<ApiResult<void>>({
+        method: "POST",
+        url: `${BASE_URL}/${id}/reject-revert`,
+        data: reason || null,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل رفض الاسترجاع';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+};
+
+// ✅ FromBody: string (نص مباشر)
+export const rejectRevertToDistributed = async (
+    id: number,
+    reason?: string
+): Promise<void> => {
+    const response = await request<ApiResult<void>>({
+        method: "POST",
+        url: `${BASE_URL}/${id}/reject-revert-to-distributed`,
+        data: reason || null,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل رفض الاسترجاع';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
 };
 
 // ============================================================
-// ===== Get Sender Entities =====
+// ===== Attachments =====
 // ============================================================
 
-export const getSenderEntities = async (): Promise<SenderEntity[]> => {
-  const res = await apiWrapper.get<SenderEntityResponse>(
-    "/SenderEntities/active"
-  );
+// export const viewAttachment = async (
+//     attachmentId: number,
+//     signal?: AbortSignal
+// ): Promise<Blob> => {
+//     const response = await fetch(
+//         `${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7236/api'}/Attachments/${attachmentId}/view`,
+//         {
+//             credentials: 'include',
+//             signal,
+//         }
+//     );
 
-  if (!res.success || !res.data) {
-    return [];
-  }
+//     if (!response.ok) {
+//         throw new Error(`HTTP error! status: ${response.status}`);
+//     }
 
-  return res.data.data;
+//     return response.blob();
+// };
+
+// export const downloadAttachment = async (
+//     attachmentId: number
+// ): Promise<Blob> => {
+//     const response = await fetch(
+//         `${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7236/api'}/Attachments/${attachmentId}/download`,
+//         {
+//             credentials: 'include',
+//         }
+//     );
+
+//     if (!response.ok) {
+//         throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+
+//     return response.blob();
+// };
+
+
+
+
+
+// ============================================================
+// ===== Attachments =====
+// ============================================================
+
+export const viewAttachment = async (
+    attachmentId: number,
+    signal?: AbortSignal
+): Promise<Blob> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/Attachments/${attachmentId}/view?t=${Date.now()}`,
+            {
+                method: 'GET',
+                credentials: 'include',
+                signal,
+                headers: {
+                    'Accept': 'application/octet-stream, */*',
+                },
+            }
+        );
+
+        if (!response.ok) {
+            let errorMessage = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData?.message) {
+                    errorMessage = errorData.message;
+                }
+            } catch {
+            }
+            throw new Error(errorMessage);
+        }
+
+        const blob = await response.blob();
+        if (!blob || blob.size === 0) {
+            throw new Error('الملف فارغ أو تالف');
+        }
+
+        return blob;
+    } catch (error) {
+        console.error('View attachment error:', error);
+        throw error;
+    }
 };
-
-// ============================================================
-// ===== Download Attachment =====
-// ============================================================
 
 export const downloadAttachment = async (
-  attachmentId: number,
-  fileName: string,
-  signal?: AbortSignal
+    attachmentId: number
 ): Promise<Blob> => {
-  try {
-    const response = await axios.get(
-      `${API_BASE_URL}/Attachments/${attachmentId}/download`,
-      {
-        responseType: 'blob',
-        withCredentials: true,
-        signal,
-        headers: {
-          'Accept': '*/*',
-        },
-      }
-    );
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/Attachments/${attachmentId}/download?t=${Date.now()}`,
+            {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/octet-stream, */*',
+                },
+            }
+        );
 
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            let errorMessage = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData?.message) {
+                    errorMessage = errorData.message;
+                }
+            } catch {
+                // تجاهل خطأ تحويل JSON
+            }
+            throw new Error(errorMessage);
+        }
+
+        const blob = await response.blob();
+        if (!blob || blob.size === 0) {
+            throw new Error('الملف فارغ أو تالف');
+        }
+
+        return blob;
+    } catch (error) {
+        console.error('Download attachment error:', error);
+        throw error;
     }
-
-    const blob = response.data;
-
-    if (!(blob instanceof Blob) || blob.size === 0) {
-      throw new Error('الملف غير صالح أو فارغ');
-    }
-
-    return blob;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw error;
-    }
-    console.error('DownloadAttachment error:', error);
-    throw error;
-  }
-};
-
-// ============================================================
-// ===== View Attachment =====
-// ============================================================
-
-/**
- * عرض المرفق (معاينة)
- * @param attachmentId - معرف المرفق
- * @param signal - AbortSignal لإلغاء الطلب (اختياري)
- */
-export const viewAttachment = async (
-  attachmentId: number,
-  signal?: AbortSignal
-): Promise<Blob> => {
-  try {
-    const response = await axios.get(
-      `${API_BASE_URL}/Attachments/${attachmentId}/view?t=${Date.now()}`,
-      {
-        responseType: 'blob',
-        withCredentials: true,
-        signal,
-        headers: {
-          'Accept': '*/*',
-        },
-      }
-    );
-
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const blob = response.data;
-
-    if (!(blob instanceof Blob) || blob.size === 0) {
-      throw new Error('الملف غير صالح أو فارغ');
-    }
-
-    return blob;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw error;
-    }
-    console.error('ViewAttachment error:', error);
-    throw error;
-  }
-};
-
-// ============================================================
-// ===== Download Attachment (Direct - مع إنشاء الرابط) =====
-// ============================================================
-
-/**
- * تحميل المرفق مباشرة مع إنشاء رابط التحميل
- * @param attachmentId - معرف المرفق
- * @param fileName - اسم الملف
- * @param signal - AbortSignal لإلغاء الطلب (اختياري)
- */
-export const downloadAttachmentDirect = async (
-  attachmentId: number,
-  fileName: string,
-  signal?: AbortSignal
-): Promise<void> => {
-  try {
-    const blob = await downloadAttachment(attachmentId, fileName, signal);
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName || `attachment_${attachmentId}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 5000);
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw error;
-    }
-    console.error('DownloadDirect error:', error);
-    throw error;
-  }
-};
-
-// ============================================================
-// ===== View Attachment (Direct - مع عرض في المتصفح) =====
-// ============================================================
-
-/**
- * عرض المرفق مباشرة في المتصفح (فتح في نافذة جديدة)
- * @param attachmentId - معرف المرفق
- */
-export const viewAttachmentDirect = (attachmentId: number): void => {
-  const url = `${API_BASE_URL}/Attachments/${attachmentId}/view?t=${Date.now()}`;
-  window.open(url, '_blank');
 };

@@ -22,7 +22,6 @@ export default function MailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
 
-    // ✅ التحقق من صلاحية المستخدم (العميد فقط)
     const isDean = role === "Dean";
 
     useEffect(() => {

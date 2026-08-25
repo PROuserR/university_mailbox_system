@@ -22,9 +22,6 @@ import {
     faUserCog,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailFilterStore from "@/store/mailFilterStore";
-import { useQuery } from "@tanstack/react-query";
-import { apiWrapper } from "@/utils/apiClient";
-import { MailCounts } from "@/types/api/Mail/MailCounts";
 import SidebarItem from "./SidebarItem";
 import { motion, AnimatePresence } from "framer-motion";
 import useUserInfoStore from "@/store/userInfoStore";
@@ -54,32 +51,6 @@ function SidebarContentWrapper() {
     const isDean = role === "Dean";
     const isAdmin = role === "Admin";
     const isDeanOrAdmin = isDean || isAdmin;
-
-    const fetchMailsCount = async (): Promise<MailCounts> => {
-        const res = await apiWrapper.get<{
-            data: MailCounts;
-        }>("/Correspondences/statistics/counts-by-type");
-
-        if (!res.success || !res.data) {
-            throw new Error("Failed to fetch mails");
-        }
-
-        return res.data.data;
-    };
-
-    const {
-        data = {
-            incomingCount: 0,
-            outgoingCount: 0,
-            internalCount: 0,
-            professionalCount: 0,
-            totalCount: 0,
-        },
-    } = useQuery({
-        queryKey: ["mailsCount"],
-        queryFn: fetchMailsCount,
-        enabled: isHomePage,
-    });
 
     const handleDistributionClick = (tab: string) => {
         router.push(`/distribution?tab=${tab}`);
@@ -161,7 +132,7 @@ function SidebarContentWrapper() {
                 },
                 { icon: faGear, label: "إعدادات النظام", path: "/dean/settings" },
                 { icon: faUser, label: "الملف الشخصي", path: "/profile" },
-                 { icon: faUserCog, label: "التفويضات", path: "/delegations" },
+                { icon: faUserCog, label: "التفويضات", path: "/delegations" },
             ];
         }
 
@@ -202,7 +173,7 @@ function SidebarContentWrapper() {
                     {!isUser && (
                         <div className="sticky top-0 z-10 bg-gradient-to-b from-blue-50 to-transparent pb-2">
                             <button
-                                onClick={() => router.push("/mail/create")}
+                                onClick={() => router.push("/correspondences/create")}
                                 className={`
                                     w-full
                                     bg-gradient-to-r from-blue-500 to-blue-600
@@ -342,7 +313,7 @@ function SidebarContentWrapper() {
                                 {!isUser && (
                                     <button
                                         onClick={() => {
-                                            router.push("/mail/create");
+                                            router.push("/correspondences/create");
                                             triggerSidebar();
                                         }}
                                         className="
@@ -452,7 +423,6 @@ function SidebarContentWrapper() {
     );
 }
 
-// ✅ المكون الرئيسي مع Suspense
 export default function Sidebar() {
     return (
         <Suspense
