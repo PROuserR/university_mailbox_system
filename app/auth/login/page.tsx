@@ -16,6 +16,7 @@ import { apiWrapper } from "@/utils/apiClient";
 import { UserLoginData } from "@/types/api/User/UserLoginData";
 import useUserInfoStore from "@/store/userInfoStore";
 import { ApiResult } from "@/types/api/ApiResult";
+import { userSchema } from "@/validations/loginValidation";
 
 export default function LoginPage() {
     const [emailInput, setEmailInput] = useState("");
@@ -41,32 +42,51 @@ export default function LoginPage() {
                 toast.success("تم تسجيل الدخول بنجاح");
                 router.push("/");
             } else {
-                toast.error(res.data?.message || "فشل تسجيل الدخول");
+                toast.error(res.data?.message ||"فشلت عملية تسجيل الدخول، يرجى التأكد من صحة البريد الإلكتروني وكلمة المرور.");
                 setIsLoading(false);
             }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || "فشل تسجيل الدخول");
+            toast.error(error?.response?.data?.message || "فشلت عملية تسجيل الدخول، يرجى التأكد من صحة البريد الإلكتروني وكلمة المرور.");
             setIsLoading(false);
         }
     };
+
+    const validateForm = async () => {
+        try {
+            const formData = {
+                email: emailInput,
+                password: passwordInput
+            }
+            const isValid = await userSchema.validate(formData, { abortEarly: false });
+            return isValid;
+        } catch (validationErrors) {
+            toast.error("يرجى التأكد من أن كلمة المرور تحتوي على أحرف كبيرة وصغيرة بالإضافة إلى أرقام ورموز خاصة")
+            return false;
+        }
+
+    }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!emailInput || !passwordInput) {
             toast.error("يرجى تعبئة جميع الحقول");
-            return;
         }
-        setIsLoading(true);
-        await loginUser();
+        else {
+            const isFormValid = await validateForm();
+            if (isFormValid) {
+                setIsLoading(true);
+                await loginUser();
+            }
+        }
     };
 
     return (
         <div
-    dir="rtl"
-    className="h-screen w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900"
->
-    {/* Gradient Overlay */}
+            dir="rtl"
+            className="h-screen w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900"
+        >
+            {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-200 to-blue-900" />
 
             {/* Main Card Container */}

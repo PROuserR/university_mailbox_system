@@ -131,7 +131,6 @@ function SidebarContentWrapper() {
                     path: "/dean/ignored-users",
                 },
                 { icon: faGear, label: "إعدادات النظام", path: "/dean/settings" },
-                { icon: faUser, label: "الملف الشخصي", path: "/profile" },
                 { icon: faUserCog, label: "التفويضات", path: "/delegations" },
             ];
         }
