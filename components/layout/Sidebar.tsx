@@ -25,6 +25,7 @@ import {
     faArrowRight,
     faArrowLeft,
     faFileAlt,
+    faSitemap, 
 } from "@fortawesome/free-solid-svg-icons";
 import useMailFilterStore from "@/store/mailFilterStore";
 import SidebarItem from "./SidebarItem";
@@ -53,21 +54,18 @@ interface NavItem {
 function SidebarContentWrapper() {
     const router = useRouter();
     const pathname = usePathname();
-    const { role, roles } = useUserInfoStore();
     const { hasPermission, isLoading: authLoading } = useAuth();
     const { filter, setFilter } = useMailFilterStore();
     const { isSidebarToggleShown, triggerSidebar } = useSidebarToggleStore();
     const [isMobile, setIsMobile] = useState(false);
     const [mounted, setMounted] = useState(false);
 
-    // ✅ تحديث الحالة بشكل غير عاجل لتجنب تحذير React
     useEffect(() => {
         startTransition(() => {
             setMounted(true);
         });
     }, []);
 
-    // ✅ تحديث حجم الشاشة (لا يسبب تحذيراً لأنه يستدعي setState داخل callback)
     useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
@@ -77,8 +75,6 @@ function SidebarContentWrapper() {
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
-    const isDean = role === "Dean";
-    const isAdmin = role === "Admin";
 
     // ============================================================
     // ===== Navigation Items (ثابتة) =====
@@ -89,6 +85,7 @@ function SidebarContentWrapper() {
             { icon: faHome, label: "الرئيسية", path: "/" },
         ];
 
+        // ===== التوزيعات =====
         items.push({
             icon: faInbox,
             label: "التوزيعات الواردة",
@@ -101,6 +98,8 @@ function SidebarContentWrapper() {
             path: "/distribution?tab=outbox",
             permission: PERMISSIONS.VIEW_DISTRIBUTION,
         });
+
+        // ===== البريد =====
         items.push({
             icon: faEnvelope,
             label: "البريد الوارد",
@@ -113,78 +112,112 @@ function SidebarContentWrapper() {
             path: "/outgoing-emails",
             permission: PERMISSIONS.MANAGE_OUTGOING_EMAIL,
         });
+
+        // ===== المراسلات =====
         items.push({
             icon: faFolder,
             label: "المراسلات",
             path: "/correspondences",
             permission: PERMISSIONS.VIEW_CORRESPONDENCE,
         });
+
+        // ===== المستخدمين =====
         items.push({
             icon: faUsers,
             label: "المستخدمين",
             path: "/users",
             permission: PERMISSIONS.MANAGE_USERS,
         });
+
+        // ===== الأقسام ===== ✅ إضافة قسم الأقسام
+        items.push({
+            icon: faSitemap,
+            label: "الأقسام",
+            path: "/departments",
+            permission: PERMISSIONS.MANAGE_DEPARTMENT,
+        });
+
+        // ===== الجهات المرسلة =====
         items.push({
             icon: faBuilding,
             label: "الجهات المرسلة",
             path: "/sender-entities",
             permission: PERMISSIONS.MANAGE_SENDER_ENTITIES,
         });
+
+        // ===== أنواع الوثائق =====
         items.push({
             icon: faFile,
             label: "أنواع الوثائق",
             path: "/document-types",
             permission: PERMISSIONS.MANAGE_DOCUMENT_TYPES,
         });
+
+        // ===== الموافقات =====
         items.push({
             icon: faCheckCircle,
             label: "الموافقات",
             path: "/pending-approvals",
             permission: PERMISSIONS.VIEW_PENDING_APPROVALS,
         });
+
+        // ===== الإحصائيات =====
         items.push({
             icon: faChartBar,
             label: "الإحصائيات",
             path: "/statistics",
             permission: PERMISSIONS.VIEW_ANALYTICS,
         });
+
+        // ===== المستخدمين المتجاهلين =====
         items.push({
             icon: faUsers,
             label: "المستخدمين المتجاهلين",
             path: "/dean/ignored-users",
             permission: PERMISSIONS.VIEW_ALL_DISTRIBUTIONS,
         });
+
+        // ===== التفويضات =====
         items.push({
             icon: faUserCog,
             label: "التفويضات",
             path: "/delegations",
             permission: PERMISSIONS.VIEW_DELEGATIONS,
         });
+
+        // ===== لوحة العميد =====
         items.push({
             icon: faChartBar,
             label: "لوحة العميد",
             path: "/dean/dashboard",
             permission: PERMISSIONS.VIEW_ANALYTICS,
         });
+
+        // ===== أنماط التوزيع =====
         items.push({
             icon: faArrowRight,
             label: "أنماط التوزيع",
             path: "/dean/distribution-patterns",
             permission: PERMISSIONS.VIEW_ANALYTICS,
         });
+
+        // ===== الأنماط المتجاهلة =====
         items.push({
             icon: faArrowLeft,
             label: "الأنماط المتجاهلة",
             path: "/dean/ignored-patterns",
             permission: PERMISSIONS.VIEW_ANALYTICS,
         });
+
+        // ===== سلوك القراءة =====
         items.push({
             icon: faFileAlt,
             label: "سلوك القراءة",
             path: "/dean/reading-behavior",
             permission: PERMISSIONS.VIEW_ANALYTICS,
         });
+
+        // ===== إحصائياتي =====
         items.push({
             icon: faChartBar,
             label: "إحصائياتي",
@@ -249,6 +282,9 @@ function SidebarContentWrapper() {
                 pathname === "/correspondences" ||
                 pathname?.startsWith("/correspondences/")
             );
+        }
+        if (path === "/departments") {
+            return pathname === "/departments";
         }
         if (path.includes("?")) {
             const basePath = path.split("?")[0];

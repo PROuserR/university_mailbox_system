@@ -358,38 +358,7 @@ function DistributionContent() {
     }
   };
 
-  const handleMarkAsRead = async () => {
-    if (!selectedId) return;
 
-    const selected = modernItems.find((item) => item.id === selectedId);
-    if (!selected) {
-      toast.error("لم يتم العثور على المراسلة");
-      return;
-    }
-
-    try {
-      const response = await apiWrapper.post<ApiResult<object>>(
-        "/Distributions/mark-as-read",
-        {
-          correspondenceId: selected.correspondenceId,
-        }
-      );
-
-      if (response.success && response.data?.isSuccess) {
-        toast.success(response.data.message || "تم تحديد البريد كمقروء");
-        if (activeTab === "inbox") {
-          refetchInbox();
-        } else {
-          refetchOutbox();
-        }
-      } else {
-        toast.error(response.data?.message || "فشل تحديث الحالة");
-      }
-    } catch (error: any) {
-      const message = error?.response?.data?.message || "فشل تحديث الحالة";
-      toast.error(message);
-    }
-  };
 
   const handleRefresh = () => {
     if (activeTab === "inbox") {
@@ -608,7 +577,6 @@ function DistributionContent() {
                 <InboxEmailDetail
                   item={selectedItem as DistributionInboxDto}
                   onClose={handleCloseDetail}
-                  onMarkAsRead={handleMarkAsRead}
                   onPrevious={handlePrevious}
                   onNext={handleNext}
                   hasPrevious={currentIndex > 0}
@@ -756,7 +724,6 @@ function DistributionContent() {
                     <InboxEmailDetail
                       item={selectedItem as DistributionInboxDto}
                       onClose={handleCloseDetail}
-                      onMarkAsRead={handleMarkAsRead}
                       onPrevious={handlePrevious}
                       onNext={handleNext}
                       hasPrevious={currentIndex > 0}

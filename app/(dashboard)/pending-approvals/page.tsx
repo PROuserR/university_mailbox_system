@@ -2,39 +2,30 @@
 // app/(dashboard)/approvals/page.tsx
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import {
     faClipboardCheck,
-    faClock,
     faSearch,
     faRotate,
-    faUsers,
-    faFileLines,
     faPaperclip,
     faCheck,
     faXmark,
-    faEye,
-    faBolt,
     faSpinner,
     faChevronDown,
     faChevronUp,
     faUserCheck,
     faUserXmark,
-    faLock,
-    faCheckDouble,
-    faBan,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { usePendingApprovals } from "@/hooks/usePendingApprovals";
 import { PermissionGate } from "@/components/auth/PermissionGate";
-import { distributionService } from "@/services/distribution.service";
-import ConfirmationModal from "@/components/ui/ConfirmationModal"; 
-import { useAuth } from "@/hooks/useAuth";
+import * as distributionService from "@/services/distribution.service";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
 // ==============================
 // HELPERS
@@ -73,18 +64,17 @@ function ApprovalsContent() {
         redirectTo: '/auth/login',
         unauthorizedPath: '/unauthorized'
     });
+
     const {
         items,
         isLoading,
         isLoadingMore,
         hasMore,
-        totalCount,
         selectedItems,
         isProcessing,
         loadMore,
         refresh,
         toggleSelectItem,
-        selectAll,
         deselectAll,
         approveSelected,
         rejectSelected,
@@ -95,7 +85,6 @@ function ApprovalsContent() {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<"all" | "incoming" | "outgoing">("all");
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
-    const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
     const [rejectReason, setRejectReason] = useState("");
 
     // ✅ Modal States
@@ -151,6 +140,34 @@ function ApprovalsContent() {
     }, [items, search, filter]);
 
     // ==============================
+    // HANDLERS - SINGLE ACTIONS
+    // ==============================
+
+    // ✅ تعريف handleSingleApprove
+    const handleSingleApprove = async (distributionId: number) => {
+        try {
+            await distributionService.approveDistribution(distributionId);
+            toast.success("تمت الموافقة على التوزيع");
+            await refresh();
+        } catch (error: any) {
+            toast.error(error.message || "فشل الموافقة على التوزيع");
+            throw error;
+        }
+    };
+
+    // ✅ تعريف handleSingleReject
+    const handleSingleReject = async (distributionId: number, reason?: string) => {
+        try {
+            await distributionService.rejectDistribution(distributionId, reason);
+            toast.success("تم رفض التوزيع");
+            await refresh();
+        } catch (error: any) {
+            toast.error(error.message || "فشل رفض التوزيع");
+            throw error;
+        }
+    };
+
+    // ==============================
     // HANDLERS - MODALS
     // ==============================
 
@@ -176,6 +193,7 @@ function ApprovalsContent() {
         setShowRejectConfirmModal(true);
     };
 
+    // ✅ استخدام الدوال المعرفة
     const handleConfirmAction = async () => {
         try {
             if (modalAction === "approve") {
@@ -203,49 +221,14 @@ function ApprovalsContent() {
             setModalTarget(null);
             setModalTargetId(null);
             setModalReceiverId(null);
-            await refresh();
         } catch {
-            // الخطأ معالج في الـ Hook
+            // الخطأ معالج في الدوال
         }
     };
 
     // ==============================
-    // HANDLERS - ORIGINAL
+    // HANDLERS - TOGGLE
     // ==============================
-
-    const handleSingleApprove = async (distributionId: number) => {
-        setProcessingIds((prev) => new Set(prev).add(distributionId));
-        try {
-            await distributionService.approveDistribution(distributionId);
-            await refresh();
-        } catch (error: any) {
-            toast.error(error.message || "فشل اعتماد التوزيع");
-            throw error;
-        } finally {
-            setProcessingIds((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(distributionId);
-                return newSet;
-            });
-        }
-    };
-
-    const handleSingleReject = async (distributionId: number, reason?: string) => {
-        setProcessingIds((prev) => new Set(prev).add(distributionId));
-        try {
-            await distributionService.rejectDistribution(distributionId, reason);
-            await refresh();
-        } catch (error: any) {
-            toast.error(error.message || "فشل رفض التوزيع");
-            throw error;
-        } finally {
-            setProcessingIds((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(distributionId);
-                return newSet;
-            });
-        }
-    };
 
     const toggleCard = (id: number) => {
         setExpandedCards((prev) => {
@@ -406,7 +389,7 @@ function ApprovalsContent() {
                             تم تحديد {selectedItems.length} توزيع
                         </span>
                         <div className="flex flex-wrap gap-2">
-                            <PermissionGate permissions={['ApproveDistribution']} disableOnUnauthorized={true} >
+                            <PermissionGate permissions={['ApproveDistribution']} disableOnUnauthorized={true}>
                                 <button
                                     onClick={() => openApproveModal("selected")}
                                     disabled={isProcessing}
@@ -417,7 +400,7 @@ function ApprovalsContent() {
                                 </button>
                             </PermissionGate>
 
-                            <PermissionGate permissions={['RejectDistribution']} disableOnUnauthorized={true} >
+                            <PermissionGate permissions={['RejectDistribution']} disableOnUnauthorized={true}>
                                 <button
                                     onClick={() => openRejectConfirmModal("selected")}
                                     disabled={isProcessing}
@@ -593,31 +576,27 @@ function ApprovalsContent() {
                                                                 </div>
 
                                                                 <div className="flex gap-1 flex-shrink-0">
-                                                                    <PermissionGate permissions={['ApproveDistribution']} disableOnUnauthorized={true} >
+                                                                    <PermissionGate permissions={['ApproveDistribution']} disableOnUnauthorized={true}>
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 openApproveModal("single", receiver.distributionId);
                                                                             }}
-                                                                            disabled={processingIds.has(receiver.distributionId)}
+                                                                            disabled={isProcessing}
                                                                             className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition flex items-center justify-center disabled:opacity-50"
                                                                             title="اعتماد"
                                                                         >
-                                                                            {processingIds.has(receiver.distributionId) ? (
-                                                                                <FontAwesomeIcon icon={faSpinner} spin className="text-[10px]" />
-                                                                            ) : (
-                                                                                <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
-                                                                            )}
+                                                                            <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
                                                                         </button>
                                                                     </PermissionGate>
 
-                                                                    <PermissionGate permissions={['RejectDistribution']} disableOnUnauthorized={true} >
+                                                                    <PermissionGate permissions={['RejectDistribution']} disableOnUnauthorized={true}>
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 openRejectConfirmModal("single", receiver.distributionId);
                                                                             }}
-                                                                            disabled={processingIds.has(receiver.distributionId)}
+                                                                            disabled={isProcessing}
                                                                             className="w-7 h-7 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center disabled:opacity-50"
                                                                             title="رفض"
                                                                         >
@@ -632,7 +611,7 @@ function ApprovalsContent() {
 
                                                 {/* ===== Bulk Actions ===== */}
                                                 <div className="flex gap-2 pt-2 border-t border-slate-100">
-                                                    <PermissionGate permissions={['ApproveDistribution']} disableOnUnauthorized={true} >
+                                                    <PermissionGate permissions={['ApproveDistribution']} disableOnUnauthorized={true}>
                                                         <button
                                                             onClick={() => openApproveModal("all", item.correspondenceId)}
                                                             disabled={isProcessing || item.pendingReceivers.length === 0}
@@ -643,7 +622,7 @@ function ApprovalsContent() {
                                                         </button>
                                                     </PermissionGate>
 
-                                                    <PermissionGate permissions={['RejectDistribution']} disableOnUnauthorized={true} >
+                                                    <PermissionGate permissions={['RejectDistribution']} disableOnUnauthorized={true}>
                                                         <button
                                                             onClick={() => openRejectConfirmModal("all", item.correspondenceId)}
                                                             disabled={isProcessing || item.pendingReceivers.length === 0}

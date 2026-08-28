@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { distributionService } from "@/services/distribution.service";
+import * as distributionService from "@/services/distribution.service";
 import { PendingApprovalCorrespondenceDto } from "@/types/api/distribution.types";
 import toast from "react-hot-toast";
 import PagedResult from "@/types/api/PagedResponse";
@@ -213,6 +213,35 @@ export function usePendingApprovals(pageSize: number = 20) {
     [refresh]
   );
 
+const approveSingle = useCallback(async (distributionId: number) => {
+  setIsProcessing(true);
+  try {
+    await distributionService.approveDistribution(distributionId);
+    toast.success("تمت الموافقة على التوزيع");
+    await refresh();
+    return true;
+  } catch (error: any) {
+    toast.error(error.message || "فشل الموافقة على التوزيع");
+    throw error;
+  } finally {
+    setIsProcessing(false);
+  }
+}, [refresh]);
+
+const rejectSingle = useCallback(async (distributionId: number, reason?: string) => {
+  setIsProcessing(true);
+  try {
+    await distributionService.rejectDistribution(distributionId, reason);
+    toast.success("تم رفض التوزيع");
+    await refresh();
+    return true;
+  } catch (error: any) {
+    toast.error(error.message || "فشل رفض التوزيع");
+    throw error;
+  } finally {
+    setIsProcessing(false);
+  }
+}, [refresh]);
   useEffect(() => {
     isMounted.current = true;
 
@@ -268,5 +297,7 @@ export function usePendingApprovals(pageSize: number = 20) {
     rejectSelected,
     approveAllByCorrespondence,
     rejectAllByCorrespondence,
+    approveSingle,
+  rejectSingle,
   };
 }

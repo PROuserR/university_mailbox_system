@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/services/distribution.service.ts
 
 import {
@@ -10,16 +11,20 @@ import {
   DistributionEditorData,
   CreateDistributionPayload,
   DistributeResponseDto,
-} from "@/types/api/distribution.types";
-import {
   DistributionFilterDto,
   DistributionResponseByIdDto,
   PendingApprovalCorrespondenceDto,
+  DistributionInboxDto,
+  DistributionOutboxDto,
 } from "@/types/api/distribution.types";
 import PagedResult from "@/types/api/PagedResponse";
 import { ApiResult } from "@/types/api/ApiResult";
 
 const BASE_URL = "Distributions";
+
+// ============================================================
+// ===== Distribution Editor =====
+// ============================================================
 
 export const getDistributionEditorData = async (
   correspondenceId: number
@@ -58,163 +63,236 @@ export const distribute = async (
   return res.data.data;
 };
 
-class DistributionService {
-  // ============================================================
-  // ===== Pending Approvals =====
-  // ============================================================
+// ============================================================
+// ===== Inbox & Outbox =====
+// ============================================================
 
-  async getPendingApprovalsGrouped(
-    page: number = 1,
-    pageSize: number = 20
-  ): Promise<PagedResult<PendingApprovalCorrespondenceDto>> {
-    const response = await apiWrapper.get<
-      ApiResult<PagedResult<PendingApprovalCorrespondenceDto>>
-    >("/Distributions/pending-approval/grouped", { page, pageSize });
+export const getInboxDistributions = async (
+  params: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    sortBy?: string;
+    sortDescending?: boolean;
+    mainType?: string;
+    isProfessional?: boolean;
+  }
+): Promise<PagedResult<DistributionInboxDto>> => {
+  const response = await apiWrapper.get<ApiResult<PagedResult<DistributionInboxDto>>>(
+    `${BASE_URL}/my-inbox`,
+    params
+  );
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل تحميل الموافقات المعلقة");
-    }
-
-    return extractData(response)!;
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل تحميل التوزيعات الواردة");
   }
 
-  async getPendingApprovals(
-    page: number = 1,
-    pageSize: number = 20
-  ): Promise<PagedResult<DistributionResponseByIdDto>> {
-    const response = await apiWrapper.get<
-      ApiResult<PagedResult<DistributionResponseByIdDto>>
-    >("/Distributions/pending-approval", { page, pageSize });
+  return extractData(response)!;
+};
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل تحميل الموافقات المعلقة");
-    }
+export const getOutboxDistributions = async (
+  params: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    sortBy?: string;
+    sortDescending?: boolean;
+  }
+): Promise<PagedResult<DistributionOutboxDto>> => {
+  const response = await apiWrapper.get<ApiResult<PagedResult<DistributionOutboxDto>>>(
+    `${BASE_URL}/my-outbox`,
+    params
+  );
 
-    return extractData(response)!;
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل تحميل التوزيعات الصادرة");
   }
 
-  // ============================================================
-  // ===== Approve / Reject =====
-  // ============================================================
+  return extractData(response)!;
+};
 
-  async approveDistribution(id: number): Promise<void> {
-    const response = await apiWrapper.post<ApiResult<void>>(
-      `/Distributions/${id}/approve`
-    );
+// ============================================================
+// ===== Pending Approvals =====
+// ============================================================
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل الموافقة على التوزيع");
-    }
+export const getPendingApprovalsGrouped = async (
+  page: number = 1,
+  pageSize: number = 20
+): Promise<PagedResult<PendingApprovalCorrespondenceDto>> => {
+  const response = await apiWrapper.get<
+    ApiResult<PagedResult<PendingApprovalCorrespondenceDto>>
+  >(`${BASE_URL}/pending-approval/grouped`, { page, pageSize });
+
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل تحميل الموافقات المعلقة");
   }
 
-  async rejectDistribution(id: number, reason?: string): Promise<void> {
-    const response = await request<ApiResult<void>>({
-      method: "POST",
-      url: `/Distributions/${id}/reject`,
-      data: reason || null,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+  return extractData(response)!;
+};
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل رفض التوزيع");
-    }
+export const getPendingApprovals = async (
+  page: number = 1,
+  pageSize: number = 20
+): Promise<PagedResult<DistributionResponseByIdDto>> => {
+  const response = await apiWrapper.get<
+    ApiResult<PagedResult<DistributionResponseByIdDto>>
+  >(`${BASE_URL}/pending-approval`, { page, pageSize });
+
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل تحميل الموافقات المعلقة");
   }
 
-  async approveDistributions(ids: number[]): Promise<number> {
-    const response = await apiWrapper.post<ApiResult<number>>(
-      "/Distributions/batch/approve",
-      ids
-    );
+  return extractData(response)!;
+};
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل الموافقة على التوزيعات");
-    }
+// ============================================================
+// ===== Approve / Reject =====
+// ============================================================
 
-    return extractData(response)!;
+export const approveDistribution = async (id: number): Promise<void> => {
+  const response = await apiWrapper.post<ApiResult<void>>(
+    `${BASE_URL}/${id}/approve`
+  );
+
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل الموافقة على التوزيع");
+  }
+};
+
+export const rejectDistribution = async (id: number, reason?: string): Promise<void> => {
+  const response = await request<ApiResult<void>>({
+    method: "POST",
+    url: `${BASE_URL}/${id}/reject`,
+    data: reason || null,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل رفض التوزيع");
+  }
+};
+
+export const approveDistributions = async (ids: number[]): Promise<number> => {
+  const response = await apiWrapper.post<ApiResult<number>>(
+    `${BASE_URL}/batch/approve`,
+    ids
+  );
+
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل الموافقة على التوزيعات");
   }
 
-  async rejectDistributions(ids: number[], reason?: string): Promise<number> {
-    const response = await apiWrapper.post<ApiResult<number>>(
-      `/Distributions/batch/reject${
-        reason ? `?reason=${encodeURIComponent(reason)}` : ""
-      }`,
-      ids
-    );
+  return extractData(response)!;
+};
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل رفض التوزيعات");
-    }
+export const rejectDistributions = async (ids: number[], reason?: string): Promise<number> => {
+  const response = await apiWrapper.post<ApiResult<number>>(
+    `${BASE_URL}/batch/reject${reason ? `?reason=${encodeURIComponent(reason)}` : ""}`,
+    ids
+  );
 
-    return extractData(response)!;
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل رفض التوزيعات");
   }
 
-  async approveAllByCorrespondence(correspondenceId: number): Promise<number> {
-    const response = await apiWrapper.post<ApiResult<number>>(
-      `/Distributions/correspondence/${correspondenceId}/approve-all`
-    );
+  return extractData(response)!;
+};
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل الموافقة على جميع التوزيعات");
-    }
+export const approveAllByCorrespondence = async (correspondenceId: number): Promise<number> => {
+  const response = await apiWrapper.post<ApiResult<number>>(
+    `${BASE_URL}/correspondence/${correspondenceId}/approve-all`
+  );
 
-    return extractData(response)!;
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل الموافقة على جميع التوزيعات");
   }
 
-  async rejectAllByCorrespondence(
-    correspondenceId: number,
-    reason?: string
-  ): Promise<number> {
-    const response = await request<ApiResult<number>>({
-      method: "POST",
-      url: `/Distributions/correspondence/${correspondenceId}/reject-all`,
-      data: reason || null,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+  return extractData(response)!;
+};
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل رفض جميع التوزيعات");
-    }
+export const rejectAllByCorrespondence = async (
+  correspondenceId: number,
+  reason?: string
+): Promise<number> => {
+  const response = await request<ApiResult<number>>({
+    method: "POST",
+    url: `${BASE_URL}/correspondence/${correspondenceId}/reject-all`,
+    data: reason || null,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 
-    return extractData(response)!;
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل رفض جميع التوزيعات");
   }
 
-  // ============================================================
-  // ===== Get Distribution Details =====
-  // ============================================================
+  return extractData(response)!;
+};
 
-  async getDistributionById(id: number): Promise<DistributionResponseByIdDto> {
-    const response = await apiWrapper.get<
-      ApiResult<DistributionResponseByIdDto>
-    >(`/Distributions/${id}`);
+// ============================================================
+// ===== Get Distribution Details =====
+// ============================================================
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل تحميل تفاصيل التوزيع");
-    }
+export const getDistributionById = async (id: number): Promise<DistributionResponseByIdDto> => {
+  const response = await apiWrapper.get<
+    ApiResult<DistributionResponseByIdDto>
+  >(`${BASE_URL}/${id}`);
 
-    return extractData(response)!;
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل تحميل تفاصيل التوزيع");
   }
 
-  // ============================================================
-  // ===== Filter Distributions =====
-  // ============================================================
+  return extractData(response)!;
+};
 
-  async getDistributions(
-    filter: DistributionFilterDto
-  ): Promise<PagedResult<DistributionResponseByIdDto>> {
-    const response = await apiWrapper.get<
-      ApiResult<PagedResult<DistributionResponseByIdDto>>
-    >("/Distributions", filter);
+// ============================================================
+// ===== Filter Distributions =====
+// ============================================================
 
-    if (!isApiSuccess(response)) {
-      throw new Error(response?.message || "فشل تحميل التوزيعات");
-    }
+export const getDistributions = async (
+  filter: DistributionFilterDto
+): Promise<PagedResult<DistributionResponseByIdDto>> => {
+  const response = await apiWrapper.get<
+    ApiResult<PagedResult<DistributionResponseByIdDto>>
+  >(`${BASE_URL}`, filter);
 
-    return extractData(response)!;
+  if (!isApiSuccess(response)) {
+    throw new Error(response?.message || "فشل تحميل التوزيعات");
   }
-}
 
-export const distributionService = new DistributionService();
+  return extractData(response)!;
+};
+
+// ============================================================
+// ===== Mark as Read =====
+// ============================================================
+
+export const markAsRead = async (correspondenceId: number, notes?: string): Promise<void> => {
+  const response = await apiWrapper.post<ApiResult<void>>(`${BASE_URL}/read`, {
+    correspondenceId: correspondenceId, 
+    notes: notes || null,
+  });
+
+  if (!isApiSuccess(response)) {
+    let errorMessage = response?.message || 'فشل تحديد البريد كمقروء';
+    
+    if (response.data?.errors) {
+      const errors = response.data.errors;
+      if (Array.isArray(errors) && errors.length > 0) {
+        errorMessage = errors.join(" • ");
+      } else if (typeof errors === 'object') {
+        const errorValues = Object.values(errors).flat();
+        if (errorValues.length > 0) {
+          errorMessage = errorValues.join(" • ");
+        }
+      }
+    }
+    
+    const error = new Error(errorMessage);
+    (error as any).statusCode = response.data?.statusCode || response.status;
+    throw error;
+  }
+};

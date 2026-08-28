@@ -29,6 +29,18 @@ export const getUsers = async (): Promise<UserResponse[]> => {
     return extractData(response) || [];
 };
 
+export const getActiveUsers = async (): Promise<UserResponse[]> => {
+    const response = await apiWrapper.get<ApiResult<UserResponse[]>>(`${BASE_URL}/active`);
+
+    if (!isApiSuccess(response)) {
+        const errorMessage = response?.message || 'فشل تحميل المستخدمين النشطين';
+        const error = new Error(errorMessage);
+        (error as any).statusCode = response.data?.statusCode || response.status;
+        throw error;
+    }
+
+    return extractData(response) || [];
+};
 // ============================================================
 // ===== Create User =====
 // ============================================================

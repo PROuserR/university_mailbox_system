@@ -29,6 +29,7 @@ export interface UserResponse {
   createdAt: string;
   updatedAt?: string;
   profileImageUrl?: string;
+  departmentId?: number | null;
   roles: string[];
 }
 

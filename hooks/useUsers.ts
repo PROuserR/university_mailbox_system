@@ -12,6 +12,7 @@ import {
     deactivateUser,
     setPermanentReceiver,
     removePermanentReceiver,
+    getActiveUsers,
 } from "@/services/users.service";
 import {
     CreateUserRequest,
@@ -34,6 +35,12 @@ export const useUsers = () => {
     });
 };
 
+export const useActiveUsers = () => {
+    return useQuery({
+        queryKey: ["users", "active"],
+        queryFn: () => getActiveUsers(),
+    });
+};
 // ============================================================
 // ===== Mutation - Create User =====
 // ============================================================

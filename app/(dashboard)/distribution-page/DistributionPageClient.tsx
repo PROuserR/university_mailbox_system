@@ -34,6 +34,9 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { CorrespondenceStatus, getStatusLabel, getStatusColor } from "@/types/api/correspondence.types";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/ui/BackButton";
+// ❌ إزالة import useMarkAsRead
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +64,10 @@ export default function DistributionPageClient() {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
 
+    // ❌ إزالة Mark as Read Modal states
+    // const [markAsReadModalOpen, setMarkAsReadModalOpen] = useState(false);
+    // const [markAsReadNotes, setMarkAsReadNotes] = useState("");
+
     // =========================
     // HOOKS
     // =========================
@@ -78,6 +85,14 @@ export default function DistributionPageClient() {
             router.push(`/correspondences?id=${correspondenceId}`);
         }
     );
+
+    // ❌ إزالة markAsReadMutation
+    // const markAsReadMutation = useMarkAsRead(() => {
+    //     setMarkAsReadModalOpen(false);
+    //     setMarkAsReadNotes("");
+    //     refetch();
+    //     toast.success("تم تحديد البريد كمقروء");
+    // });
 
     // =========================
     // INIT SELECTED USERS - فقط isSelected = true
@@ -207,6 +222,18 @@ export default function DistributionPageClient() {
         });
     };
 
+    // ❌ إزالة handleMarkAsRead
+    // const handleMarkAsRead = () => {
+    //     if (!correspondenceId) {
+    //         toast.error("لا يوجد مراسلة مرتبطة بهذا البريد");
+    //         return;
+    //     }
+    //     markAsReadMutation.mutate({
+    //         correspondenceId: Number(correspondenceId),
+    //         notes: markAsReadNotes || undefined,
+    //     });
+    // };
+
     // =========================
     // LOADING / ERROR
     // =========================
@@ -282,11 +309,24 @@ export default function DistributionPageClient() {
             {/* ===== HEADER ===== */}
             <header className="bg-white border-b border-gray-200 shadow-sm shrink-0">
                 <div className="flex items-center justify-between px-4 md:px-8 py-3">
-                     <BackButton
-            onClick={() => router.push(`/correspondences?id=${correspondenceId}`)}
-            hasChanges={hasChanges}
-            variant="compact"
-        />
+                    <div className="flex items-center gap-2">
+                        <BackButton
+                            onClick={() => router.push(`/correspondences?id=${correspondenceId}`)}
+                            hasChanges={hasChanges}
+                            variant="compact"
+                        />
+
+                        {/* ❌ إزالة زر تحديد كمقروء من هنا */}
+                        {/* <button
+                            onClick={() => setMarkAsReadModalOpen(true)}
+                            disabled={markAsReadMutation.isPending}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition disabled:opacity-50"
+                            title="تحديد البريد كمقروء"
+                        >
+                            <FontAwesomeIcon icon={faEnvelope } className="text-sm" />
+                            <span className="hidden sm:inline">قراءة</span>
+                        </button> */}
+                    </div>
 
                     {/* عنوان الصفحة */}
                     <h1 className="text-lg md:text-xl font-bold text-gray-900">
@@ -553,50 +593,81 @@ export default function DistributionPageClient() {
                 </div>
             </main>
 
-           {/* ===== FIXED FOOTER - الأزرار في الأسفل ===== */}
-         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg px-4 md:px-8 py-4 z-50">
-    <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-end gap-3">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-            {/* زر الإلغاء */}
-            <button
-                type="button"
-                onClick={resetSelection}
-                disabled={!hasChanges || isDistributeDisabled}
-                className={cn(
-                    "flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition",
-                    hasChanges && !isDistributeDisabled
-                        ? "bg-red-50 text-red-600 hover:bg-red-100"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
-                )}
-            >
-                <FontAwesomeIcon icon={faUndo} />
-                إلغاء التغييرات
-            </button>
+            {/* ❌ إزالة Mark as Read Modal */}
+            {/* {markAsReadModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full shadow-xl p-6">
+                        <h2 className="text-lg font-bold mb-2">تحديد البريد كمقروء</h2>
+                        <p className="text-sm text-gray-500 mb-4">الرجاء إدخال ملاحظات (اختياري):</p>
+                        <textarea
+                            value={markAsReadNotes}
+                            onChange={(e) => setMarkAsReadNotes(e.target.value)}
+                            className="w-full border rounded-xl p-3 text-sm resize-none h-24 focus:outline-none focus:border-blue-400"
+                            placeholder="ملاحظات..."
+                        />
+                        <div className="flex gap-2 mt-4">
+                            <button 
+                                onClick={() => setMarkAsReadModalOpen(false)} 
+                                className="flex-1 border border-gray-200 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+                            >
+                                إلغاء
+                            </button>
+                            <button
+                                onClick={handleMarkAsRead}
+                                disabled={markAsReadMutation.isPending}
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl font-semibold transition disabled:opacity-50"
+                            >
+                                {markAsReadMutation.isPending ? "جاري..." : "تأكيد القراءة"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )} */}
 
-            {/* زر الحفظ */}
-            <button
-                onClick={handleSubmit}
-                disabled={distributeMutation.isPending || isDistributeDisabled || !hasChanges}
-                className={cn(
-                    "flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition min-w-[140px]",
-                    distributeMutation.isPending || isDistributeDisabled || !hasChanges
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg"
-                )}
-            >
-                <FontAwesomeIcon
-                    icon={distributeMutation.isPending ? faSpinner : faPaperPlane}
-                    spin={distributeMutation.isPending}
-                />
-                {isDistributeDisabled 
-                    ? 'غير مسموح بالتوزيع' 
-                    : distributeMutation.isPending 
-                        ? 'جاري الحفظ...' 
-                        : 'حفظ التوزيع'}
-            </button>
-        </div>
-    </div>
-         </div>
+            {/* ===== FIXED FOOTER - الأزرار في الأسفل ===== */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg px-4 md:px-8 py-4 z-50">
+                <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-end gap-3">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        {/* زر الإلغاء */}
+                        <button
+                            type="button"
+                            onClick={resetSelection}
+                            disabled={!hasChanges || isDistributeDisabled}
+                            className={cn(
+                                "flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition",
+                                hasChanges && !isDistributeDisabled
+                                    ? "bg-red-50 text-red-600 hover:bg-red-100"
+                                    : "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+                            )}
+                        >
+                            <FontAwesomeIcon icon={faUndo} />
+                            إلغاء التغييرات
+                        </button>
+
+                        {/* زر الحفظ */}
+                        <button
+                            onClick={handleSubmit}
+                            disabled={distributeMutation.isPending || isDistributeDisabled || !hasChanges}
+                            className={cn(
+                                "flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition min-w-[140px]",
+                                distributeMutation.isPending || isDistributeDisabled || !hasChanges
+                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    : "bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg"
+                            )}
+                        >
+                            <FontAwesomeIcon
+                                icon={distributeMutation.isPending ? faSpinner : faPaperPlane}
+                                spin={distributeMutation.isPending}
+                            />
+                            {isDistributeDisabled 
+                                ? 'غير مسموح بالتوزيع' 
+                                : distributeMutation.isPending 
+                                    ? 'جاري الحفظ...' 
+                                    : 'حفظ التوزيع'}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </motion.div>
     );
 }

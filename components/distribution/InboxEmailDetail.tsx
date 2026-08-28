@@ -18,6 +18,9 @@ import {
   EyeIcon,
   CheckCheckIcon,
   Clock,
+  UsersIcon,
+  MailCheckIcon,
+  SendIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -32,17 +35,21 @@ import { DistributionInboxDto } from "@/types/api/distribution.types";
 import { downloadAttachment, viewAttachment } from "@/services/correspondence.service";
 import toast from "react-hot-toast";
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import useUserInfoStore from "@/store/userInfoStore";
+import { useMarkAsRead } from "@/hooks/useDistribute";
 
 interface InboxEmailDetailProps {
   item: DistributionInboxDto;
   onClose: () => void;
-  onMarkAsRead: () => void;
+  onMarkAsRead?: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
   hasPrevious?: boolean;
   hasNext?: boolean;
   currentIndex?: number;
   totalCount?: number;
+  onRefresh?: () => void;
 }
 
 function getFileIcon(type: string) {
@@ -73,7 +80,10 @@ export function InboxEmailDetail({
   hasNext,
   currentIndex,
   totalCount,
+  onRefresh,
 }: InboxEmailDetailProps) {
+  const router = useRouter();
+  const { role, isHeadOfDepartment, roles } = useUserInfoStore();
   const [downloading, setDownloading] = useState<number | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -81,93 +91,111 @@ export function InboxEmailDetail({
   const [previewName, setPreviewName] = useState<string>("");
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // ✅ Modal states - زر واحد مع مودال للملاحظات (اختياري)
+  const [markAsReadModalOpen, setMarkAsReadModalOpen] = useState(false);
+  const [markAsReadNotes, setMarkAsReadNotes] = useState("");
+
+  // ✅ استخدام الـ Hook الجديد فقط
+  const markAsReadMutation = useMarkAsRead(() => {
+    setMarkAsReadModalOpen(false);
+    setMarkAsReadNotes("");
+    if (onRefresh) onRefresh();
+    if (onMarkAsRead) onMarkAsRead();
+  });
+
+  const isHeadOfDept = role === "HeadOfDepartment" ||
+    isHeadOfDepartment === true ||
+    roles?.includes("HeadOfDepartment") ||
+    false;
+
+  const hasCorrespondenceId = item.correspondenceId !== undefined &&
+    item.correspondenceId !== null &&
+    item.correspondenceId > 0;
+
+  const showDistributeButton = isHeadOfDept && hasCorrespondenceId;
+
+  // ✅ شرط واحد لعرض زر القراءة - يظهر فقط إذا كانت الرسالة غير مقروءة
+  const showMarkAsReadButton = hasCorrespondenceId && !item.isRead;
+
   const handleView = async (attachmentId: number, fileName: string, mimeType: string) => {
-        // ✅ إلغاء أي طلب سابق
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-        setPreviewLoading(true);
-        setPreviewUrl(null);
-        setPreviewType(mimeType || "");
-        setPreviewName(fileName || "ملف");
+    setPreviewLoading(true);
+    setPreviewUrl(null);
+    setPreviewType(mimeType || "");
+    setPreviewName(fileName || "ملف");
 
-        try {
-            // ✅ استخدام viewAttachment مع signal
-            const blob = await viewAttachment(attachmentId, controller.signal);
+    try {
+      const blob = await viewAttachment(attachmentId, controller.signal);
 
-            if (!blob || blob.size === 0) {
-                throw new Error("الملف فارغ أو تالف");
-            }
+      if (!blob || blob.size === 0) {
+        throw new Error("الملف فارغ أو تالف");
+      }
 
-            const url = URL.createObjectURL(blob);
-            setPreviewUrl(url);
-            toast.success("تم تحميل الملف للمعاينة");
-        } catch (error: any) {
-            if (error.name !== "AbortError") {
-                console.error("View error:", error);
-                toast.error(error.message || "فشل في تحميل الملف للمعاينة");
-                closePreview();
-            }
-        } finally {
-            setPreviewLoading(false);
-            if (abortControllerRef.current === controller) {
-                abortControllerRef.current = null;
-            }
-        }
-    };
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      toast.success("تم تحميل الملف للمعاينة");
+    } catch (error: any) {
+      if (error.name !== "AbortError") {
+        console.error("View error:", error);
+        toast.error(error.message || "فشل في تحميل الملف للمعاينة");
+        closePreview();
+      }
+    } finally {
+      setPreviewLoading(false);
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
+    }
+  };
 
-    // ============================================================
-    // ===== Download - تحميل الملف =====
-    // ============================================================
-    const handleDownload = async (attachmentId: number, fileName: string) => {
-        setDownloading(attachmentId);
+  const handleDownload = async (attachmentId: number, fileName: string) => {
+    setDownloading(attachmentId);
 
-        try {
-            const blob = await downloadAttachment(attachmentId);
+    try {
+      const blob = await downloadAttachment(attachmentId);
 
-            if (!blob || blob.size === 0) {
-                throw new Error("الملف فارغ أو تالف");
-            }
+      if (!blob || blob.size === 0) {
+        throw new Error("الملف فارغ أو تالف");
+      }
 
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fileName || `attachment_${attachmentId}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || `attachment_${attachmentId}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
-            setTimeout(() => {
-                URL.revokeObjectURL(url);
-            }, 1000);
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
 
-            toast.success("تم تحميل المرفق بنجاح");
-        } catch (error: any) {
-            console.error("Download error:", error);
+      toast.success("تم تحميل المرفق بنجاح");
+    } catch (error: any) {
+      console.error("Download error:", error);
 
-            if (error.message?.includes("Network") ||
-                error.message?.includes("CORS") ||
-                error.message?.includes("Failed to fetch")) {
-                toast.error("حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى");
-            } else if (error.message?.includes("404")) {
-                toast.error("الملف غير موجود");
-            } else if (error.message?.includes("403")) {
-                toast.error("ليس لديك صلاحية لتحميل هذا الملف");
-            } else {
-                toast.error(error.message || "فشل تحميل المرفق");
-            }
-        } finally {
-            setDownloading(null);
-        }
-    };
+      if (error.message?.includes("Network") ||
+        error.message?.includes("CORS") ||
+        error.message?.includes("Failed to fetch")) {
+        toast.error("حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى");
+      } else if (error.message?.includes("404")) {
+        toast.error("الملف غير موجود");
+      } else if (error.message?.includes("403")) {
+        toast.error("ليس لديك صلاحية لتحميل هذا الملف");
+      } else {
+        toast.error(error.message || "فشل تحميل المرفق");
+      }
+    } finally {
+      setDownloading(null);
+    }
+  };
 
-  // ============================================================
-  // ===== Close Preview =====
-  // ============================================================
   const closePreview = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -181,9 +209,38 @@ export function InboxEmailDetail({
     setPreviewName("");
   };
 
-  // ============================================================
-  // ===== Helpers =====
-  // ============================================================
+  // ===== Handlers =====
+  const handleDistribute = () => {
+    if (item.correspondenceId) {
+      router.push(`/distribution-page?id=${item.correspondenceId}`);
+    } else {
+      toast.error("لا يوجد مراسلة مرتبطة بهذا البريد للتوزيع");
+    }
+  };
+
+  // ✅ دالة موحدة للقراءة - تستقبل ملاحظات اختيارية
+  const handleMarkAsRead = (notes?: string) => {
+    if (!item.correspondenceId) {
+      toast.error("لا يوجد مراسلة مرتبطة بهذا البريد");
+      return;
+    }
+    markAsReadMutation.mutate({
+      correspondenceId: item.correspondenceId,
+      notes: notes || undefined,
+    });
+  };
+
+  // ✅ فتح المودال لإضافة ملاحظات (اختياري)
+  const handleOpenNotesModal = () => {
+    setMarkAsReadNotes("");
+    setMarkAsReadModalOpen(true);
+  };
+
+  // ✅ تأكيد القراءة مع الملاحظات من المودال
+  const handleConfirmReadWithNotes = () => {
+    handleMarkAsRead(markAsReadNotes || undefined);
+  };
+
   const getTypeBadge = (mainType: string | number) => {
     if (typeof mainType === 'number') {
       switch (mainType) {
@@ -236,14 +293,44 @@ export function InboxEmailDetail({
             <TooltipContent>إغلاق</TooltipContent>
           </Tooltip>
 
-          {item.status === "Pending" && !item.isRead && (
+          {/* ✅ زر قراءة واحد فقط - مع ملاحظات (اختياري) - يظهر فقط إذا كانت الرسالة غير مقروءة */}
+          {showMarkAsReadButton && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={handleOpenNotesModal}
+                    disabled={markAsReadMutation.isPending}
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  >
+                    {markAsReadMutation.isPending ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                    ) : (
+                      <MailCheckIcon className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>تحديد كمقروء مع ملاحظات</TooltipContent>
+              </Tooltip>
+            </>
+          )}
+
+          {/* ✅ زر التوزيع - أيقونة طائرة بجانب زر القراءة */}
+          {showDistributeButton && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" onClick={onMarkAsRead}>
-                  <CheckCheckIcon className="h-4 w-4" />
+                <Button
+                  onClick={handleDistribute}
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                >
+                  <SendIcon className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>تحديد كمقروء</TooltipContent>
+              <TooltipContent>توزيع</TooltipContent>
             </Tooltip>
           )}
         </div>
@@ -267,6 +354,39 @@ export function InboxEmailDetail({
           </Button>
         </div>
       </div>
+
+      {/* ===== Mark as Read Modal ===== */}
+      {markAsReadModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-xl p-6">
+            <h2 className="text-lg font-bold mb-2">تحديد البريد كمقروء</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              الرجاء إدخال ملاحظات <span className="text-gray-400">(اختياري)</span>:
+            </p>
+            <textarea
+              value={markAsReadNotes}
+              onChange={(e) => setMarkAsReadNotes(e.target.value)}
+              className="w-full border rounded-xl p-3 text-sm resize-none h-24 focus:outline-none focus:border-blue-400"
+              placeholder="أدخل ملاحظاتك هنا (اختياري)..."
+            />
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setMarkAsReadModalOpen(false)}
+                className="flex-1 border border-gray-200 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleConfirmReadWithNotes}
+                disabled={markAsReadMutation.isPending}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl font-semibold transition disabled:opacity-50"
+              >
+                {markAsReadMutation.isPending ? "جاري..." : "تأكيد القراءة"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sender Info */}
       <div className="shrink-0 border-b border-border p-4">
@@ -387,7 +507,7 @@ export function InboxEmailDetail({
 
                 return (
                   <div
-                    key={att.id }
+                    key={att.id}
                     className="group flex w-full max-w-[260px] items-center justify-between rounded-lg border border-border bg-muted/30 p-2 transition-all hover:shadow-md"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2">

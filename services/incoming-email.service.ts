@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // services/incoming-email.service.ts
 import { apiWrapper, extractData, isApiSuccess } from "@/utils/apiClient";
 import { ApiResult } from "@/types/api/ApiResult";
@@ -67,6 +68,34 @@ class IncomingEmailService {
             throw new Error(response?.message || "فشل في الموافقة على البريد");
         }
         return extractData(response)!;
+    }
+
+    // ===== Mark As Read =====
+    async markAsRead(correspondenceId: number, notes?: string): Promise<void> {
+        const response = await apiWrapper.post<ApiResult<void>>("/Distributions/read", {
+            correspondenceId: correspondenceId,
+            notes: notes || null,
+        });
+
+        if (!isApiSuccess(response)) {
+            let errorMessage = response?.message || 'فشل تحديد البريد كمقروء';
+            
+            if (response.data?.errors) {
+                const errors = response.data.errors;
+                if (Array.isArray(errors) && errors.length > 0) {
+                    errorMessage = errors.join(" • ");
+                } else if (typeof errors === 'object') {
+                    const errorValues = Object.values(errors).flat();
+                    if (errorValues.length > 0) {
+                        errorMessage = errorValues.join(" • ");
+                    }
+                }
+            }
+            
+            const error = new Error(errorMessage);
+            (error as any).statusCode = response.data?.statusCode || response.status;
+            throw error;
+        }
     }
 
     // ===== Reject Email - يعيد ProcessIncomingEmailResultDto =====
