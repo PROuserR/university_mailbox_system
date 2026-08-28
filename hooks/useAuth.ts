@@ -7,39 +7,44 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { authService } from "@/services/auth.service";
 import userInfoStore from "@/store/userInfoStore";
-import { UserRole } from "@/types/api/user";
+import { UserRole, getPrimaryRole } from "@/types/api/user";
 
 export function useAuth() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const initializedRef = useRef(false);
-  
-  const { 
+
+  const {
     setId, setEmail, setFirstname, setLastname, setRole, setRoles,
-    setIsLoggedIn, clearUser, setPhone, setIsActive, setIsPermanentReceiver, 
-    setProfileImageUrl
+    setIsLoggedIn, clearUser, setPhone, setIsActive, setIsPermanentReceiver,
+    setProfileImageUrl, setIsHeadOfDepartment, setDepartmentId
   } = userInfoStore();
 
   const initializeUser = useCallback(async () => {
     if (initializedRef.current) return;
     initializedRef.current = true;
-    
+
     try {
       const user = await authService.getCurrentUser();
-      
+
       if (user) {
+        const primaryRole = getPrimaryRole(user.roles);
+
         setId(user.id);
         setEmail(user.email);
         setFirstname(user.firstName);
         setLastname(user.lastName);
         setRoles(user.roles);
+        setRole(primaryRole); 
         setPhone(user.phone || null);
         setIsActive(user.isActive);
         setIsPermanentReceiver(user.isPermanentReceiver);
+        setIsHeadOfDepartment(user.isHeadOfDepartment);
+        setDepartmentId(user.departmentId || null);
         setProfileImageUrl(user.profileImageUrl || null);
         setIsLoggedIn(true);
-        
+
         await authService.loadDelegatedPermissions();
       }
     } catch (err) {
@@ -48,26 +53,27 @@ export function useAuth() {
       setIsInitialized(true);
     }
   }, [
-    setId, setEmail, setFirstname, setLastname, setRoles,
-    setPhone, setIsActive, setIsPermanentReceiver, setProfileImageUrl,
-    setIsLoggedIn, clearUser
+    setId, setEmail, setFirstname, setLastname, setRoles, setRole,
+    setPhone, setIsActive, setIsPermanentReceiver, setIsHeadOfDepartment,
+    setDepartmentId, setProfileImageUrl, setIsLoggedIn, clearUser
   ]);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
       const user = await authService.login(email, password);
-      
+      const primaryRole = getPrimaryRole([user.role || 'User']);
+
       setEmail(user.email);
       setFirstname(user.firstName);
       setLastname(user.lastName);
-      setRole(user.role);
+      setRole(primaryRole);
       setIsLoggedIn(true);
-      
+
       toast.success(`مرحباً ${user.firstName} ${user.lastName}`, {
         duration: 3000,
       });
-      
+
       router.push("/");
       return user;
     } catch (err: any) {
@@ -106,8 +112,8 @@ export function useAuth() {
     }
   }, []);
 
-  const hasPermission = useCallback(async (permissionName: string): Promise<boolean> => {
-    return await authService.hasPermission(permissionName);
+  const hasPermission = useCallback((permissionName: string): boolean => {
+    return authService.hasPermission(permissionName);
   }, []);
 
   const refreshPermissions = useCallback(async (): Promise<void> => {
@@ -116,12 +122,12 @@ export function useAuth() {
 
   const hasRole = useCallback((role: UserRole | UserRole[]): boolean => {
     const state = userInfoStore.getState();
-    if (!state.role) return false;
-    
+    if (!state.roles || state.roles.length === 0) return false;
+
     if (Array.isArray(role)) {
-      return role.includes(state.role as UserRole);
+      return role.some(r => state.roles.includes(r));
     }
-    return state.role === role;
+    return state.roles.includes(role);
   }, []);
 
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {

@@ -24,7 +24,6 @@ import toast from "react-hot-toast";
 import { Drawer } from "vaul";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-
 const PAGE_HEIGHT = "calc(100vh - 64px)";
 
 const cleanText = (text: string): string => {
@@ -100,7 +99,6 @@ const {
         if (correspondenceId) {
             const id = Number(correspondenceId);
             if (!isNaN(id) && id > 0) {
-                // ✅ استخدام requestAnimationFrame لتجنب setState أثناء التصيير
                 const rafId = requestAnimationFrame(() => {
                     setSelectedId(id);
                     setDetailOpen(true);

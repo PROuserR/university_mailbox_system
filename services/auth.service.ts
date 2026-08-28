@@ -5,15 +5,14 @@ import myAPI from "@/utils/myAPI";
 import userInfoStore from "@/store/userInfoStore";
 
 interface PermissionDto {
-    id: number;
-    name: string;
-    displayName: string;
-    category: string | null;
-    isGranted: boolean;
+  id: number;
+  name: string;
+  displayName: string;
+  category: string | null;
+  isGranted: boolean;
 }
 
 export const authService = {
-  
   // ============================================================
   // ===== Delegated Permissions Management =====
   // ============================================================
@@ -29,17 +28,16 @@ export const authService = {
   async loadDelegatedPermissions(): Promise<string[]> {
     try {
       const response = await myAPI.get<ApiResult<PermissionDto[]>>("/Delegations/my-permissions");
-      
+
       if (!response.data?.isSuccess) {
         return [];
       }
-      
+
       const permissions = response.data.data
         .filter(p => p.isGranted)
         .map(p => p.name);
-      
+
       this.setDelegatedPermissions(permissions);
-      userInfoStore.getState().setDelegatedPermissions(permissions);
       return permissions;
     } catch (error) {
       return [];
@@ -75,11 +73,11 @@ export const authService = {
       if (!response.data.isSuccess) {
         throw new Error(response.data.message || "فشل في تسجيل الدخول");
       }
-      
+
       const userData = response.data.data;
-      
+
       await this.loadDelegatedPermissions();
-      
+
       return userData;
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || "حدث خطأ في الاتصال";
@@ -98,18 +96,18 @@ export const authService = {
       throw new Error(message);
     } finally {
       this.setDelegatedPermissions([]);
-      userInfoStore.getState().setDelegatedPermissions([]);
+      userInfoStore.getState().clearUser();
     }
   },
 
   async getCurrentUser(): Promise<CurrentUserResponse> {
     try {
       const response = await myAPI.get<ApiResult<CurrentUserResponse>>("/Auth/me");
-      
+
       if (!response.data.isSuccess) {
         throw new Error(response.data.message || "فشل في الحصول على معلومات المستخدم");
       }
-      
+
       return response.data.data;
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || "حدث خطأ في الاتصال";
@@ -123,9 +121,9 @@ export const authService = {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<boolean> {
     try {
-      const response = await myAPI.post<ApiResultWithoutData>("/Auth/change-password", { 
-        currentPassword, 
-        newPassword 
+      const response = await myAPI.post<ApiResultWithoutData>("/Auth/change-password", {
+        currentPassword,
+        newPassword
       });
       if (!response.data.isSuccess) {
         throw new Error(response.data.message || "فشل في تغيير كلمة المرور");
@@ -151,10 +149,10 @@ export const authService = {
 
   async resetPassword(email: string, code: string, newPassword: string): Promise<void> {
     try {
-      const response = await myAPI.post<ApiResultWithoutData>("/Auth/reset-password", { 
-        email, 
-        code, 
-        newPassword 
+      const response = await myAPI.post<ApiResultWithoutData>("/Auth/reset-password", {
+        email,
+        code,
+        newPassword
       });
       if (!response.data.isSuccess) {
         throw new Error(response.data.message || "فشل في إعادة تعيين كلمة المرور");

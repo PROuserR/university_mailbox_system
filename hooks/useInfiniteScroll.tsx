@@ -17,8 +17,8 @@ export default function useSafeBottomTrigger({
     isLoading = false,
     hasMore = true,
     dataLength,
-    threshold = 0.8,
-    rootMargin = "50px",
+    threshold = 0.1, 
+    rootMargin = "100px", 
 }: Props) {
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const isReadyRef = useRef(false);
@@ -36,7 +36,7 @@ export default function useSafeBottomTrigger({
             const entry = entries[0];
             if (!entry) return;
 
-            const isVisible = entry.intersectionRatio >= threshold;
+            const isVisible = entry.isIntersecting; // ✅ استخدام isIntersecting بدلاً من intersectionRatio
 
             if (
                 !isVisible ||
@@ -59,7 +59,7 @@ export default function useSafeBottomTrigger({
                 loadingLockRef.current = false;
             }
         },
-        [onBottom, isLoading, hasMore, threshold]
+        [onBottom, isLoading, hasMore]
     );
 
     useEffect(() => {
@@ -73,8 +73,8 @@ export default function useSafeBottomTrigger({
 
         observerRef.current = new IntersectionObserver(handleIntersection, {
             root: null,
-            threshold,
-            rootMargin,
+            threshold: threshold,
+            rootMargin: rootMargin,
         });
 
         observerRef.current.observe(el);

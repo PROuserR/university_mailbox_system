@@ -3,7 +3,7 @@
 // src/components/correspondence/CorrespondenceEmailDetail.tsx
 
 "use client";
-
+import { useSendEmail } from "@/hooks/useOutgoingEmail";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { useRouter } from "next/navigation";
@@ -34,6 +34,9 @@ import {
     CalendarIcon,
     UsersIcon,
     EyeIcon as EyeIcon2,
+    Loader2,
+    MailIcon,
+    CheckIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -266,6 +269,75 @@ export function CorrespondenceEmailDetail({
     // ============================================================
     // ===== Confirmation Modal Helpers =====
     // ============================================================
+const sendEmailMutation = useSendEmail(() => {
+    toast.success("تم إرسال البريد بنجاح");
+    refresh();
+});
+const [sendModalOpen, setSendModalOpen] = useState(false);
+const [sendData, setSendData] = useState({
+    toEmail: "",
+    ccEmail: "",
+    bccEmail: "",
+    subject: "",
+    customBody: "",
+    includeAllAttachments: true,
+    selectedAttachmentIds: [] as number[], // ✅ مرفقات محددة
+});
+const handleIncludeAllAttachmentsChange = (checked: boolean) => {
+    setSendData(prev => ({
+        ...prev,
+        includeAllAttachments: checked,
+        selectedAttachmentIds: checked ? [] : prev.selectedAttachmentIds,
+    }));
+};
+const toggleAttachmentSelection = (attachmentId: number) => {
+    if (sendData.includeAllAttachments) {
+        // ✅ إذا كان "تضمين الكل" مفعلاً، نقوم بإلغائه
+        setSendData(prev => ({
+            ...prev,
+            includeAllAttachments: false,
+            selectedAttachmentIds: [attachmentId],
+        }));
+        return;
+    }
+
+    setSendData(prev => ({
+        ...prev,
+        selectedAttachmentIds: prev.selectedAttachmentIds.includes(attachmentId)
+            ? prev.selectedAttachmentIds.filter(id => id !== attachmentId)
+            : [...prev.selectedAttachmentIds, attachmentId],
+    }));
+};
+
+const handleSendEmail = () => {
+    if (!sendData.toEmail) {
+        toast.error("يرجى إدخال البريد الإلكتروني للمستلم");
+        return;
+    }
+
+    let attachmentIds: number[] | undefined;
+    
+    if (sendData.includeAllAttachments) {
+        attachmentIds = item.attachments?.map(att => att.id) || [];
+    } else if (sendData.selectedAttachmentIds.length > 0) {
+        attachmentIds = sendData.selectedAttachmentIds;
+    } else {
+        attachmentIds = undefined;
+    }
+
+    sendEmailMutation.mutate({
+        correspondenceId: item.id,
+        toEmail: sendData.toEmail,
+        ccEmail: sendData.ccEmail || undefined,
+        bccEmail: sendData.bccEmail || undefined,
+        subject: sendData.subject || item.title,
+        customBody: sendData.customBody || undefined,
+        includeAllAttachments: sendData.includeAllAttachments,
+        attachmentIds: attachmentIds,
+    });
+    setSendModalOpen(false);
+};
+    // ============================================================
 
     const openConfirmationModal = (
         title: string,
@@ -492,7 +564,7 @@ export function CorrespondenceEmailDetail({
 
     // ===== Approve / Reject Revert =====
 
-    const handleApproveRevertToDraft = () => {
+    const handleApproveRevertToDraft = async  () => {
         openReasonModal(
             'موافقة على استرجاع إلى مسودة',
             'الرجاء إدخال سبب الموافقة (اختياري):',
@@ -511,7 +583,7 @@ export function CorrespondenceEmailDetail({
         );
     };
 
-    const handleApproveRevertToDistributed = () => {
+    const handleApproveRevertToDistributed = async  () => {
         openReasonModal(
             'موافقة على استرجاع إلى موزعة',
             'الرجاء إدخال سبب الموافقة (اختياري):',
@@ -530,7 +602,7 @@ export function CorrespondenceEmailDetail({
         );
     };
 
-    const handleRejectRevertToDraft = () => {
+    const handleRejectRevertToDraft = async  () => {
         openReasonModal(
             'رفض استرجاع إلى مسودة',
             'الرجاء إدخال سبب الرفض (اختياري):',
@@ -549,7 +621,7 @@ export function CorrespondenceEmailDetail({
         );
     };
 
-    const handleRejectRevertToDistributed = () => {
+    const handleRejectRevertToDistributed = async () => {
         openReasonModal(
             'رفض استرجاع إلى موزعة',
             'الرجاء إدخال سبب الرفض (اختياري):',
@@ -570,7 +642,7 @@ export function CorrespondenceEmailDetail({
 
     // ===== Delete =====
 
-    const handleDelete = () => {
+    const handleDelete = async  () => {
         openConfirmationModal(
             'تأكيد الحذف',
             'هل أنت متأكد من حذف هذه المراسلة؟ هذا الإجراء لا يمكن التراجع عنه.',
@@ -973,7 +1045,22 @@ export function CorrespondenceEmailDetail({
                                     </DropdownMenuItem>
                                 </PermissionGate>
                             )}
+                            {/* ============================================================ */}
+{/* ===== إرسال كبريد إلكتروني - فقط للمراسلات غير المسودة ===== */}
+{/* ============================================================ */}
+{status !== 'Draft' && (
+    <PermissionGate permissions={['ManageOutgoingEmail']}>
+        <DropdownMenuItem
+            onClick={() => setSendModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-blue-50 transition-colors justify-end"
+        >
+            <span>إرسال كبريد إلكتروني</span>
+            <MailIcon className="h-4 w-4 text-blue-500" />
+        </DropdownMenuItem>
+    </PermissionGate>
+)}
                         </DropdownMenuContent>
+
                     </DropdownMenu>
 
                     <div className="mr-2">
@@ -1412,6 +1499,212 @@ export function CorrespondenceEmailDetail({
                     </div>
                 </div>
             )}
+            
+
+{sendModalOpen && (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-800">إرسال كبريد إلكتروني</h2>
+                <button
+                    onClick={() => setSendModalOpen(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    disabled={sendEmailMutation.isPending}
+                >
+                    <XIcon className="h-5 w-5" />
+                </button>
+            </div>
+
+            <div className="space-y-4">
+                {/* البريد الإلكتروني للمستلم */}
+                <div>
+                    <label className="text-sm font-medium text-gray-700">
+                        البريد الإلكتروني للمستلم <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="email"
+                        value={sendData.toEmail}
+                        onChange={(e) => setSendData({ ...sendData, toEmail: e.target.value })}
+                        placeholder="example@domain.com"
+                        className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400 transition-colors disabled:opacity-50"
+                        disabled={sendEmailMutation.isPending}
+                        required
+                    />
+                </div>
+
+                {/* Cc و Bcc */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">Cc</label>
+                        <input
+                            type="email"
+                            value={sendData.ccEmail}
+                            onChange={(e) => setSendData({ ...sendData, ccEmail: e.target.value })}
+                            placeholder="cc@domain.com"
+                            className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400 transition-colors disabled:opacity-50"
+                            disabled={sendEmailMutation.isPending}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">Bcc</label>
+                        <input
+                            type="email"
+                            value={sendData.bccEmail}
+                            onChange={(e) => setSendData({ ...sendData, bccEmail: e.target.value })}
+                            placeholder="bcc@domain.com"
+                            className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400 transition-colors disabled:opacity-50"
+                            disabled={sendEmailMutation.isPending}
+                        />
+                    </div>
+                </div>
+
+                {/* الموضوع */}
+                <div>
+                    <label className="text-sm font-medium text-gray-700">الموضوع</label>
+                    <input
+                        type="text"
+                        value={sendData.subject}
+                        onChange={(e) => setSendData({ ...sendData, subject: e.target.value })}
+                        placeholder={item.title || "الموضوع"}
+                        className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400 transition-colors disabled:opacity-50"
+                        disabled={sendEmailMutation.isPending}
+                    />
+                </div>
+
+                {/* نص مخصص */}
+                <div>
+                    <label className="text-sm font-medium text-gray-700">نص مخصص (اختياري)</label>
+                    <textarea
+                        value={sendData.customBody}
+                        onChange={(e) => setSendData({ ...sendData, customBody: e.target.value })}
+                        rows={4}
+                        className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400 transition-colors resize-none disabled:opacity-50"
+                        placeholder="أضف نصاً مخصصاً للبريد الإلكتروني..."
+                        disabled={sendEmailMutation.isPending}
+                    />
+                </div>
+
+                {/* ===== المرفقات ===== */}
+                {item.attachments && item.attachments.length > 0 && (
+                    <div className="border-t border-gray-100 pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <label className="text-sm font-medium text-gray-700">
+                                المرفقات ({item.attachments.length})
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={sendData.includeAllAttachments}
+                                    onChange={(e) => handleIncludeAllAttachmentsChange(e.target.checked)}
+                                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                                    disabled={sendEmailMutation.isPending}
+                                />
+                                تضمين الكل
+                            </label>
+                        </div>
+
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                            {item.attachments.map((att) => {
+                                const isSelected = sendData.includeAllAttachments || 
+                                    sendData.selectedAttachmentIds.includes(att.id);
+                                const Icon = getFileIcon(att.mimeType);
+                                
+                                return (
+                                    <label
+                                        key={att.id}
+                                        className={cn(
+                                            "flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-all",
+                                            isSelected
+                                                ? "border-blue-300 bg-blue-50/50"
+                                                : "border-gray-200 hover:bg-gray-50"
+                                        )}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() => toggleAttachmentSelection(att.id)}
+                                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                                            disabled={sendEmailMutation.isPending || sendData.includeAllAttachments}
+                                        />
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <div className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                                <Icon className="h-3 w-3 text-blue-600" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm text-gray-700 truncate">
+                                                    {att.fileName}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {Math.round(att.fileSize / 1024)} KB
+                                                    {att.isPrimary && (
+                                                        <span className="mr-2 text-blue-500">(أساسي)</span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {isSelected && (
+                                            <CheckIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                        )}
+                                    </label>
+                                );
+                            })}
+                        </div>
+
+                        {sendData.includeAllAttachments && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                                ✅ سيتم تضمين جميع المرفقات ({item.attachments.length})
+                            </p>
+                        )}
+                        {!sendData.includeAllAttachments && sendData.selectedAttachmentIds.length === 0 && (
+                            <p className="text-xs text-yellow-600 mt-2">
+                                ⚠️ لم يتم اختيار أي مرفق
+                            </p>
+                        )}
+                        {!sendData.includeAllAttachments && sendData.selectedAttachmentIds.length > 0 && (
+                            <p className="text-xs text-blue-600 mt-2">
+                                ✅ تم اختيار {sendData.selectedAttachmentIds.length} مرفق
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {(!item.attachments || item.attachments.length === 0) && (
+                    <div className="border-t border-gray-100 pt-4">
+                        <p className="text-sm text-muted-foreground">لا توجد مرفقات لإضافتها</p>
+                    </div>
+                )}
+            </div>
+
+            {/* الأزرار */}
+            <div className="flex gap-2 mt-6 border-t border-gray-100 pt-4">
+                <button
+                    onClick={() => setSendModalOpen(false)}
+                    disabled={sendEmailMutation.isPending}
+                    className="flex-1 border border-gray-200 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                    إلغاء
+                </button>
+                <button
+                    onClick={handleSendEmail}
+                    disabled={sendEmailMutation.isPending || !sendData.toEmail}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                    {sendEmailMutation.isPending ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            جاري الإرسال...
+                        </>
+                    ) : (
+                        <>
+                            <SendIcon className="h-4 w-4" />
+                            إرسال
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
+    </div>
+)}
         </div>
     );
 }
