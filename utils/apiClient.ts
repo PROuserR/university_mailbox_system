@@ -21,8 +21,6 @@ export type ApiResponse<T> = {
 // CORE REQUEST WRAPPER
 // ==============================
 
-// src/utils/apiClient.ts
-
 export async function request<T>(
     config: AxiosRequestConfig
 ): Promise<ApiResponse<T>> {
@@ -44,7 +42,7 @@ export async function request<T>(
             if (data.isSuccess === true) {
                 return {
                     data: data,
-                    message: null,
+                    message: data.message || null,
                     success: true,
                     status: res.status,
                 };
@@ -66,7 +64,7 @@ export async function request<T>(
                 
                 return {
                     data: data,
-                    message: errorMessage, // ✅ تمرير الرسالة الصحيحة
+                    message: errorMessage,
                     success: false,
                     status: res.status,
                 };
@@ -123,12 +121,13 @@ export async function request<T>(
 
         return {
             data: null,
-            message: message, // ✅ تمرير الرسالة الصحيحة
+            message: message,
             success: false,
             status,
         };
     }
 }
+
 // ==============================
 // API WRAPPER
 // ==============================

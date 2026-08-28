@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
 // app/(dashboard)/users/page.tsx
 
 "use client";
@@ -7,7 +6,7 @@
 import {
     useEffect,
     useMemo,
-    useState
+    useState,
 } from "react";
 import {
     faPlus,
@@ -17,91 +16,132 @@ import {
     faUserCheck,
     faUserSlash,
     faEnvelope,
-    faStar,
     faXmark,
     faCheckCircle,
     faTimes,
     faKey,
     faSpinner,
-    faPhone,
+    faEye,
+    faEyeSlash,
+    faUserCog,
+    faUserShield,
+    faUserGraduate,
+    faUserTie,
+    faUsers,
+    faUserMinus,
+    faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 
 import {
     FontAwesomeIcon
 } from "@fortawesome/react-fontawesome";
 
-import {
-    apiWrapper
-} from "@/utils/apiClient";
-import { toast } from "react-hot-toast";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import useUserInfoStore from "@/store/userInfoStore";
+import { useUsers, useCreateUser, useUpdateUser, useResetUserPassword, useToggleActive, useTogglePermanentReceiver } from "@/hooks/useUsers";
+import { CreateUserRole, UpdateUserRole, UserResponse } from "@/types/api/user";
 
 // ==============================
-// TYPES - مطابقة للـ DTOs
+// VALIDATION FUNCTIONS
 // ==============================
 
-// UpdateUserRole enum (مطابق للـ Backend)
-enum UpdateUserRole {
-    User = "User",
-    Employee = "Employee"
+interface ValidationErrors {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    password?: string;
+    newPassword?: string;
 }
 
-// CreateUserRole enum (مطابق للـ Backend)
-enum CreateUserRole {
-    Employee = 2,
-    User = 3
-}
+const validateFirstName = (value: string): string => {
+    if (!value || value.trim() === "") return "الاسم الأول مطلوب";
+    if (value.length > 100) return "الاسم الأول لا يتجاوز 100 حرف";
+    return "";
+};
 
-interface User {
-    id: number;
-    firstName: string;
-    lastName: string;
-    userName: string;
-    fullName: string;
-    email: string;
-    phone: string | null;
-    isActive: boolean;
-    isBanned: boolean;
-    isPermanentReceiver: boolean;
-    lastLoginAt: string | null;
-    createdAt: string;
-    updatedAt: string | null;
-    profileImageUrl: string | null;
-    roles: string[];
-}
+const validateLastName = (value: string): string => {
+    if (!value || value.trim() === "") return "اسم العائلة مطلوب";
+    if (value.length > 100) return "اسم العائلة لا يتجاوز 100 حرف";
+    return "";
+};
 
-interface ApiResponse<T> {
-    isSuccess: boolean;
-    data: T;
-    message: string;
-    errors: string[] | null;
-    statusCode: number;
-}
+const validateEmail = (email: string): string => {
+    if (!email || email.trim() === "") return "البريد الإلكتروني مطلوب";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return "صيغة البريد الإلكتروني غير صحيحة";
+    if (email.length > 255) return "البريد الإلكتروني لا يتجاوز 255 حرف";
+    return "";
+};
+
+const validatePassword = (password: string): string => {
+    if (!password || password.trim() === "") return "كلمة المرور مطلوبة";
+    if (password.length < 6) return "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+    if (!/\d/.test(password)) return "كلمة المرور يجب أن تحتوي على رقم واحد على الأقل";
+    if (!/[a-z]/.test(password)) return "كلمة المرور يجب أن تحتوي على حرف صغير واحد على الأقل";
+    if (!/[A-Z]/.test(password)) return "كلمة المرور يجب أن تحتوي على حرف كبير واحد على الأقل";
+    return "";
+};
 
 // ==============================
 // COMPONENT
 // ==============================
 
 export default function UsersPage() {
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { isLoading: isAuthLoading, isAuthorized } = useAuthGuard({
+        requiredPermissions: ['ManageUsers'],
+        redirectTo: '/auth/login',
+        unauthorizedPath: '/unauthorized'
+    });
+
+    const { id: currentUserId, roles: currentUserRoles } = useUserInfoStore();
+
+    const { data: users = [], isLoading: loadingUsers, refetch: refetchUsers } = useUsers();
+    const createUserMutation = useCreateUser(() => { closeModal(); refetchUsers(); });
+    const updateUserMutation = useUpdateUser(() => { closeModal(); refetchUsers(); });
+    const resetPasswordMutation = useResetUserPassword(() => { closeModal(); refetchUsers(); });
+    const toggleActiveMutation = useToggleActive(() => refetchUsers());
+    const toggleReceiverMutation = useTogglePermanentReceiver(() => refetchUsers());
+
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<"all" | "active" | "inactive" | "receiver">("all");
     
     // Modal states
     const [modalOpen, setModalOpen] = useState(false);
     const [modalType, setModalType] = useState<"create" | "edit" | "resetPassword">("create");
-    const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [processing, setProcessing] = useState(false);
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [editingUser, setEditingUser] = useState<UserResponse | null>(null);
 
-    // Form states - مطابقة للـ DTOs
+    // Show password states
+    const [showCreatePassword, setShowCreatePassword] = useState(false);
+    const [showResetPassword, setShowResetPassword] = useState(false);
+
+    // Validation states
+    const [createErrors, setCreateErrors] = useState<ValidationErrors>({});
+    const [createTouched, setCreateTouched] = useState<{
+        firstName: boolean;
+        lastName: boolean;
+        email: boolean;
+        password: boolean;
+    }>({
+        firstName: false,
+        lastName: false,
+        email: false,
+        password: false,
+    });
+
+    const [resetErrors, setResetErrors] = useState<ValidationErrors>({});
+    const [resetTouched, setResetTouched] = useState<{
+        newPassword: boolean;
+    }>({
+        newPassword: false,
+    });
+
+    // Form states
     const [createForm, setCreateForm] = useState({
         firstName: "",
         lastName: "",
         email: "",
         password: "",
-        role: CreateUserRole.User, // User = 3
+        role: CreateUserRole.User,
     });
     
     const [updateForm, setUpdateForm] = useState({
@@ -117,28 +157,33 @@ export default function UsersPage() {
         newPassword: "",
     });
 
-    // ==============================
-    // LOAD USERS
-    // ==============================
-    async function loadUsers() {
-        try {
-            setLoading(true);
-            const response = await apiWrapper.get<ApiResponse<User[]>>("/Users");
+    const isProcessing = 
+        createUserMutation.isPending || 
+        updateUserMutation.isPending || 
+        resetPasswordMutation.isPending || 
+        toggleActiveMutation.isPending || 
+        toggleReceiverMutation.isPending;
 
-            if (response.success && response.data) {
-                setUsers(response.data.data);
-            }
-        } catch (error) {
-            console.error("Failed to load users:", error);
-            toast.error("فشل تحميل المستخدمين");
-        } finally {
-            setLoading(false);
-        }
-    }
+    // ==============================
+    // CHECK IF ROLE IS PROTECTED
+    // ==============================
+    const isProtectedRole = (roles: string[]): boolean => {
+        return roles.includes('Admin') || 
+               roles.includes('Dean') || 
+               roles.includes('HeadOfDepartment');
+    };
 
-    useEffect(() => {
-        loadUsers();
-    }, []);
+    const canEditRole = (user: UserResponse): boolean => {
+        if (isProtectedRole(user.roles)) return false;
+        if (user.id === currentUserId) return false;
+        return true;
+    };
+
+    const canDeactivate = (user: UserResponse): boolean => {
+        if (user.id === currentUserId) return false;
+        if (user.roles.includes('Admin')) return false;
+        return true;
+    };
 
     // ==============================
     // SEARCH + FILTER
@@ -172,136 +217,146 @@ export default function UsersPage() {
     const receiverCount = users.filter((u) => u.isPermanentReceiver).length;
 
     // ==============================
-    // CREATE USER - مطابق لـ CreateUserRequest
+    // VALIDATION HANDLERS
     // ==============================
-    async function createUser() {
-        if (!createForm.firstName || !createForm.lastName || !createForm.email || !createForm.password) {
-            toast.error("يرجى تعبئة جميع الحقول المطلوبة");
+
+    const validateCreateField = (field: keyof ValidationErrors, value: string): string => {
+        switch (field) {
+            case 'firstName': return validateFirstName(value);
+            case 'lastName': return validateLastName(value);
+            case 'email': return validateEmail(value);
+            case 'password': return validatePassword(value);
+            default: return "";
+        }
+    };
+
+    const handleCreateBlur = (field: keyof ValidationErrors) => {
+        setCreateTouched((prev) => ({ ...prev, [field]: true }));
+        if (field === 'password' || field === 'firstName' || field === 'lastName' || field === 'email') {
+            const value = createForm[field as keyof typeof createForm] as string || "";
+            const error = validateCreateField(field, value);
+            setCreateErrors((prev) => ({ ...prev, [field]: error }));
+        }
+    };
+
+    const handleCreateChange = (field: keyof ValidationErrors, value: string) => {
+        setCreateForm((prev) => ({ ...prev, [field]: value }));
+        if (createTouched[field as keyof typeof createTouched]) {
+            const error = validateCreateField(field, value);
+            setCreateErrors((prev) => ({ ...prev, [field]: error }));
+        }
+    };
+
+    const handleResetBlur = () => {
+        setResetTouched({ newPassword: true });
+        const error = validatePassword(resetPasswordForm.newPassword);
+        setResetErrors({ newPassword: error });
+    };
+
+    const handleResetChange = (value: string) => {
+        setResetPasswordForm((prev) => ({ ...prev, newPassword: value }));
+        if (resetTouched.newPassword) {
+            const error = validatePassword(value);
+            setResetErrors({ newPassword: error });
+        }
+    };
+
+    const isCreateFieldValid = (field: keyof ValidationErrors): boolean => {
+        if (!createTouched[field as keyof typeof createTouched]) return true;
+        return !createErrors[field];
+    };
+
+    const isResetFieldValid = (): boolean => {
+        if (!resetTouched.newPassword) return true;
+        return !resetErrors.newPassword;
+    };
+
+    // ==============================
+    // HANDLERS
+    // ==============================
+
+    function handleCreateUser() {
+        const firstNameError = validateFirstName(createForm.firstName);
+        const lastNameError = validateLastName(createForm.lastName);
+        const emailError = validateEmail(createForm.email);
+        const passwordError = validatePassword(createForm.password);
+
+        const newErrors: ValidationErrors = {};
+        if (firstNameError) newErrors.firstName = firstNameError;
+        if (lastNameError) newErrors.lastName = lastNameError;
+        if (emailError) newErrors.email = emailError;
+        if (passwordError) newErrors.password = passwordError;
+
+        setCreateErrors(newErrors);
+        setCreateTouched({
+            firstName: true,
+            lastName: true,
+            email: true,
+            password: true,
+        });
+
+        if (Object.keys(newErrors).length > 0) {
             return;
         }
 
-        try {
-            setProcessing(true);
-            
-            // ✅ CreateUserRequest: FirstName, LastName, Email, Password, Role (2=Employee, 3=User)
-            await apiWrapper.post("/Users", {
-                firstName: createForm.firstName,
-                lastName: createForm.lastName,
-                email: createForm.email,
-                password: createForm.password,
-                role: createForm.role, // 2 = Employee, 3 = User
-            });
-            
-            toast.success("تم إضافة المستخدم بنجاح");
-            closeModal();
-            loadUsers();
-        } catch (error: any) {
-            console.error(error);
-            toast.error(error?.response?.data?.message || "فشل إضافة المستخدم");
-        } finally {
-            setProcessing(false);
-        }
+        const roleString = createForm.role === CreateUserRole.Employee ? "Employee" : "User";
+        
+        createUserMutation.mutate({
+            firstName: createForm.firstName,
+            lastName: createForm.lastName,
+            email: createForm.email,
+            password: createForm.password,
+            role: roleString,
+        });
     }
 
-    // ==============================
-    // UPDATE USER - مطابق لـ UpdateUserRequest
-    // ==============================
-    async function updateUser() {
+    function handleUpdateUser() {
         if (!editingUser) return;
-        if (!updateForm.firstName || !updateForm.lastName || !updateForm.email) {
-            toast.error("يرجى تعبئة جميع الحقول المطلوبة");
+
+        const firstNameError = validateFirstName(updateForm.firstName);
+        const lastNameError = validateLastName(updateForm.lastName);
+        const emailError = validateEmail(updateForm.email);
+
+        if (firstNameError || lastNameError || emailError) {
             return;
         }
 
-        try {
-            setProcessing(true);
-            
-            // ✅ UpdateUserRequest: FirstName, LastName, Phone, Email, Role (User/Employee)
-            await apiWrapper.put(`/Users/${editingUser.id}`, {
-                firstName: updateForm.firstName,
-                lastName: updateForm.lastName,
-                phone: updateForm.phone || null,
-                email: updateForm.email,
-                role: updateForm.role, // "User" or "Employee"
-            });
-            
-            toast.success("تم تعديل المستخدم بنجاح");
-            closeModal();
-            loadUsers();
-        } catch (error: any) {
-            console.error(error);
-            toast.error(error?.response?.data?.message || "فشل تعديل المستخدم");
-        } finally {
-            setProcessing(false);
+        const payload: any = {
+            firstName: updateForm.firstName,
+            lastName: updateForm.lastName,
+            phone: updateForm.phone || null,
+            email: updateForm.email,
+        };
+
+        if (canEditRole(editingUser)) {
+            payload.role = updateForm.role;
         }
+
+        updateUserMutation.mutate({ id: editingUser.id, payload });
     }
 
-    // ==============================
-    // RESET PASSWORD - مطابق لـ AdminResetUserPasswordRequest
-    // ==============================
-    async function resetPassword() {
-        if (!resetPasswordForm.newPassword || resetPasswordForm.newPassword.length < 6) {
-            toast.error("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+    function handleResetPassword() {
+        const passwordError = validatePassword(resetPasswordForm.newPassword);
+        setResetErrors({ newPassword: passwordError });
+        setResetTouched({ newPassword: true });
+
+        if (passwordError) return;
+
+        resetPasswordMutation.mutate({
+            userId: resetPasswordForm.userId,
+            newPassword: resetPasswordForm.newPassword,
+        });
+    }
+
+    function handleToggleActive(user: UserResponse) {
+        if (!canDeactivate(user)) {
             return;
         }
-
-        try {
-            setProcessing(true);
-            
-            // ✅ AdminResetUserPasswordRequest: UserId, NewPassword
-            await apiWrapper.post("/Users/reset-user-password", {
-                userId: resetPasswordForm.userId,
-                newPassword: resetPasswordForm.newPassword,
-            });
-            
-            toast.success("تم إعادة تعيين كلمة المرور بنجاح");
-            closeModal();
-        } catch (error: any) {
-            console.error(error);
-            toast.error(error?.response?.data?.message || "فشل إعادة تعيين كلمة المرور");
-        } finally {
-            setProcessing(false);
-        }
+        toggleActiveMutation.mutate({ id: user.id, isActive: user.isActive });
     }
 
-    // ==============================
-    // TOGGLE ACTIVE
-    // ==============================
-    async function toggleActive(user: User) {
-        try {
-            await apiWrapper.post(
-                user.isActive
-                    ? `/Users/${user.id}/deactivate`
-                    : `/Users/${user.id}/activate`
-            );
-            toast.success(user.isActive ? "تم تعطيل المستخدم" : "تم تفعيل المستخدم");
-            loadUsers();
-        } catch (error: any) {
-            console.error(error);
-            toast.error(error?.response?.data?.message || "فشل تغيير الحالة");
-        }
-    }
-
-    // ==============================
-    // TOGGLE PERMANENT RECEIVER
-    // ==============================
-    async function toggleReceiver(user: User) {
-        try {
-            await apiWrapper.post(
-                user.isPermanentReceiver
-                    ? `/Users/${user.id}/remove-permanent-receiver`
-                    : `/Users/${user.id}/set-permanent-receiver`
-            );
-            toast.success(
-                user.isPermanentReceiver
-                    ? "تم إزالة المستخدم من المستلمين الدائمين"
-                    : "تم إضافة المستخدم للمستلمين الدائمين"
-            );
-            loadUsers();
-        } catch (error: any) {
-            console.error(error);
-            toast.error(error?.response?.data?.message || "فشل تغيير حالة الاستقبال الدائم");
-        }
+    function handleToggleReceiver(user: UserResponse) {
+        toggleReceiverMutation.mutate({ id: user.id, isPermanentReceiver: user.isPermanentReceiver });
     }
 
     // ==============================
@@ -315,16 +370,23 @@ export default function UsersPage() {
             lastName: "",
             email: "",
             password: "",
-            role: CreateUserRole.User, // 3 = User
+            role: CreateUserRole.User,
         });
+        setCreateErrors({});
+        setCreateTouched({
+            firstName: false,
+            lastName: false,
+            email: false,
+            password: false,
+        });
+        setShowCreatePassword(false);
         setModalOpen(true);
     }
 
-    function openEditModal(user: User) {
+    function openEditModal(user: UserResponse) {
         setModalType("edit");
         setEditingUser(user);
         
-        // تحديد الدور الحالي للمستخدم
         const currentRole = user.roles.includes("Employee") 
             ? UpdateUserRole.Employee 
             : UpdateUserRole.User;
@@ -339,20 +401,22 @@ export default function UsersPage() {
         setModalOpen(true);
     }
 
-    function openResetPasswordModal(user: User) {
+    function openResetPasswordModal(user: UserResponse) {
         setModalType("resetPassword");
         setEditingUser(user);
         setResetPasswordForm({
             userId: user.id,
             newPassword: "",
         });
+        setResetErrors({});
+        setResetTouched({ newPassword: false });
+        setShowResetPassword(false);
         setModalOpen(true);
     }
 
     function closeModal() {
         setModalOpen(false);
         setEditingUser(null);
-        setProcessing(false);
         setCreateForm({
             firstName: "",
             lastName: "",
@@ -371,6 +435,10 @@ export default function UsersPage() {
             userId: 0,
             newPassword: "",
         });
+        setCreateErrors({});
+        setResetErrors({});
+        setShowCreatePassword(false);
+        setShowResetPassword(false);
     }
 
     function formatDate(date: string | null) {
@@ -382,13 +450,31 @@ export default function UsersPage() {
     // RENDER
     // ==============================
 
+    if (isAuthLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+        );
+    }
+
+    if (!isAuthorized) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+                <div className="text-6xl">🔒</div>
+                <h2 className="text-xl font-bold text-slate-700">غير مصرح بالوصول</h2>
+                <p className="text-sm text-slate-500">ليس لديك الصلاحية لعرض هذه الصفحة</p>
+            </div>
+        );
+    }
+
     return (
         <div dir="rtl" className="min-h-screen bg-slate-50 p-3 sm:p-4">
             {/* ===== HEADER ===== */}
             <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-3 sm:p-4 mb-3 sm:mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-base sm:text-lg flex-shrink-0">
-                        <FontAwesomeIcon icon={faUser} />
+                        <FontAwesomeIcon icon={faUsers} />
                     </div>
                     <div>
                         <h1 className="text-base sm:text-lg font-bold text-slate-800">إدارة المستخدمين</h1>
@@ -476,13 +562,13 @@ export default function UsersPage() {
 
             {/* ===== USERS TABLE ===== */}
             <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
-                {loading ? (
+                {loadingUsers ? (
                     <div className="h-32 sm:h-40 flex items-center justify-center text-slate-500 text-xs sm:text-sm">
                         جاري تحميل المستخدمين...
                     </div>
                 ) : filteredUsers.length === 0 ? (
                     <div className="h-32 sm:h-40 flex flex-col items-center justify-center text-slate-400 gap-1.5 sm:gap-2">
-                        <FontAwesomeIcon icon={faUser} className="text-2xl sm:text-3xl" />
+                        <FontAwesomeIcon icon={faUsers} className="text-2xl sm:text-3xl" />
                         <p className="text-xs sm:text-sm">لا يوجد مستخدمين</p>
                     </div>
                 ) : (
@@ -513,6 +599,9 @@ export default function UsersPage() {
                                                 <div className="min-w-0">
                                                     <div className="font-semibold text-slate-800 text-xs sm:text-sm truncate max-w-[80px] sm:max-w-[120px]" title={user.fullName}>
                                                         {user.fullName}
+                                                        {user.id === currentUserId && (
+                                                            <span className="mr-1 text-[8px] text-blue-500">(أنت)</span>
+                                                        )}
                                                     </div>
                                                     <div className="text-[10px] sm:text-xs text-slate-400 truncate max-w-[60px] sm:max-w-[100px]">
                                                         @{user.userName}
@@ -532,14 +621,32 @@ export default function UsersPage() {
                                         {/* ROLES */}
                                         <td className="p-2 sm:p-3 hidden md:table-cell">
                                             <div className="flex gap-1 flex-wrap">
-                                                {user.roles.map((role) => (
-                                                    <span
-                                                        key={role}
-                                                        className="bg-purple-100 text-purple-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] whitespace-nowrap"
-                                                    >
-                                                        {role}
-                                                    </span>
-                                                ))}
+                                                {user.roles.map((role) => {
+                                                    let icon = faUser;
+                                                    let color = "bg-purple-100 text-purple-700";
+                                                    if (role === 'Admin') {
+                                                        icon = faUserShield;
+                                                        color = "bg-red-100 text-red-700";
+                                                    } else if (role === 'Dean') {
+                                                        icon = faUserGraduate;
+                                                        color = "bg-blue-100 text-blue-700";
+                                                    } else if (role === 'HeadOfDepartment') {
+                                                        icon = faUserTie;
+                                                        color = "bg-green-100 text-green-700";
+                                                    } else if (role === 'Employee') {
+                                                        icon = faUserCog;
+                                                        color = "bg-orange-100 text-orange-700";
+                                                    }
+                                                    return (
+                                                        <span
+                                                            key={role}
+                                                            className={`${color} px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] whitespace-nowrap flex items-center gap-0.5`}
+                                                        >
+                                                            <FontAwesomeIcon icon={icon} className="text-[6px] sm:text-[7px]" />
+                                                            {role}
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
                                         </td>
 
@@ -564,11 +671,14 @@ export default function UsersPage() {
                                         <td className="p-2 sm:p-3 hidden lg:table-cell whitespace-nowrap">
                                             {user.isPermanentReceiver ? (
                                                 <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
-                                                    <FontAwesomeIcon icon={faStar} className="text-[7px] sm:text-[8px]" />
+                                                    <FontAwesomeIcon icon={faUserCheck} className="text-[7px] sm:text-[8px]" />
                                                     دائم
                                                 </span>
                                             ) : (
-                                                <span className="text-slate-400 text-[10px] sm:text-xs">-</span>
+                                                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-400 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
+                                                    <FontAwesomeIcon icon={faUserMinus} className="text-[7px] sm:text-[8px]" />
+                                                    غير دائم
+                                                </span>
                                             )}
                                         </td>
 
@@ -583,18 +693,40 @@ export default function UsersPage() {
                                                     <FontAwesomeIcon icon={faEdit} className="text-[10px] sm:text-sm" />
                                                 </button>
                                                 <button
-                                                    onClick={() => toggleActive(user)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition flex items-center justify-center"
-                                                    title={user.isActive ? "تعطيل" : "تفعيل"}
+                                                    onClick={() => handleToggleActive(user)}
+                                                    disabled={!canDeactivate(user) || toggleActiveMutation.isPending}
+                                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl transition flex items-center justify-center ${
+                                                        !canDeactivate(user) || toggleActiveMutation.isPending
+                                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                            : user.isActive
+                                                                ? "bg-red-100 text-red-600 hover:bg-red-200"
+                                                                : "bg-emerald-100 text-emerald-600 hover:bg-emerald-200"
+                                                    }`}
+                                                    title={
+                                                        user.id === currentUserId
+                                                            ? "لا يمكن تعطيل حسابك الخاص"
+                                                            : user.roles.includes('Admin')
+                                                                ? "لا يمكن تعطيل حساب المدير"
+                                                                : user.isActive
+                                                                    ? "تعطيل"
+                                                                    : "تفعيل"
+                                                    }
                                                 >
                                                     <FontAwesomeIcon icon={user.isActive ? faUserSlash : faUserCheck} className="text-[10px] sm:text-sm" />
                                                 </button>
                                                 <button
-                                                    onClick={() => toggleReceiver(user)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-yellow-100 text-yellow-600 hover:bg-yellow-200 transition flex items-center justify-center"
+                                                    onClick={() => handleToggleReceiver(user)}
+                                                    disabled={toggleReceiverMutation.isPending}
+                                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl transition flex items-center justify-center ${
+                                                        toggleReceiverMutation.isPending
+                                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                            : user.isPermanentReceiver
+                                                                ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                                                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                                    }`}
                                                     title={user.isPermanentReceiver ? "إزالة من الدائمين" : "إضافة للدائمين"}
                                                 >
-                                                    <FontAwesomeIcon icon={faStar} className="text-[10px] sm:text-sm" />
+                                                    <FontAwesomeIcon icon={user.isPermanentReceiver ? faUserCheck : faUserPlus} className="text-[10px] sm:text-sm" />
                                                 </button>
                                                 <button
                                                     onClick={() => openResetPasswordModal(user)}
@@ -634,34 +766,93 @@ export default function UsersPage() {
                         {/* ===== CREATE FORM ===== */}
                         {modalType === "create" && (
                             <div className="space-y-3 sm:space-y-3.5">
-                                <input
-                                    value={createForm.firstName}
-                                    onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
-                                    placeholder="الاسم الأول *"
-                                    className="w-full border border-slate-200 rounded-xl p-2.5 sm:p-3 text-sm outline-none focus:border-blue-400 text-right"
-                                />
-                                <input
-                                    value={createForm.lastName}
-                                    onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
-                                    placeholder="اسم العائلة *"
-                                    className="w-full border border-slate-200 rounded-xl p-2.5 sm:p-3 text-sm outline-none focus:border-blue-400 text-right"
-                                />
-                                <input
-                                    value={createForm.email}
-                                    onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                                    placeholder="البريد الإلكتروني *"
-                                    type="email"
-                                    className="w-full border border-slate-200 rounded-xl p-2.5 sm:p-3 text-sm outline-none focus:border-blue-400 text-right"
-                                />
-                                <input
-                                    value={createForm.password}
-                                    onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                                    placeholder="كلمة المرور *"
-                                    type="password"
-                                    className="w-full border border-slate-200 rounded-xl p-2.5 sm:p-3 text-sm outline-none focus:border-blue-400 text-right"
-                                />
+                                {/* First Name */}
+                                <div className="space-y-1">
+                                    <input
+                                        value={createForm.firstName}
+                                        onChange={(e) => handleCreateChange("firstName", e.target.value)}
+                                        onBlur={() => handleCreateBlur("firstName")}
+                                        placeholder="الاسم الأول *"
+                                        className={`w-full border rounded-xl p-2.5 sm:p-3 text-sm outline-none text-right transition ${
+                                            !isCreateFieldValid("firstName") && createTouched.firstName
+                                                ? "border-red-500 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                                : "border-slate-200 focus:border-blue-400"
+                                        }`}
+                                    />
+                                    {createTouched.firstName && createErrors.firstName && (
+                                        <p className="text-red-500 text-xs mt-1">{createErrors.firstName}</p>
+                                    )}
+                                </div>
 
-                                {/* Role Selection - CreateUserRole (2=Employee, 3=User) */}
+                                {/* Last Name */}
+                                <div className="space-y-1">
+                                    <input
+                                        value={createForm.lastName}
+                                        onChange={(e) => handleCreateChange("lastName", e.target.value)}
+                                        onBlur={() => handleCreateBlur("lastName")}
+                                        placeholder="اسم العائلة *"
+                                        className={`w-full border rounded-xl p-2.5 sm:p-3 text-sm outline-none text-right transition ${
+                                            !isCreateFieldValid("lastName") && createTouched.lastName
+                                                ? "border-red-500 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                                : "border-slate-200 focus:border-blue-400"
+                                        }`}
+                                    />
+                                    {createTouched.lastName && createErrors.lastName && (
+                                        <p className="text-red-500 text-xs mt-1">{createErrors.lastName}</p>
+                                    )}
+                                </div>
+
+                                {/* Email */}
+                                <div className="space-y-1">
+                                    <input
+                                        value={createForm.email}
+                                        onChange={(e) => handleCreateChange("email", e.target.value)}
+                                        onBlur={() => handleCreateBlur("email")}
+                                        placeholder="البريد الإلكتروني *"
+                                        type="email"
+                                        className={`w-full border rounded-xl p-2.5 sm:p-3 text-sm outline-none text-right transition ${
+                                            !isCreateFieldValid("email") && createTouched.email
+                                                ? "border-red-500 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                                : "border-slate-200 focus:border-blue-400"
+                                        }`}
+                                    />
+                                    {createTouched.email && createErrors.email && (
+                                        <p className="text-red-500 text-xs mt-1">{createErrors.email}</p>
+                                    )}
+                                </div>
+
+                                {/* Password with Eye Button */}
+                                <div className="space-y-1">
+                                    <div className="relative">
+                                        <input
+                                            value={createForm.password}
+                                            onChange={(e) => handleCreateChange("password", e.target.value)}
+                                            onBlur={() => handleCreateBlur("password")}
+                                            placeholder="كلمة المرور *"
+                                            type={showCreatePassword ? "text" : "password"}
+                                            className={`w-full border rounded-xl p-2.5 sm:p-3 text-sm outline-none text-right transition pl-10 ${
+                                                !isCreateFieldValid("password") && createTouched.password
+                                                    ? "border-red-500 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                                    : "border-slate-200 focus:border-blue-400"
+                                            }`}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCreatePassword(!showCreatePassword)}
+                                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                                        >
+                                            <FontAwesomeIcon icon={showCreatePassword ? faEyeSlash : faEye} />
+                                        </button>
+                                    </div>
+                                    {createTouched.password && createErrors.password && (
+                                        <p className="text-red-500 text-xs mt-1">{createErrors.password}</p>
+                                    )}
+                                    <div className="text-[10px] text-gray-400 mt-1 space-y-0.5">
+                                        <p>• 6 أحرف على الأقل • رقم واحد • حرف صغير • حرف كبير</p>
+                                    </div>
+                                </div>
+
+                                {/* Role Selection */}
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-xs font-medium text-slate-600">الدور</label>
                                     <div className="flex gap-2">
@@ -692,7 +883,7 @@ export default function UsersPage() {
                             </div>
                         )}
 
-                        {/* ===== EDIT FORM - مطابق لـ UpdateUserRequest ===== */}
+                        {/* ===== EDIT FORM ===== */}
                         {modalType === "edit" && (
                             <div className="space-y-3 sm:space-y-3.5">
                                 <input
@@ -721,34 +912,43 @@ export default function UsersPage() {
                                     className="w-full border border-slate-200 rounded-xl p-2.5 sm:p-3 text-sm outline-none focus:border-blue-400 text-right"
                                 />
 
-                                {/* Role Selection - UpdateUserRole (User/Employee) */}
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs font-medium text-slate-600">الدور</label>
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setUpdateForm({ ...updateForm, role: UpdateUserRole.User })}
-                                            className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
-                                                updateForm.role === UpdateUserRole.User
-                                                    ? "bg-blue-500 text-white"
-                                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                            }`}
-                                        >
-                                            مستخدم
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setUpdateForm({ ...updateForm, role: UpdateUserRole.Employee })}
-                                            className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
-                                                updateForm.role === UpdateUserRole.Employee
-                                                    ? "bg-blue-500 text-white"
-                                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                            }`}
-                                        >
-                                            موظف
-                                        </button>
+                                {/* Role Selection - Only if editable */}
+                                {editingUser && canEditRole(editingUser) && (
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-xs font-medium text-slate-600">الدور</label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setUpdateForm({ ...updateForm, role: UpdateUserRole.User })}
+                                                className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+                                                    updateForm.role === UpdateUserRole.User
+                                                        ? "bg-blue-500 text-white"
+                                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                }`}
+                                            >
+                                                مستخدم
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setUpdateForm({ ...updateForm, role: UpdateUserRole.Employee })}
+                                                className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+                                                    updateForm.role === UpdateUserRole.Employee
+                                                        ? "bg-blue-500 text-white"
+                                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                }`}
+                                            >
+                                                موظف
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+
+                                {editingUser && !canEditRole(editingUser) && (
+                                    <div className="bg-gray-50 rounded-xl p-3 text-center text-sm text-gray-500">
+                                        <FontAwesomeIcon icon={faUserShield} className="ml-2 text-gray-400" />
+                                        لا يمكن تعديل دور المستخدمين (Admin, Dean, HeadOfDepartment)
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -758,28 +958,50 @@ export default function UsersPage() {
                                 <p className="text-sm text-slate-600">
                                     إعادة تعيين كلمة المرور للمستخدم: <span className="font-semibold text-slate-800">{editingUser?.fullName}</span>
                                 </p>
-                                <input
-                                    value={resetPasswordForm.newPassword}
-                                    onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, newPassword: e.target.value })}
-                                    placeholder="كلمة المرور الجديدة * (6 أحرف على الأقل)"
-                                    type="password"
-                                    className="w-full border border-slate-200 rounded-xl p-2.5 sm:p-3 text-sm outline-none focus:border-blue-400 text-right"
-                                />
+                                <div className="space-y-1">
+                                    <div className="relative">
+                                        <input
+                                            value={resetPasswordForm.newPassword}
+                                            onChange={(e) => handleResetChange(e.target.value)}
+                                            onBlur={handleResetBlur}
+                                            placeholder="كلمة المرور الجديدة * (6 أحرف على الأقل)"
+                                            type={showResetPassword ? "text" : "password"}
+                                            className={`w-full border rounded-xl p-2.5 sm:p-3 text-sm outline-none text-right transition pl-10 ${
+                                                !isResetFieldValid() && resetTouched.newPassword
+                                                    ? "border-red-500 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                                    : "border-slate-200 focus:border-blue-400"
+                                            }`}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowResetPassword(!showResetPassword)}
+                                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                                        >
+                                            <FontAwesomeIcon icon={showResetPassword ? faEyeSlash : faEye} />
+                                        </button>
+                                    </div>
+                                    {resetTouched.newPassword && resetErrors.newPassword && (
+                                        <p className="text-red-500 text-xs mt-1">{resetErrors.newPassword}</p>
+                                    )}
+                                    <div className="text-[10px] text-gray-400 mt-1 space-y-0.5">
+                                        <p>• 6 أحرف على الأقل • رقم واحد • حرف صغير • حرف كبير</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
                         <button
-                            disabled={processing}
+                            disabled={isProcessing}
                             onClick={
                                 modalType === "create"
-                                    ? createUser
+                                    ? handleCreateUser
                                     : modalType === "edit"
-                                        ? updateUser
-                                        : resetPassword
+                                        ? handleUpdateUser
+                                        : handleResetPassword
                             }
                             className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 sm:py-2.5 rounded-xl font-semibold transition disabled:opacity-50 text-sm mt-4 sm:mt-5 flex items-center justify-center gap-2"
                         >
-                            {processing ? (
+                            {isProcessing ? (
                                 <>
                                     <FontAwesomeIcon icon={faSpinner} spin />
                                     جاري الحفظ...

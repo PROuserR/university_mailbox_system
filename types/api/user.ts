@@ -1,5 +1,17 @@
 // types/user.ts
+export enum UpdateUserRole {
+    User = "User",
+    Employee = "Employee"
+}
 
+export enum CreateUserRole {
+    Employee = 2,
+    User = 3
+}
+export interface ResetUserPasswordRequest {
+    userId: number;
+    newPassword: string;
+}
 /**
  * User Response DTO from backend
  */
@@ -36,6 +48,7 @@ export interface CreateUserRequest {
   password: string;
   role: string;
 }
+
 
 export interface UpdateUserRequest {
   firstName?: string;
