@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/layout/Sidebar.tsx
 
 "use client";
@@ -20,22 +21,53 @@ import {
     faXmark,
     faFile,
     faUserCog,
+    faEnvelope,
+    faArrowRight,
+    faArrowLeft,
+    faFileAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailFilterStore from "@/store/mailFilterStore";
 import SidebarItem from "./SidebarItem";
 import { motion, AnimatePresence } from "framer-motion";
 import useUserInfoStore from "@/store/userInfoStore";
 import useSidebarToggleStore from "@/store/sidebarToggleStore";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useMemo, startTransition } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { PERMISSIONS } from "@/lib/permissions";
+
+// ============================================================
+// ===== Types =====
+// ============================================================
+
+interface NavItem {
+    icon: any;
+    label: string;
+    path: string;
+    permission?: string;
+}
+
+// ============================================================
+// ===== Main Component =====
+// ============================================================
 
 function SidebarContentWrapper() {
     const router = useRouter();
     const pathname = usePathname();
-    const { role } = useUserInfoStore();
+    const { role, roles } = useUserInfoStore();
+    const { hasPermission, isLoading: authLoading } = useAuth();
     const { filter, setFilter } = useMailFilterStore();
     const { isSidebarToggleShown, triggerSidebar } = useSidebarToggleStore();
     const [isMobile, setIsMobile] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
+    // ✅ تحديث الحالة بشكل غير عاجل لتجنب تحذير React
+    useEffect(() => {
+        startTransition(() => {
+            setMounted(true);
+        });
+    }, []);
+
+    // ✅ تحديث حجم الشاشة (لا يسبب تحذيراً لأنه يستدعي setState داخل callback)
     useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
@@ -45,12 +77,151 @@ function SidebarContentWrapper() {
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
-    const isHomePage = pathname === "/";
-    const isUser = role === "User";
-    const isEmployee = role === "Employee";
     const isDean = role === "Dean";
     const isAdmin = role === "Admin";
-    const isDeanOrAdmin = isDean || isAdmin;
+
+    // ============================================================
+    // ===== Navigation Items (ثابتة) =====
+    // ============================================================
+
+    const navItems: NavItem[] = useMemo(() => {
+        const items: NavItem[] = [
+            { icon: faHome, label: "الرئيسية", path: "/" },
+        ];
+
+        items.push({
+            icon: faInbox,
+            label: "التوزيعات الواردة",
+            path: "/distribution?tab=inbox",
+            permission: PERMISSIONS.VIEW_DISTRIBUTION,
+        });
+        items.push({
+            icon: faPaperPlane,
+            label: "التوزيعات الصادرة",
+            path: "/distribution?tab=outbox",
+            permission: PERMISSIONS.VIEW_DISTRIBUTION,
+        });
+        items.push({
+            icon: faEnvelope,
+            label: "البريد الوارد",
+            path: "/incoming-emails",
+            permission: PERMISSIONS.MANAGE_INCOMING_EMAIL,
+        });
+        items.push({
+            icon: faPaperPlane,
+            label: "البريد الصادر",
+            path: "/outgoing-emails",
+            permission: PERMISSIONS.MANAGE_OUTGOING_EMAIL,
+        });
+        items.push({
+            icon: faFolder,
+            label: "المراسلات",
+            path: "/correspondences",
+            permission: PERMISSIONS.VIEW_CORRESPONDENCE,
+        });
+        items.push({
+            icon: faUsers,
+            label: "المستخدمين",
+            path: "/users",
+            permission: PERMISSIONS.MANAGE_USERS,
+        });
+        items.push({
+            icon: faBuilding,
+            label: "الجهات المرسلة",
+            path: "/sender-entities",
+            permission: PERMISSIONS.MANAGE_SENDER_ENTITIES,
+        });
+        items.push({
+            icon: faFile,
+            label: "أنواع الوثائق",
+            path: "/document-types",
+            permission: PERMISSIONS.MANAGE_DOCUMENT_TYPES,
+        });
+        items.push({
+            icon: faCheckCircle,
+            label: "الموافقات",
+            path: "/pending-approvals",
+            permission: PERMISSIONS.VIEW_PENDING_APPROVALS,
+        });
+        items.push({
+            icon: faChartBar,
+            label: "الإحصائيات",
+            path: "/statistics",
+            permission: PERMISSIONS.VIEW_ANALYTICS,
+        });
+        items.push({
+            icon: faUsers,
+            label: "المستخدمين المتجاهلين",
+            path: "/dean/ignored-users",
+            permission: PERMISSIONS.VIEW_ALL_DISTRIBUTIONS,
+        });
+        items.push({
+            icon: faUserCog,
+            label: "التفويضات",
+            path: "/delegations",
+            permission: PERMISSIONS.VIEW_DELEGATIONS,
+        });
+        items.push({
+            icon: faChartBar,
+            label: "لوحة العميد",
+            path: "/dean/dashboard",
+            permission: PERMISSIONS.VIEW_ANALYTICS,
+        });
+        items.push({
+            icon: faArrowRight,
+            label: "أنماط التوزيع",
+            path: "/dean/distribution-patterns",
+            permission: PERMISSIONS.VIEW_ANALYTICS,
+        });
+        items.push({
+            icon: faArrowLeft,
+            label: "الأنماط المتجاهلة",
+            path: "/dean/ignored-patterns",
+            permission: PERMISSIONS.VIEW_ANALYTICS,
+        });
+        items.push({
+            icon: faFileAlt,
+            label: "سلوك القراءة",
+            path: "/dean/reading-behavior",
+            permission: PERMISSIONS.VIEW_ANALYTICS,
+        });
+        items.push({
+            icon: faChartBar,
+            label: "إحصائياتي",
+            path: "/user-statistics",
+        });
+
+        return items;
+    }, []);
+
+    // ============================================================
+    // ===== Filter Items by Permission (يعتمد على mounted) =====
+    // ============================================================
+
+    const filteredNavItems = useMemo(() => {
+        // أثناء التصيير الأول (mounted == false) نعرض جميع العناصر بدون تصفية
+        if (!mounted) {
+            return navItems;
+        }
+        // بعد التحميل نطبق التصفية حسب الصلاحيات
+        if (authLoading) {
+            return navItems.filter(item => item.path === "/" || item.path === "/profile");
+        }
+        return navItems.filter(item => {
+            if (!item.permission) return true;
+            return hasPermission(item.permission);
+        });
+    }, [navItems, hasPermission, authLoading, mounted]);
+
+    // ============================================================
+    // ===== Check if user can create correspondence =====
+    // ============================================================
+
+    const canCreateCorrespondence = mounted && !authLoading && hasPermission(PERMISSIONS.CREATE_CORRESPONDENCE);
+
+    // ============================================================
+    // ===== Handlers =====
+    // ============================================================
 
     const handleDistributionClick = (tab: string) => {
         router.push(`/distribution?tab=${tab}`);
@@ -73,19 +244,16 @@ function SidebarContentWrapper() {
         if (path === "/") {
             return pathname === "/";
         }
-
         if (path === "/correspondences") {
             return (
                 pathname === "/correspondences" ||
                 pathname?.startsWith("/correspondences/")
             );
         }
-
         if (path.includes("?")) {
             const basePath = path.split("?")[0];
             return pathname === basePath;
         }
-
         return pathname === path;
     };
 
@@ -93,54 +261,9 @@ function SidebarContentWrapper() {
         return pathname === "/distribution" && filter === tab;
     };
 
-    const getPagesByRole = () => {
-        const commonPages = [
-            { icon: faUser, label: "الملف الشخصي", path: "/profile" },
-        ];
-
-        if (isUser) {
-            return [
-                ...commonPages,
-            ];
-        }
-
-        if (isEmployee) {
-            return [
-                { icon: faFolder, label: "المراسلات", path: "/correspondences" },
-                { icon: faChartBar, label: "الإحصائيات", path: "/user-statistics" },
-                ...commonPages,
-            ];
-        }
-
-        if (isDeanOrAdmin) {
-            return [
-                { icon: faFolder, label: "المراسلات", path: "/correspondences" },
-                { icon: faUsers, label: "المستخدمين", path: "/users" },
-                { icon: faBuilding, label: "الجهات المرسلة", path: "/sender-entities" },
-                { icon: faFile, label: "أنواع الوثائق", path: "/document-types" },
-                { icon: faCheckCircle, label: "الموافقات", path: "/approvals" },
-                { icon: faChartBar, label: "الإحصائيات", path: "/statistics" },
-                {
-                    icon: faBan,
-                    label: "تقرير المتجاهلين",
-                    path: "/dean/ignored-report",
-                },
-                {
-                    icon: faUsers,
-                    label: "المستخدمين المتجاهلين",
-                    path: "/dean/ignored-users",
-                },
-                { icon: faGear, label: "إعدادات النظام", path: "/dean/settings" },
-                { icon: faUserCog, label: "التفويضات", path: "/delegations" },
-            ];
-        }
-
-        return commonPages;
-    };
-
-    const pages = getPagesByRole();
-
-    const showDistributionLinks = !isUser;
+    // ============================================================
+    // ===== Render =====
+    // ============================================================
 
     return (
         <>
@@ -166,10 +289,8 @@ function SidebarContentWrapper() {
                     ${!isSidebarToggleShown ? "items-center" : ""}
                 `}
             >
-                {/* ===== المحتوى ===== */}
                 <div className="flex-1 overflow-y-auto w-full scrollbar-hide">
-                    {/* ✅ زر إنشاء مراسلة - مثبت في الأعلى */}
-                    {!isUser && (
+                    {canCreateCorrespondence && (
                         <div className="sticky top-0 z-10 bg-gradient-to-b from-blue-50 to-transparent pb-2">
                             <button
                                 onClick={() => router.push("/correspondences/create")}
@@ -199,54 +320,35 @@ function SidebarContentWrapper() {
                         </div>
                     )}
 
-                    {/* ===== القسم الرئيسي ===== */}
                     <div className="space-y-1">
-                        {/* الرئيسية */}
-                        <SidebarItem
-                            icon={faHome}
-                            label={isSidebarToggleShown ? "الرئيسية" : ""}
-                            onClick={goToHome}
-                            active={isLinkActive("/")}
-                            isCollapsed={!isSidebarToggleShown}
-                        />
-
-
-                        {showDistributionLinks && (
-                            <>
+                        {filteredNavItems.map((item) => {
+                            if (item.path.includes("/distribution?tab=")) {
+                                const tab = item.path.split("?tab=")[1];
+                                return (
+                                    <SidebarItem
+                                        key={item.path}
+                                        icon={item.icon}
+                                        label={isSidebarToggleShown ? item.label : ""}
+                                        onClick={() => handleDistributionClick(tab)}
+                                        active={isDistributionActive(tab)}
+                                        isCollapsed={!isSidebarToggleShown}
+                                    />
+                                );
+                            }
+                            return (
                                 <SidebarItem
-                                    icon={faInbox}
-                                    label={isSidebarToggleShown ? "الوارد" : ""}
-                                    onClick={() => handleDistributionClick("inbox")}
-                                    active={isDistributionActive("inbox")}
+                                    key={item.path}
+                                    icon={item.icon}
+                                    label={isSidebarToggleShown ? item.label : ""}
+                                    onClick={() => handleNavigation(item.path)}
+                                    active={isLinkActive(item.path)}
                                     isCollapsed={!isSidebarToggleShown}
                                 />
-
-                                <SidebarItem
-                                    icon={faPaperPlane}
-                                    label={isSidebarToggleShown ? "الصادر" : ""}
-                                    onClick={() => handleDistributionClick("outbox")}
-                                    active={isDistributionActive("outbox")}
-                                    isCollapsed={!isSidebarToggleShown}
-                                />
-
-                            </>
-                        )}
-
-                        {/* ✅ روابط الصفحات حسب الدور */}
-                        {pages.map((page) => (
-                            <SidebarItem
-                                key={page.path}
-                                icon={page.icon}
-                                label={isSidebarToggleShown ? page.label : ""}
-                                onClick={() => handleNavigation(page.path)}
-                                active={isLinkActive(page.path)}
-                                isCollapsed={!isSidebarToggleShown}
-                            />
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 
-                {/* ===== BOTTOM SECTION (ثابت في الأسفل) ===== */}
                 {isSidebarToggleShown && (
                     <div className="sticky bottom-0 bg-gradient-to-t from-blue-50 to-transparent pt-2">
                         <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-100/50">
@@ -265,7 +367,7 @@ function SidebarContentWrapper() {
                 )}
             </motion.aside>
 
-            {/* ===== Mobile Sidebar (Overlay) ===== */}
+            {/* ===== Mobile Sidebar ===== */}
             <AnimatePresence>
                 {isMobile && isSidebarToggleShown && (
                     <>
@@ -283,10 +385,7 @@ function SidebarContentWrapper() {
                             initial={{ x: "100%" }}
                             animate={{ x: 0 }}
                             exit={{ x: "100%" }}
-                            transition={{
-                                duration: 0.3,
-                                ease: "easeInOut",
-                            }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
                             className="
                                 fixed top-0 right-0 z-50
                                 w-[280px] h-full
@@ -299,7 +398,6 @@ function SidebarContentWrapper() {
                                 md:hidden
                             "
                         >
-                            {/* زر الإغلاق للموبايل */}
                             <button
                                 onClick={triggerSidebar}
                                 className="absolute top-3 left-3 w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition z-10"
@@ -307,9 +405,8 @@ function SidebarContentWrapper() {
                                 <FontAwesomeIcon icon={faXmark} className="text-lg" />
                             </button>
 
-                            {/* المحتوى للموبايل */}
                             <div className="flex-1 overflow-y-auto w-full mt-4 scrollbar-hide">
-                                {!isUser && (
+                                {canCreateCorrespondence && (
                                     <button
                                         onClick={() => {
                                             router.push("/correspondences/create");
@@ -341,65 +438,40 @@ function SidebarContentWrapper() {
                                 )}
 
                                 <div className="space-y-1">
-                                    <SidebarItem
-                                        icon={faHome}
-                                        label="الرئيسية"
-                                        onClick={() => {
-                                            goToHome();
-                                            triggerSidebar();
-                                        }}
-                                        active={isLinkActive("/")}
-                                        isCollapsed={false}
-                                    />
-
-                                    <div className="h-px bg-blue-100/50 my-2" />
-
-                                    {/* ✅ روابط التوزيعات في الموبايل */}
-                                    {showDistributionLinks && (
-                                        <>
+                                    {filteredNavItems.map((item) => {
+                                        if (item.path.includes("/distribution?tab=")) {
+                                            const tab = item.path.split("?tab=")[1];
+                                            return (
+                                                <SidebarItem
+                                                    key={item.path}
+                                                    icon={item.icon}
+                                                    label={item.label}
+                                                    onClick={() => {
+                                                        handleDistributionClick(tab);
+                                                        triggerSidebar();
+                                                    }}
+                                                    active={isDistributionActive(tab)}
+                                                    isCollapsed={false}
+                                                />
+                                            );
+                                        }
+                                        return (
                                             <SidebarItem
-                                                icon={faInbox}
-                                                label="الوارد"
+                                                key={item.path}
+                                                icon={item.icon}
+                                                label={item.label}
                                                 onClick={() => {
-                                                    handleDistributionClick("inbox");
+                                                    handleNavigation(item.path);
                                                     triggerSidebar();
                                                 }}
-                                                active={isDistributionActive("inbox")}
+                                                active={isLinkActive(item.path)}
                                                 isCollapsed={false}
                                             />
-
-                                            <SidebarItem
-                                                icon={faPaperPlane}
-                                                label="الصادر"
-                                                onClick={() => {
-                                                    handleDistributionClick("outbox");
-                                                    triggerSidebar();
-                                                }}
-                                                active={isDistributionActive("outbox")}
-                                                isCollapsed={false}
-                                            />
-
-                                            <div className="h-px bg-blue-100/50 my-2" />
-                                        </>
-                                    )}
-
-                                    {pages.map((page) => (
-                                        <SidebarItem
-                                            key={page.path}
-                                            icon={page.icon}
-                                            label={page.label}
-                                            onClick={() => {
-                                                handleNavigation(page.path);
-                                                triggerSidebar();
-                                            }}
-                                            active={isLinkActive(page.path)}
-                                            isCollapsed={false}
-                                        />
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            {/* BOTTOM SECTION للموبايل */}
                             <div className="w-full">
                                 <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100/50">
                                     <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
@@ -421,6 +493,10 @@ function SidebarContentWrapper() {
         </>
     );
 }
+
+// ============================================================
+// ===== Export with Suspense =====
+// ============================================================
 
 export default function Sidebar() {
     return (

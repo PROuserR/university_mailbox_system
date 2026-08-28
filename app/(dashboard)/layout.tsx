@@ -15,7 +15,7 @@ export default function DashboardLayout({
     const isAuthPage = pathname?.startsWith("/auth");
 
     return (
-        <div className="flex flex-col h-screen">
+        <div className="flex flex-col h-screen" suppressHydrationWarning>
             <header className="fixed top-0 left-0 z-40 w-full">
                 <Navbar />
             </header>
