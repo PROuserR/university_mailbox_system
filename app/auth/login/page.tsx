@@ -137,15 +137,22 @@ export default function LoginPage() {
 
             if (res.success && res.data?.isSuccess) {
                 const data = res.data.data;
+                
+                // ✅ تخزين بيانات المستخدم في store
                 setEmail(data.email);
                 setFirstname(data.firstName);
                 setLastname(data.lastName);
                 setRole(data.role);
+                
                 toastIdRef.current = toast.success(res.data.message || "تم تسجيل الدخول بنجاح", { duration: 4000 });
-                router.push("/");
+                
+                setTimeout(() => {
+                    router.push("/");
+                }, 100);
             } else {
                 const errorMessage = res.message || res.data?.message || "فشلت عملية تسجيل الدخول";
                 toastIdRef.current = toast.error(errorMessage, { duration: 4000 });
+                setIsLoading(false);
             }
         } catch (error: any) {
             if (toastIdRef.current) {
@@ -154,7 +161,6 @@ export default function LoginPage() {
             }
             const errorMessage = error?.message || "فشلت عملية تسجيل الدخول";
             toastIdRef.current = toast.error(errorMessage, { duration: 4000 });
-        } finally {
             setIsLoading(false);
         }
     };
@@ -177,11 +183,11 @@ export default function LoginPage() {
         setErrors(newErrors);
         setTouched({ email: true, password: true });
 
-    if (Object.keys(newErrors).length > 0) {
-    const firstError = newErrors.email || newErrors.password || "يرجى تصحيح الأخطاء في النموذج";
-    toastIdRef.current = toast.error(firstError, { duration: 4000 });
-    return;
-}
+        if (Object.keys(newErrors).length > 0) {
+            const firstError = newErrors.email || newErrors.password || "يرجى تصحيح الأخطاء في النموذج";
+            toastIdRef.current = toast.error(firstError, { duration: 4000 });
+            return;
+        }
 
         setIsLoading(true);
         await loginUser();

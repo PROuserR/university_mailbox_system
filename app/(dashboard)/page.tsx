@@ -1,49 +1,39 @@
 // app/(dashboard)/page.tsx
 
-/* eslint-disable react-hooks/set-state-in-effect */
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import useUserInfoStore from "@/store/userInfoStore";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { role } = useUserInfoStore();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [mounted, setMounted] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const { role, isLoggedIn } = useUserInfoStore();
+  
+  const { isLoading: isAuthLoading, isAuthorized } = useAuthGuard({
+    redirectTo: '/auth/login',
+    unauthorizedPath: '/unauthorized'
+  });
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    if (authLoading) return;
-    if (!isAuthenticated()) {
-      router.push("/auth/login");
-      return;
-    }
-    if (isRedirecting) return;
+    if (isAuthLoading) return;
+    
+    if (!isAuthorized) return;
 
     if (role === "Admin") {
-      setIsRedirecting(true);
       router.push("/users");
       return;
     }
 
     if (role) {
-      setIsRedirecting(true);
       router.push("/distribution?tab=inbox");
       return;
     }
     
-  }, [role, router, authLoading, isAuthenticated, isRedirecting, mounted]);
+  }, [role, router, isAuthLoading, isAuthorized]);
 
-  if (!mounted || authLoading) {
+  if (isAuthLoading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -51,16 +41,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (!isAuthenticated()) {
+  if (!isAuthorized) {
     return null;
-  }
-
-  if (isRedirecting) {
-    return (
-      <div className="flex items-center justify-center h-full min-h-[400px]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
   }
 
   return (
