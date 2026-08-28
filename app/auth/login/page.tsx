@@ -42,12 +42,12 @@ export default function LoginPage() {
                 toast.success("تم تسجيل الدخول بنجاح");
                 router.push("/");
             } else {
-                toast.error(res.data?.message ||"فشلت عملية تسجيل الدخول، يرجى التأكد من صحة البريد الإلكتروني وكلمة المرور.");
+                toast.error(res?.message ||"فشلت عملية تسجيل الدخول، يرجى التأكد من صحة البريد الإلكتروني وكلمة المرور.");
                 setIsLoading(false);
             }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || "فشلت عملية تسجيل الدخول، يرجى التأكد من صحة البريد الإلكتروني وكلمة المرور.");
+            toast.error(error?.message || "فشلت عملية تسجيل الدخول، يرجى التأكد من صحة البريد الإلكتروني وكلمة المرور.");
             setIsLoading(false);
         }
     };

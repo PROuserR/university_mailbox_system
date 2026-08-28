@@ -11,7 +11,7 @@ import { CorrespondenceEmailList } from "@/components/correspondence/Corresponde
 import { CorrespondenceEmailDetail } from "@/components/correspondence/CorrespondenceEmailDetail";
 import { AdvancedSearchModal } from "@/components/ui/AdvancedSearchModal";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, Filter } from "lucide-react";
+import { RefreshCw, Plus, Filter, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useSearchStore } from "@/store/searchStore";
@@ -23,6 +23,7 @@ import {
 import toast from "react-hot-toast";
 import { Drawer } from "vaul";
 import { useSearchParams, useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 const PAGE_HEIGHT = "calc(100vh - 64px)";
 
@@ -30,8 +31,20 @@ const cleanText = (text: string): string => {
     return text.replace(/\s+/g, " ").trim();
 };
 
+// ============================================================
+// ===== Status Options =====
+// ============================================================
+
+interface DateValidationErrors {
+    createdAt?: string;
+    issuedDate?: string;
+    receivedDate?: string;
+    sentDate?: string;
+}
 function CorrespondencesContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+
     const { isLoading: isAuthLoading, isAuthorized } = useAuthGuard({
         requiredPermissions: ['ViewCorrespondence'],
         redirectTo: '/auth/login'
@@ -40,30 +53,36 @@ function CorrespondencesContent() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     const { searchQuery, clearSearch } = useSearchStore();
 
-    const {
-        searchParams,
-        tempParams,
-        hasActiveFilters,
-        isOpen: isAdvancedOpen,
-        setSearchText,
-        setMainType,
-        setProfessional,
-        setDocumentType,
-        setSenderEntity,
-        setStatus,
-        setSort,
-        resetFilters,
-        openModal,
-        closeModal,
-        applyFilters,
-    } = useAdvancedSearch<CorrespondenceSearchDto>({
-        sortField: "issuedDate",
-        sortDirection: "desc",
-    });
+    
+const {
+    searchParams: advSearchParams,
+    tempParams,
+    hasActiveFilters,
+    isOpen: isAdvancedOpen,
+    setSearchText,
+    setMainType,
+    setProfessional,
+    setDocumentType,
+    setSenderEntity,
+    setStatus,
+    setSort,
+    setNumber,
+    setCreatedAtRange,
+    setIssuedDateRange,
+    setReceivedDateRange,
+    setSentDateRange,
+    setTempParams, 
+    resetFilters,
+    openModal,
+    closeModal,
+    applyFilters,
+} = useAdvancedSearch<CorrespondenceSearchDto>({
+    sortField: "issuedDate",
+    sortDirection: "desc",
+});
 
     const searchParams2 = useSearchParams();
     const correspondenceId = searchParams2.get("id");
@@ -75,41 +94,33 @@ function CorrespondencesContent() {
     const senderEntities = senderEntitiesData || [];
 
     const hasSetFromUrl = useRef(false);
-    const previousCorrespondenceId = useRef<string | null>(null);
 
-    // ✅ مراقبة التغييرات في correspondenceId - بدون setState مباشر
+    // ===== URL Param Handler =====
     useEffect(() => {
         if (correspondenceId) {
             const id = Number(correspondenceId);
             if (!isNaN(id) && id > 0) {
-                // ✅ استخدام setTimeout لتجنب التحذير
-                const timer = setTimeout(() => {
+                // ✅ استخدام requestAnimationFrame لتجنب setState أثناء التصيير
+                const rafId = requestAnimationFrame(() => {
                     setSelectedId(id);
                     setDetailOpen(true);
                     hasSetFromUrl.current = true;
-                }, 0);
+                });
                 
                 router.replace('/correspondences');
                 
-                return () => clearTimeout(timer);
+                return () => cancelAnimationFrame(rafId);
             }
         } else {
-            // ✅ استخدام setTimeout لتجنب التحذير
-            const timer = setTimeout(() => {
-                if (!hasSetFromUrl.current) {
+            if (!hasSetFromUrl.current) {
+                const rafId = requestAnimationFrame(() => {
                     setDetailOpen(false);
                     setSelectedId(null);
-                }
-            }, 0);
-            
-            return () => clearTimeout(timer);
+                });
+                return () => cancelAnimationFrame(rafId);
+            }
         }
     }, [correspondenceId, router]);
-
-    // ✅ تحديث previousCorrespondenceId بعد كل تغيير
-    useEffect(() => {
-        previousCorrespondenceId.current = correspondenceId;
-    }, [correspondenceId]);
 
     useEffect(() => {
         const cleaned = cleanText(searchQuery);
@@ -125,47 +136,138 @@ function CorrespondencesContent() {
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
-    const apiParams = useMemo(() => {
-        const params: CorrespondenceSearchDto = {
-            page: 1,
-            pageSize: 50,
-            sortBy:
-                searchParams.sortField === "issuedDate"
-                    ? "IssuedDate"
-                    : searchParams.sortField === "createdAt"
-                    ? "CreatedAt"
-                    : searchParams.sortField === "title"
-                    ? "Title"
-                    : searchParams.sortField === "number"
-                    ? "Number"
-                    : searchParams.sortField === "senderEntity"
-                    ? "SenderEntity"
-                    : "MainType",
-            sortOrderDESC: searchParams.sortDirection === "desc",
-        };
+    // ============================================================
+    // ===== Validation Functions =====
+    // ============================================================
 
-        if (searchParams.searchText && searchParams.searchText.trim() !== "") {
-            params.search = searchParams.searchText.trim();
+    const validateDateRange = useCallback((
+        from: Date | undefined,
+        to: Date | undefined,
+        field: keyof DateValidationErrors
+    ): string | undefined => {
+        if (from && to && to < from) {
+            const fieldNames: Record<keyof DateValidationErrors, string> = {
+                createdAt: "تاريخ الإنشاء",
+                issuedDate: "تاريخ الإصدار",
+                receivedDate: "تاريخ الاستلام",
+                sentDate: "تاريخ الإرسال",
+            };
+            return `${fieldNames[field]} (إلى) لا يمكن أن يكون أقدم من ${fieldNames[field]} (من)`;
         }
+        return undefined;
+    }, []);
 
-        if (searchParams.mainType) {
-            params.mainType = Number(searchParams.mainType) as CorrespondenceMainType;
-        }
-        if (searchParams.isProfessional !== undefined) {
-            params.isProfessional = searchParams.isProfessional;
-        }
-        if (searchParams.documentTypeId) {
-            params.documentTypeId = searchParams.documentTypeId;
-        }
-        if (searchParams.senderEntityId) {
-            params.senderEntityId = searchParams.senderEntityId;
-        }
-        if (searchParams.status !== undefined) {
-            params.status = searchParams.status;
-        }
+    const validateAllDates = useCallback(() => {
+        const errors: DateValidationErrors = {};
 
-        return params;
-    }, [searchParams]);
+        const createdAtError = validateDateRange(
+            tempParams.createdAtFrom,
+            tempParams.createdAtTo,
+            'createdAt'
+        );
+        if (createdAtError) errors.createdAt = createdAtError;
+
+        const issuedDateError = validateDateRange(
+            tempParams.issuedDateFrom,
+            tempParams.issuedDateTo,
+            'issuedDate'
+        );
+        if (issuedDateError) errors.issuedDate = issuedDateError;
+
+        const receivedDateError = validateDateRange(
+            tempParams.receivedDateFrom,
+            tempParams.receivedDateTo,
+            'receivedDate'
+        );
+        if (receivedDateError) errors.receivedDate = receivedDateError;
+
+        const sentDateError = validateDateRange(
+            tempParams.sentDateFrom,
+            tempParams.sentDateTo,
+            'sentDate'
+        );
+        if (sentDateError) errors.sentDate = sentDateError;
+
+        return Object.keys(errors).length === 0;
+    }, [tempParams, validateDateRange]);
+
+    // ===== API Params =====
+
+const apiParams = useMemo(() => {
+    const params: CorrespondenceSearchDto = {
+        page: 1,
+        pageSize: 50,
+        sortBy:
+            advSearchParams.sortField === "issuedDate"
+                ? "IssuedDate"
+                : advSearchParams.sortField === "createdAt"
+                ? "CreatedAt"
+                : advSearchParams.sortField === "receivedDate"
+                ? "ReceivedDate"
+                : advSearchParams.sortField === "sentDate"
+                ? "SentDate"
+                : advSearchParams.sortField === "title"
+                ? "Title"
+                : advSearchParams.sortField === "number"
+                ? "Number"
+                : advSearchParams.sortField === "senderEntity"
+                ? "SenderEntity"
+                : "MainType",
+        sortOrderDESC: advSearchParams.sortDirection === "desc",
+    };
+
+    if (advSearchParams.searchText && advSearchParams.searchText.trim() !== "") {
+        params.search = advSearchParams.searchText.trim();
+    }
+
+    if (advSearchParams.number) {
+        params.number = advSearchParams.number;
+    }
+
+    if (advSearchParams.mainType) {
+        params.mainType = Number(advSearchParams.mainType) as CorrespondenceMainType;
+    }
+    if (advSearchParams.isProfessional !== undefined) {
+        params.isProfessional = advSearchParams.isProfessional;
+    }
+    if (advSearchParams.documentTypeId) {
+        params.documentTypeId = advSearchParams.documentTypeId;
+    }
+    if (advSearchParams.senderEntityId) {
+        params.senderEntityId = advSearchParams.senderEntityId;
+    }
+    if (advSearchParams.status !== undefined) {
+        params.status = advSearchParams.status;
+    }
+    
+    // ✅ تحويل Date إلى string (YYYY-MM-DD)
+    if (advSearchParams.createdAtFrom) {
+        params.createdAtFrom = advSearchParams.createdAtFrom.toISOString().split('T')[0];
+    }
+    if (advSearchParams.createdAtTo) {
+        params.createdAtTo = advSearchParams.createdAtTo.toISOString().split('T')[0];
+    }
+    if (advSearchParams.issuedDateFrom) {
+        params.issuedDateFrom = advSearchParams.issuedDateFrom.toISOString().split('T')[0];
+    }
+    if (advSearchParams.issuedDateTo) {
+        params.issuedDateTo = advSearchParams.issuedDateTo.toISOString().split('T')[0];
+    }
+    if (advSearchParams.receivedDateFrom) {
+        params.receivedDateFrom = advSearchParams.receivedDateFrom.toISOString().split('T')[0];
+    }
+    if (advSearchParams.receivedDateTo) {
+        params.receivedDateTo = advSearchParams.receivedDateTo.toISOString().split('T')[0];
+    }
+    if (advSearchParams.sentDateFrom) {
+        params.sentDateFrom = advSearchParams.sentDateFrom.toISOString().split('T')[0];
+    }
+    if (advSearchParams.sentDateTo) {
+        params.sentDateTo = advSearchParams.sentDateTo.toISOString().split('T')[0];
+    }
+
+    return params;
+}, [advSearchParams]);
 
     const { data, isLoading, error, refetch, isFetching } =
         useCorrespondences(apiParams);
@@ -176,29 +278,12 @@ function CorrespondencesContent() {
 
     const isApplyingFilters = useRef(false);
     const isResetting = useRef(false);
-    const previousApiParams = useRef<string>("");
-    const hasSetInitialSelection = useRef(false);
 
     useEffect(() => {
         if (error) {
             toast.error(error.message || "حدث خطأ أثناء تحميل المراسلات");
         }
     }, [error]);
-
-    useEffect(() => {
-        const currentParams = JSON.stringify(apiParams);
-        previousApiParams.current = currentParams;
-
-        if (isApplyingFilters.current) {
-            isApplyingFilters.current = false;
-        }
-        if (isResetting.current) {
-            isResetting.current = false;
-        }
-    }, [apiParams]);
-
-    // ❌ تم إزالة اختيار أول عنصر تلقائياً
-    // ✅ المستخدم الآن يختار يدوياً من القائمة
 
     const items = data?.items || [];
     const totalCount = data?.totalCount || 0;
@@ -238,9 +323,13 @@ function CorrespondencesContent() {
     };
 
     const handleApplyFilters = useCallback(() => {
+        if (!validateAllDates()) {
+            toast.error("يرجى تصحيح الأخطاء في التواريخ");
+            return;
+        }
         isApplyingFilters.current = true;
         applyFilters();
-    }, [applyFilters]);
+    }, [applyFilters, validateAllDates]);
 
     const handleResetFilters = useCallback(() => {
         isResetting.current = true;
@@ -250,13 +339,21 @@ function CorrespondencesContent() {
 
     const activeFiltersCount = useMemo(() => {
         let count = 0;
-        if (searchParams.mainType) count++;
-        if (searchParams.isProfessional !== undefined) count++;
-        if (searchParams.documentTypeId) count++;
-        if (searchParams.senderEntityId) count++;
-        if (searchParams.status !== undefined) count++;
+        if (advSearchParams.mainType) count++;
+        if (advSearchParams.isProfessional !== undefined) count++;
+        if (advSearchParams.documentTypeId) count++;
+        if (advSearchParams.senderEntityId) count++;
+        if (advSearchParams.status !== undefined) count++;
+        if (advSearchParams.createdAtFrom) count++;
+        if (advSearchParams.createdAtTo) count++;
+        if (advSearchParams.issuedDateFrom) count++;
+        if (advSearchParams.issuedDateTo) count++;
+        if (advSearchParams.receivedDateFrom) count++;
+        if (advSearchParams.receivedDateTo) count++;
+        if (advSearchParams.sentDateFrom) count++;
+        if (advSearchParams.sentDateTo) count++;
         return count;
-    }, [searchParams]);
+    }, [advSearchParams]);
 
     if (isAuthLoading) {
         return (
@@ -400,28 +497,34 @@ function CorrespondencesContent() {
                     </Drawer.Portal>
                 </Drawer.Root>
 
-                <AdvancedSearchModal
-                    isOpen={isAdvancedOpen}
-                    onClose={closeModal}
-                    onApply={handleApplyFilters}
-                    onReset={handleResetFilters}
-                    mainType={tempParams.mainType}
-                    onMainTypeChange={setMainType}
-                    isProfessional={tempParams.isProfessional}
-                    onProfessionalChange={setProfessional}
-                    documentTypeId={tempParams.documentTypeId}
-                    onDocumentTypeChange={setDocumentType}
-                    documentTypes={documentTypes}
-                    senderEntityId={tempParams.senderEntityId}
-                    onSenderEntityChange={setSenderEntity}
-                    senderEntities={senderEntities}
-                    status={tempParams.status}
-                    onStatusChange={setStatus}
-                    sortField={tempParams.sortField}
-                    sortDirection={tempParams.sortDirection}
-                    onSortChange={setSort}
-                    activeFiltersCount={activeFiltersCount}
-                />
+
+   <AdvancedSearchModal
+                isOpen={isAdvancedOpen}
+                onClose={closeModal}
+                onApply={handleApplyFilters}
+                onReset={handleResetFilters}
+                mainType={tempParams.mainType}
+                onMainTypeChange={setMainType}
+                isProfessional={tempParams.isProfessional}
+                onProfessionalChange={setProfessional}
+                documentTypeId={tempParams.documentTypeId}
+                onDocumentTypeChange={setDocumentType}
+                documentTypes={documentTypes}
+                senderEntityId={tempParams.senderEntityId}
+                onSenderEntityChange={setSenderEntity}
+                senderEntities={senderEntities}
+                status={tempParams.status}
+                onStatusChange={setStatus}
+                sortField={tempParams.sortField}
+                sortDirection={tempParams.sortDirection}
+                onSortChange={setSort}
+                activeFiltersCount={activeFiltersCount}
+                number={tempParams.number}
+                onNumberChange={setNumber}
+                // ✅ إضافة tempParams و setTempParams
+                tempParams={tempParams}
+                setTempParams={setTempParams}
+            />
             </div>
         );
     }
@@ -508,28 +611,32 @@ function CorrespondencesContent() {
                 )}
             </div>
 
-            <AdvancedSearchModal
-                isOpen={isAdvancedOpen}
-                onClose={closeModal}
-                onApply={handleApplyFilters}
-                onReset={handleResetFilters}
-                mainType={tempParams.mainType}
-                onMainTypeChange={setMainType}
-                isProfessional={tempParams.isProfessional}
-                onProfessionalChange={setProfessional}
-                documentTypeId={tempParams.documentTypeId}
-                onDocumentTypeChange={setDocumentType}
-                documentTypes={documentTypes}
-                senderEntityId={tempParams.senderEntityId}
-                onSenderEntityChange={setSenderEntity}
-                senderEntities={senderEntities}
-                status={tempParams.status}
-                onStatusChange={setStatus}
-                sortField={tempParams.sortField}
-                sortDirection={tempParams.sortDirection}
-                onSortChange={setSort}
-                activeFiltersCount={activeFiltersCount}
-            />
+              <AdvancedSearchModal
+            isOpen={isAdvancedOpen}
+            onClose={closeModal}
+            onApply={handleApplyFilters}
+            onReset={handleResetFilters}
+            mainType={tempParams.mainType}
+            onMainTypeChange={setMainType}
+            isProfessional={tempParams.isProfessional}
+            onProfessionalChange={setProfessional}
+            documentTypeId={tempParams.documentTypeId}
+            onDocumentTypeChange={setDocumentType}
+            documentTypes={documentTypes}
+            senderEntityId={tempParams.senderEntityId}
+            onSenderEntityChange={setSenderEntity}
+            senderEntities={senderEntities}
+            status={tempParams.status}
+            onStatusChange={setStatus}
+            sortField={tempParams.sortField}
+            sortDirection={tempParams.sortDirection}
+            onSortChange={setSort}
+            activeFiltersCount={activeFiltersCount}
+            number={tempParams.number}
+            onNumberChange={setNumber}
+            setTempParams={setTempParams}
+            tempParams={tempParams}
+        />
         </div>
     );
 }

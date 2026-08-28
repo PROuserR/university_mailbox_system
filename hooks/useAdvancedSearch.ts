@@ -7,7 +7,7 @@ import { useState, useCallback, useMemo } from "react";
 import { CorrespondenceStatus } from "@/types/api/correspondence.types";
 
 export type SortDirection = "asc" | "desc";
-export type SortField = "title" | "number" | "issuedDate" | "createdAt" | "senderEntity" | "mainType" | "distributedDate";
+export type SortField = "title" | "number" | "issuedDate" | "createdAt" | "senderEntity" | "mainType" | "distributedDate" | "receivedDate" | "sentDate";
 
 export interface AdvancedSearchParams {
     searchText: string;
@@ -20,6 +20,15 @@ export interface AdvancedSearchParams {
     status?: CorrespondenceStatus;
     sortField: SortField;
     sortDirection: SortDirection;
+    number?: number;
+    createdAtFrom?: Date;
+    createdAtTo?: Date;
+    issuedDateFrom?: Date;
+    issuedDateTo?: Date;
+    receivedDateFrom?: Date;
+    receivedDateTo?: Date;
+    sentDateFrom?: Date;
+    sentDateTo?: Date;
 }
 
 export interface AdvancedSearchReturn<T> {
@@ -35,6 +44,12 @@ export interface AdvancedSearchReturn<T> {
     setSenderEntity: (id?: number) => void;
     setStatus: (value?: CorrespondenceStatus) => void;
     setSort: (field: SortField, direction?: SortDirection) => void;
+    setNumber: (value?: number) => void;
+    setCreatedAtRange: (from?: Date, to?: Date) => void;
+    setIssuedDateRange: (from?: Date, to?: Date) => void;
+    setReceivedDateRange: (from?: Date, to?: Date) => void;
+    setSentDateRange: (from?: Date, to?: Date) => void;
+    setTempParams: (params: AdvancedSearchParams) => void; // ✅ إضافة هذه الدالة
     resetFilters: () => void;
     openModal: () => void;
     closeModal: () => void;
@@ -52,6 +67,15 @@ const defaultParams: AdvancedSearchParams = {
     status: undefined,
     sortField: "issuedDate",
     sortDirection: "desc",
+    number: undefined,
+    createdAtFrom: undefined,
+    createdAtTo: undefined,
+    issuedDateFrom: undefined,
+    issuedDateTo: undefined,
+    receivedDateFrom: undefined,
+    receivedDateTo: undefined,
+    sentDateFrom: undefined,
+    sentDateTo: undefined,
 };
 
 const cleanText = (text: string): string => {
@@ -78,12 +102,22 @@ export function useAdvancedSearch<T>(initialParams?: Partial<AdvancedSearchParam
             searchParams.dateTo ||
             searchParams.documentTypeId ||
             searchParams.senderEntityId ||
-            searchParams.status !== undefined);
+            searchParams.status !== undefined ||
+            searchParams.number ||
+            searchParams.createdAtFrom ||
+            searchParams.createdAtTo ||
+            searchParams.issuedDateFrom ||
+            searchParams.issuedDateTo ||
+            searchParams.receivedDateFrom ||
+            searchParams.receivedDateTo ||
+            searchParams.sentDateFrom ||
+            searchParams.sentDateTo);
     }, [searchParams]);
 
     const setSearchText = useCallback((text: string) => {
         const cleaned = cleanText(text);
         setSearchParams(prev => ({ ...prev, searchText: cleaned }));
+        setTempParams(prev => ({ ...prev, searchText: cleaned }));
     }, []);
 
     const setMainType = useCallback((type?: string) => {
@@ -110,6 +144,26 @@ export function useAdvancedSearch<T>(initialParams?: Partial<AdvancedSearchParam
         setTempParams(prev => ({ ...prev, status: value }));
     }, []);
 
+    const setNumber = useCallback((value?: number) => {
+        setTempParams(prev => ({ ...prev, number: value }));
+    }, []);
+
+    const setCreatedAtRange = useCallback((from?: Date, to?: Date) => {
+        setTempParams(prev => ({ ...prev, createdAtFrom: from, createdAtTo: to }));
+    }, []);
+
+    const setIssuedDateRange = useCallback((from?: Date, to?: Date) => {
+        setTempParams(prev => ({ ...prev, issuedDateFrom: from, issuedDateTo: to }));
+    }, []);
+
+    const setReceivedDateRange = useCallback((from?: Date, to?: Date) => {
+        setTempParams(prev => ({ ...prev, receivedDateFrom: from, receivedDateTo: to }));
+    }, []);
+
+    const setSentDateRange = useCallback((from?: Date, to?: Date) => {
+        setTempParams(prev => ({ ...prev, sentDateFrom: from, sentDateTo: to }));
+    }, []);
+
     const setSort = useCallback((field: SortField, direction?: SortDirection) => {
         setTempParams(prev => ({
             ...prev,
@@ -119,16 +173,13 @@ export function useAdvancedSearch<T>(initialParams?: Partial<AdvancedSearchParam
     }, []);
 
     const resetFilters = useCallback(() => {
-        setSearchParams({
+        const currentSearchText = searchParams.searchText;
+        const resetState = {
             ...defaultParams,
-            searchText: searchParams.searchText,
-            status: undefined,
-        });
-        setTempParams({
-            ...defaultParams,
-            searchText: searchParams.searchText,
-            status: undefined,
-        });
+            searchText: currentSearchText,
+        };
+        setSearchParams(resetState);
+        setTempParams(resetState);
     }, [searchParams.searchText]);
 
     const openModal = useCallback(() => {
@@ -162,6 +213,12 @@ export function useAdvancedSearch<T>(initialParams?: Partial<AdvancedSearchParam
         setSenderEntity,
         setStatus,
         setSort,
+        setNumber,
+        setCreatedAtRange,
+        setIssuedDateRange,
+        setReceivedDateRange,
+        setSentDateRange,
+        setTempParams, 
         resetFilters,
         openModal,
         closeModal,

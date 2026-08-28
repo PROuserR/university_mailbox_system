@@ -1,10 +1,11 @@
-/* eslint-disable react-hooks/purity */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/purity */
 // src/components/correspondence/CorrespondenceEmailDetail.tsx
 
 "use client";
 
 import { format } from "date-fns";
+import { arSA } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -29,6 +30,10 @@ import {
     CheckCircleIcon,
     Undo2Icon,
     XCircleIcon,
+    UserIcon,
+    CalendarIcon,
+    UsersIcon,
+    EyeIcon as EyeIcon2,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -52,7 +57,6 @@ import {
     CorrespondenceStatus,
     getStatusLabel,
     getStatusColor,
-    getMainTypeString,
 } from "@/types/api/correspondence.types";
 import { Attachment } from "@/types/api/Attachment";
 import {
@@ -75,16 +79,31 @@ import {
 import { useUserRole } from "@/hooks/useUserRole";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { EmailContent } from "@/components/ui/EmailContent";
 import toast from "react-hot-toast";
 import { useState, useRef, useMemo } from "react";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import axios from "axios";
-import { utcToLocalDate } from "@/utils/dateUtil";
 
 // ============================================================
 // ===== API Base URL =====
 // ============================================================
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7236/api";
+
+// ============================================================
+// ===== Helper: Format date as local DD/MM/YYYY =====
+// ============================================================
+
+const formatDateDisplay = (date?: string | null): string => {
+    if (!date) return "";
+    try {
+        const parsed = new Date(date);
+        if (isNaN(parsed.getTime())) return "";
+        return format(parsed, "dd/MM/yyyy", { locale: arSA });
+    } catch {
+        return "";
+    }
+};
 
 // ============================================================
 // ===== Helpers =====
@@ -126,13 +145,6 @@ interface CorrespondenceEmailDetailProps {
     onRefresh?: () => void;
 }
 
-const formatDateDisplay = (date?: string | null) => {
-    if (!date) return "";
-    const localDate = utcToLocalDate(date);
-    if (!localDate) return "";
-    const parts = localDate.split('-');
-    return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
-};
 export function CorrespondenceEmailDetail({
     item,
     onClose,
@@ -724,13 +736,28 @@ export function CorrespondenceEmailDetail({
     const statusLabel = getStatusLabel(item.status || 'Draft');
     const statusColor = getStatusColor(item.status || 'Draft');
 
-    // ============================================================
-    // ===== Render =====
-    // ============================================================
+    // ✅ تحديد ما إذا كانت المراسلة من البريد الوارد
+    const isFromIncomingEmail = item.isFromIncomingEmail || false;
+
+    // ✅ تحويل المرفقات إلى الصيغة المطلوبة لـ EmailContent
+    const emailAttachments = useMemo(() => {
+        return item.attachments?.map((att) => ({
+            id: att.id,
+            fileName: att.fileName,
+            fileSize: att.fileSize,
+            contentType: att.mimeType || 'application/octet-stream',
+            fileIdentifier: att.fileIdentifier || '',
+            isInline: att.isInline || false,
+            contentId: att.contentId || undefined,
+            uploadedBy: att.uploadedBy,
+            uploadedAt: att.uploadedAt,
+            isPrimary: att.isPrimary,
+        })) || [];
+    }, [item.attachments]);
 
     return (
         <div className="flex h-full flex-col bg-card">
-            {/* ========== شريط الإجراءات العلوي ========== */}
+            {/* ========== Header ========== */}
             <div className="shrink-0 flex items-center justify-between border-b border-border px-4 py-2">
                 <div className="flex items-center gap-1 flex-wrap">
                     <TooltipProvider>
@@ -744,7 +771,6 @@ export function CorrespondenceEmailDetail({
                         </Tooltip>
                     </TooltipProvider>
 
-                    {/* ===== قائمة الإجراءات ===== */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon-sm">
@@ -756,10 +782,6 @@ export function CorrespondenceEmailDetail({
                             className="w-56 bg-white border border-gray-200 shadow-lg rounded-xl text-right"
                             sideOffset={5}
                         >
-                            {/* ============================================================ */}
-                            {/* ===== 1. التعديل والتوزيع ===== */}
-                            {/* ============================================================ */}
-
                             {showButtons.showEdit && (
                                 <PermissionGate permissions={['EditCorrespondence']}>
                                     <DropdownMenuItem
@@ -796,10 +818,6 @@ export function CorrespondenceEmailDetail({
                                 </PermissionGate>
                             )}
 
-                            {/* ============================================================ */}
-                            {/* ===== 2. الموافقة والتوقيع ===== */}
-                            {/* ============================================================ */}
-
                             {showButtons.showRequestApproval && !isDean && (
                                 <PermissionGate permissions={['EditCorrespondence']}>
                                     <DropdownMenuItem
@@ -823,10 +841,6 @@ export function CorrespondenceEmailDetail({
                                     </DropdownMenuItem>
                                 </PermissionGate>
                             )}
-
-                            {/* ============================================================ */}
-                            {/* ===== 3. الأرشفة والاسترجاع ===== */}
-                            {/* ============================================================ */}
 
                             {showButtons.showArchive && (
                                 <PermissionGate permissions={['ApproveArchive']}>
@@ -852,10 +866,6 @@ export function CorrespondenceEmailDetail({
                                 </PermissionGate>
                             )}
 
-                            {/* ============================================================ */}
-                            {/* ===== 4. الاسترجاع ===== */}
-                            {/* ============================================================ */}
-
                             {showButtons.showRevertToDraft && (
                                 <PermissionGate permissions={['EditCorrespondence']}>
                                     <DropdownMenuItem
@@ -880,10 +890,6 @@ export function CorrespondenceEmailDetail({
                                 </PermissionGate>
                             )}
 
-                            {/* ============================================================ */}
-                            {/* ===== 5. طلبات الاسترجاع (للموظف) ===== */}
-                            {/* ============================================================ */}
-
                             {showButtons.showRequestRevertToDraft && !isDean && (
                                 <PermissionGate permissions={['RequestRevert']}>
                                     <DropdownMenuItem
@@ -907,10 +913,6 @@ export function CorrespondenceEmailDetail({
                                     </DropdownMenuItem>
                                 </PermissionGate>
                             )}
-
-                            {/* ============================================================ */}
-                            {/* ===== 6. الموافقة على طلبات الاسترجاع (للعميد) ===== */}
-                            {/* ============================================================ */}
 
                             {showButtons.showApproveRevert && isDean && (
                                 <PermissionGate permissions={['ApproveRevert']}>
@@ -960,10 +962,6 @@ export function CorrespondenceEmailDetail({
                                 </PermissionGate>
                             )}
 
-                            {/* ============================================================ */}
-                            {/* ===== 7. الحذف ===== */}
-                            {/* ============================================================ */}
-
                             {showButtons.showDelete && (
                                 <PermissionGate permissions={['DeleteCorrespondence']}>
                                     <DropdownMenuItem
@@ -983,6 +981,12 @@ export function CorrespondenceEmailDetail({
                             {statusLabel}
                         </Badge>
                     </div>
+
+                    {isFromIncomingEmail && (
+                        <Badge variant="incoming" className="text-[10px] bg-blue-100 text-blue-700">
+                            📧 بريد وارد
+                        </Badge>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -1021,9 +1025,39 @@ export function CorrespondenceEmailDetail({
                                 </h2>
                                 {getTypeBadge(item.mainType)}
                                 {item.isProfessional && <Badge variant="professional">مهني</Badge>}
+                                {isFromIncomingEmail && (
+                                    <Badge variant="incoming" className="bg-blue-100 text-blue-700">📧 بريد وارد</Badge>
+                                )}
                             </div>
-                            <p className="text-xs text-muted-foreground">رقم: {item.number}</p>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                <span>رقم: {item.number}</span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                    <UserIcon className="h-3 w-3" />
+                                    {item.createdBy || "غير معروف"}
+                                </span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                    <CalendarIcon className="h-3 w-3" />
+                                    {formatDateDisplay(item.createdAt)}
+                                </span>
+                            </div>
                         </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                            <UsersIcon className="h-3 w-3" />
+                            <span>{item.totalReceivers} مستقبل</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <EyeIcon2 className="h-3 w-3" />
+                            <span>{item.readCount} مقروء</span>
+                        </div>
+                        {item.updatedAt && (
+                            <div className="flex items-center gap-1">
+                                <span>آخر تحديث: {formatDateDisplay(item.updatedAt)}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1035,6 +1069,7 @@ export function CorrespondenceEmailDetail({
 
             {/* ========== منطقة التمرير ========== */}
             <div className="flex-1 overflow-y-auto hide-scrollbar">
+                {/* ========== معلومات إضافية ========== */}
                 <div className="border-b border-border p-4">
                     <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                         {item.documentType && (
@@ -1049,49 +1084,72 @@ export function CorrespondenceEmailDetail({
                                 <span className="text-muted-foreground">{item.senderReference}</span>
                             </div>
                         )}
+                        {item.notes && (
+                            <div className="flex items-center gap-2 col-span-2">
+                                <span className="font-medium text-foreground">📝 ملاحظات:</span>
+                                <span className="text-muted-foreground">{item.notes}</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
                         {item.issuedDate && (
                             <div className="flex items-center gap-2">
                                 <span className="font-medium text-foreground">📅 تاريخ الإصدار:</span>
-                                <span>{formatDateDisplay (item.issuedDate)}</span>
+                                <span>{formatDateDisplay(item.issuedDate)}</span>
                             </div>
                         )}
                         {item.mainType === 1 && item.receivedDate && (
                             <div className="flex items-center gap-2">
                                 <span className="font-medium text-foreground">📥 تاريخ الاستلام:</span>
-                                <span>{formatDateDisplay (item.receivedDate)}</span>
+                                <span>{formatDateDisplay(item.receivedDate)}</span>
                             </div>
                         )}
                         {item.mainType === 2 && item.sentDate && (
                             <div className="flex items-center gap-2">
                                 <span className="font-medium text-foreground">📤 تاريخ الإرسال:</span>
-                                <span>{formatDateDisplay (item.sentDate)}</span>
+                                <span>{formatDateDisplay(item.sentDate)}</span>
+                            </div>
+                        )}
+                        {item.approvedAt && (
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground">✅ تاريخ الموافقة:</span>
+                                <span>{formatDateDisplay(item.approvedAt)}</span>
+                            </div>
+                        )}
+                        {item.archivedAt && (
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground">📦 تاريخ الأرشفة:</span>
+                                <span>{formatDateDisplay(item.archivedAt)}</span>
                             </div>
                         )}
                     </div>
                 </div>
 
+                {/* ========== المحتوى ========== */}
                 <div className="border-b border-border p-4">
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                        <div
-                            dangerouslySetInnerHTML={{
-                                __html: item.content || "<p class='text-muted-foreground'>لا يوجد محتوى</p>",
-                            }}
-                        />
-                    </div>
+                    {isFromIncomingEmail ? (
+                        (item.content && item.content.trim() !== '') ? (
+                            <EmailContent 
+                                html={item.content || undefined}
+                                text={item.content || undefined}
+                                attachments={emailAttachments}
+                            />
+                        ) : (
+                            <p className="text-muted-foreground">لا يوجد محتوى</p>
+                        )
+                    ) : (
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <div
+                                dangerouslySetInnerHTML={{
+                                    __html: item.content || "<p class='text-muted-foreground'>لا يوجد محتوى</p>",
+                                }}
+                            />
+                        </div>
+                    )}
                 </div>
 
-                {item.notes && (
-                    <div className="border-b border-border p-4">
-                        <div className="flex items-start gap-2">
-                            <span className="text-sm font-medium text-foreground">📝 ملاحظات:</span>
-                            <p className="text-sm text-muted-foreground">{item.notes}</p>
-                        </div>
-                    </div>
-                )}
-
+                {/* ========== المرفقات ========== */}
                 {item.attachments && item.attachments.length > 0 && (
                     <div className="p-4">
                         <div className="mb-3 flex items-center gap-2">
@@ -1104,10 +1162,13 @@ export function CorrespondenceEmailDetail({
                             {item.attachments.map((att) => {
                                 const Icon = getFileIcon(att.mimeType);
                                 const gradient = getFileGradient(att.mimeType);
+                                
+                                const isInline = att.isInline || false;
+                                
                                 return (
                                     <div
                                         key={att.id}
-                                        className="group flex w-full max-w-[260px] items-center justify-between rounded-lg border border-border bg-muted/30 p-2 transition-all hover:shadow-md"
+                                        className="group flex w-full max-w-[280px] items-center justify-between rounded-lg border border-border bg-muted/30 p-2 transition-all hover:shadow-md"
                                     >
                                         <div className="flex min-w-0 flex-1 items-center gap-2">
                                             <div
@@ -1125,9 +1186,27 @@ export function CorrespondenceEmailDetail({
                                                 >
                                                     {att.fileName}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {Math.round(att.fileSize / 1024)} KB
-                                                </p>
+                                                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                                                    <span>{Math.round(att.fileSize / 1024)} KB</span>
+                                                    
+                                                    {att.isPrimary && (
+                                                        <Badge variant="outline" className="text-[8px] px-1.5 py-0 h-4">
+                                                            أساسي
+                                                        </Badge>
+                                                    )}
+                                                    
+                                                    {isInline && (
+                                                        <Badge variant="outline" className="text-[8px] px-1.5 py-0 h-4 bg-blue-50 text-blue-600 border-blue-200">
+                                                            مضمن
+                                                        </Badge>
+                                                    )}
+                                                    
+                                                    {att.uploadedBy && (
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            · {att.uploadedBy}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">

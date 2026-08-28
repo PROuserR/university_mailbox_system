@@ -1,4 +1,4 @@
-// src/components/correspondence/CorrespondenceEmailList.tsx
+// components/correspondence/CorrespondenceEmailList.tsx
 
 "use client";
 
@@ -10,8 +10,9 @@ import { forwardRef, useState } from "react";
 import { ChevronDown, ChevronUp, Reply, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCorrespondenceWithReplies } from "@/hooks/useCorrespondence";
-import { formatDateDisplay } from "@/utils/dateUtil";
 import { getStatusLabel, getStatusColor } from "@/types/api/correspondence.types";
+import { format } from "date-fns";
+import { arSA } from "date-fns/locale";
 
 interface CorrespondenceEmailListProps {
     items: CorrespondenceResponse[];
@@ -19,6 +20,21 @@ interface CorrespondenceEmailListProps {
     onSelectItem: (id: number) => void;
     isLoading?: boolean;
 }
+
+// ============================================================
+// ===== Helper: Format date as local DD/MM/YYYY =====
+// ============================================================
+
+const formatDateDisplay = (date?: string | null): string => {
+    if (!date) return "";
+    try {
+        const parsed = new Date(date);
+        if (isNaN(parsed.getTime())) return "";
+        return format(parsed, "dd/MM/yyyy", { locale: arSA });
+    } catch {
+        return "";
+    }
+};
 
 // ============================================================
 // ===== Sub-component for rendering a single item with replies =====
@@ -52,7 +68,8 @@ function CorrespondenceItemWithReplies({
     const statusLabel = getStatusLabel(item.status || 'Draft');
     const statusColor = getStatusColor(item.status || 'Draft');
 
-    // ✅ إرجاع Badge بحجم موحد
+    const isFromIncomingEmail = item.isFromIncomingEmail || false;
+
     const getTypeBadge = (mainType: string | number) => {
         let label = '';
         let variant: 'incoming' | 'outgoing' | 'internal' | 'default' = 'default';
@@ -93,7 +110,6 @@ function CorrespondenceItemWithReplies({
             }
         }
 
-        // ✅ Badge بحجم موحد مع باقي الـ Badges
         return (
             <Badge variant={variant} className="text-[8px] px-1.5 py-0.5">
                 {label}
@@ -132,7 +148,6 @@ function CorrespondenceItemWithReplies({
                                 <span className="text-sm font-semibold text-foreground">
                                     {item.senderEntity || "جهة غير محددة"}
                                 </span>
-                                {/* ✅ نوع المراسلة - حجم موحد */}
                                 {getTypeBadge(item.mainType)}
                                 {item.isProfessional && (
                                     <Badge variant="professional" className="text-[8px] px-1.5 py-0.5">
@@ -142,7 +157,11 @@ function CorrespondenceItemWithReplies({
                                 {depth > 0 && (
                                     <Badge variant="outline" className="text-[8px] px-1.5 py-0.5">رد</Badge>
                                 )}
-                                {/* ✅ حالة المراسلة - حجم موحد */}
+                                {isFromIncomingEmail && (
+                                    <Badge variant="incoming" className="text-[8px] px-1.5 py-0.5 bg-blue-100 text-blue-700">
+                                        📧 بريد وارد
+                                    </Badge>
+                                )}
                                 <Badge className={cn("text-[8px] px-1.5 py-0.5", statusColor)}>
                                     {statusLabel}
                                 </Badge>
@@ -156,11 +175,21 @@ function CorrespondenceItemWithReplies({
                             {item.title}
                         </p>
 
-                        {item.attachments && item.attachments.length > 0 && (
-                            <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                                📎 {item.attachments.length} مرفق
-                            </div>
-                        )}
+                        {/* ✅ معلومات إضافية مع عدد المرفقات بجانبها */}
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {item.createdBy && (
+                                <span>👤 {item.createdBy}</span>
+                            )}
+                            {item.totalReceivers > 0 && (
+                                <span>📨 {item.totalReceivers} مستقبل</span>
+                            )}
+                            {item.readCount > 0 && (
+                                <span>👁️ {item.readCount} مقروء</span>
+                            )}
+                            {item.attachments && item.attachments.length > 0 && (
+                                <span>📎 {item.attachments.length}</span>
+                            )}
+                        </div>
 
                         {(item.repliesCount > 0 || hasReplies) && (
                             <div className="mt-1">

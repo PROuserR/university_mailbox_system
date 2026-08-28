@@ -85,6 +85,7 @@ export const getStatusColor = (status: CorrespondenceStatus | string): string =>
 // DTOs من Backend
 // =========================
 
+
 export type CorrespondenceResponse = {
     id: number;
     number: number;
@@ -113,8 +114,8 @@ export type CorrespondenceResponse = {
     parentCorrespondenceId: number | null;
     isReply: boolean;
     repliesCount: number;
+    isFromIncomingEmail?: boolean;
 };
-
 
 export type UpdateCorrespondencePayload = {
     number?: number;
@@ -158,6 +159,8 @@ export type CreateCorrespondencePayload = {
 // ApiResult<T>
 // =========================
 
+// types/api/correspondence.types.ts
+
 export interface CorrespondenceSearchDto {
     number?: number;
     mainType?: CorrespondenceMainType;
@@ -170,7 +173,7 @@ export interface CorrespondenceSearchDto {
     documentTypeId?: number;
     senderEntityId?: number;
     status?: CorrespondenceStatus;
-    createdAtFrom?: string;
+    createdAtFrom?: string;  // ✅ string للتطابق مع الـ Backend
     createdAtTo?: string;
     issuedDateFrom?: string;
     issuedDateTo?: string;
