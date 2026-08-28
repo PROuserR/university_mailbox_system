@@ -71,8 +71,7 @@ function SidebarContentWrapper() {
             setIsMobile(window.innerWidth < 768);
         };
         checkMobile();
-        window.addEventListener("resize", checkMobile);
-        return () => window.removeEventListener("resize", checkMobile);
+        console.log(hasPermission)
     }, []);
 
 

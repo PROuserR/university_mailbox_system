@@ -112,9 +112,9 @@ export function useAuth() {
     }
   }, []);
 
-  const hasPermission = useCallback((permissionName: string): boolean => {
+  const hasPermission = (permissionName: string): boolean => {
     return authService.hasPermission(permissionName);
-  }, []);
+  };
 
   const refreshPermissions = useCallback(async (): Promise<void> => {
     await authService.refreshDelegatedPermissions();

@@ -666,12 +666,6 @@ export default function DeanSettingsPage() {
                                 />
                             </div>
                             <SettingCard
-                                label="البريد المرسل"
-                                description="عنوان البريد الإلكتروني للمرسل"
-                                value={settings.outgoingEmailFrom || "-"}
-                                icon={faEnvelope}
-                            />
-                            <SettingCard
                                 label="اسم المرسل"
                                 description="اسم المرسل الظاهر"
                                 value={settings.outgoingEmailFromName || "-"}
@@ -1680,16 +1674,6 @@ export default function DeanSettingsPage() {
                                     className="w-4 h-4 rounded border-gray-300"
                                 />
                                 <label className="text-sm text-slate-700">SSL</label>
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-slate-700">البريد المرسل</label>
-                                <input
-                                    type="email"
-                                    value={formValues.outgoingEmailFrom || ""}
-                                    onChange={(e) => setFormValues({...formValues, outgoingEmailFrom: e.target.value})}
-                                    className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-                                    placeholder="noreply@domain.com"
-                                />
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-slate-700">اسم المرسل</label>

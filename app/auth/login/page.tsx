@@ -321,9 +321,6 @@ export default function LoginPage() {
                         >
                             استعادة كلمة المرور
                         </Link>
-                        <Link href="/support" className="text-[10px] sm:text-xs text-slate-500 hover:text-blue-600 transition-colors duration-300">
-                            مساعدة؟
-                        </Link>
                     </div>
                 </footer>
             </div>

@@ -126,8 +126,8 @@ export default function UserSettingsOverlay({ user }: Props) {
                         {(role === "Dean" || role === "Admin") && (
                             <MenuItem
                                 icon={faCog}
-                                label="الإدارة"
-                                onClick={() => handleNavigation("/users")}
+                                label="الاعدادات"
+                                onClick={() => handleNavigation("/settings")}
                             />
                         )}
 

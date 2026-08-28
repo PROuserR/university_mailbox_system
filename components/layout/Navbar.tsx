@@ -314,28 +314,6 @@ function NavbarContent() {
                         <FontAwesomeIcon icon={faSearch} className="text-sm" />
                     </button>
 
-                    {/* Mobile Menu Toggle */}
-                    <button
-                        data-menu-toggle
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="lg:hidden w-9 h-9 rounded-xl bg-white/80 border border-blue-200/50 flex items-center justify-center text-blue-600 hover:bg-blue-50 transition relative"
-                    >
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={isMobileMenuOpen ? "close" : "open"}
-                                initial={{ rotate: -90, opacity: 0 }}
-                                animate={{ rotate: 0, opacity: 1 }}
-                                exit={{ rotate: 90, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                <FontAwesomeIcon
-                                    icon={isMobileMenuOpen ? faXmark : faBars}
-                                    className="text-sm"
-                                />
-                            </motion.div>
-                        </AnimatePresence>
-                    </button>
-
                     <NotificationsDropdown />
 
                     <motion.button

@@ -8,9 +8,7 @@ import {
     faArrowRight,
     faCompass,
     faHouse,
-    faMagnifyingGlass,
     faTriangleExclamation,
-    faBell,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -87,7 +85,7 @@ export default function NotFound() {
                                 transition={{
                                     delay: 0.1,
                                 }}
-                                className="text-7xl font-black tracking-tight text-transparent bg-gradient-to-r from-blue-700 via-sky-500 to-cyan-400 bg-clip-text"
+                                className="text-7xl font-black tracking-tight text-transparent bg-gradient-to-r from-red-700 via-red-500 to-red-400 bg-clip-text"
                             >
                                 404
                             </motion.h1>
@@ -258,7 +256,7 @@ export default function NotFound() {
                                         repeat: Infinity,
                                         duration: 5,
                                     }}
-                                    className="absolute -bottom-6 -left-6 rounded-3xl bg-gradient-to-r from-yellow-300 to-yellow-200 px-6 py-4 text-3xl font-black text-slate-900 shadow-2xl"
+                                    className="absolute -bottom-6 -left-6 rounded-3xl bg-gradient-to-r from-yellow-300 to-yellow-200 px-6 py-4 text-3xl font-black text-red-600 shadow-2xl"
                                 >
                                     404
                                 </motion.div>
