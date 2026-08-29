@@ -28,6 +28,7 @@ import {
     faFileAlt,
     faSitemap,
     faHistory,
+    faDatabase,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailFilterStore from "@/store/mailFilterStore";
 import SidebarItem from "./SidebarItem";
@@ -148,6 +149,20 @@ function SidebarContentWrapper() {
             path: "/dean-history",
             role: UserRole.ADMIN,
         });
+        items.push({
+  icon: faDatabase,
+  label: "النسخ الاحتياطية",
+  path: "/backup",
+  permission: PERMISSIONS.MANAGE_BACKUP,
+},);
+
+items.push({
+  icon: faDatabase,
+  label: "تقدم العمليات",
+  path: "/backup-progress",
+  permission: PERMISSIONS.MANAGE_BACKUP,
+},);
+
 
         // ===== الجهات المرسلة =====
         items.push({
