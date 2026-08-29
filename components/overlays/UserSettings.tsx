@@ -122,7 +122,7 @@ export default function UserSettingsOverlay({ user }: Props) {
                             icon={faChartBar}
                             label="الإحصائيات"
                             onClick={() => handleNavigation(
-                                role === "Dean" || role === "Admin" ? "/statistics" : "/user-statistics"
+                                "/user-statistics"
                             )}
                         />
 

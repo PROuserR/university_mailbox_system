@@ -188,13 +188,7 @@ items.push({
             permission: PERMISSIONS.VIEW_PENDING_APPROVALS,
         });
 
-        // ===== الإحصائيات =====
-        items.push({
-            icon: faChartBar,
-            label: "الإحصائيات",
-            path: "/statistics",
-            permission: PERMISSIONS.VIEW_ANALYTICS,
-        });
+       
 
         // ===== المستخدمين المتجاهلين =====
         items.push({
