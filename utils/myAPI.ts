@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // utils/myAPI.ts
 import axios from "axios";
 import { authService } from "@/services/auth.service";
@@ -9,52 +10,117 @@ const myAPI = axios.create({
   withCredentials: true,
 });
 
+let isRefreshingToken = false;
+let refreshTokenPromise: Promise<void> | null = null;
 let isRefreshingPermissions = false;
 let refreshPermissionPromise: Promise<void> | null = null;
 
-// ============================================================
-// ===== Request Interceptor =====
-// ============================================================
+const updateUserData = async (): Promise<boolean> => {
+  try {
+    const user = await authService.getCurrentUser();
+    const store = userInfoStore.getState();
+    
+    store.setUser({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName: user.fullName,
+      email: user.email,
+      userName: user.userName,
+      roles: user.roles,
+      phone: user.phone || null,
+      isActive: user.isActive,
+      isPermanentReceiver: user.isPermanentReceiver,
+      isEmailConfirmed: user.isEmailConfirmed,
+      isHeadOfDepartment: user.isHeadOfDepartment,
+      departmentId: user.departmentId || null,
+      lastLoginAt: user.lastLoginAt || null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt || null,
+      profileImageUrl: user.profileImageUrl || null,
+    });
+    
+    await authService.loadDelegatedPermissions();
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 myAPI.interceptors.request.use(
   (config) => config,
   (error) => Promise.reject(error)
 );
 
-// ============================================================
-// ===== Response Interceptor =====
-// ============================================================
-
 myAPI.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // ===== معالجة 401 =====
+    if (originalRequest.url?.includes("/logout") || originalRequest.url?.includes("/refresh")) {
+      return Promise.reject(error);
+    }
+
+    // ============================================================
+    // ===== 401 Unauthorized - Refresh Token =====
+    // ============================================================
+    
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      try {
-        await authService.refreshToken();
+
+      if (isRefreshingToken) {
+        await refreshTokenPromise;
         return myAPI(originalRequest);
-      } catch {
-        authService.logout();
-        window.location.href = "/auth/login";
-        return Promise.reject(error);
+      }
+
+      isRefreshingToken = true;
+
+      try {
+        refreshTokenPromise = authService.refreshToken();
+        await refreshTokenPromise;
+        
+        const updated = await updateUserData();
+        
+        if (!updated) {
+          if (typeof window !== "undefined") {
+            toast.error("انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى", { duration: 5000 });
+            window.location.href = "/auth/login";
+          }
+          return Promise.reject(error);
+        }
+        
+        return myAPI(originalRequest);
+      } catch (refreshError: any) {
+        if (typeof window !== "undefined") {
+          userInfoStore.getState().clearUser();
+          toast.error("انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى", { duration: 5000 });
+          window.location.href = "/auth/login";
+        }
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshingToken = false;
+        refreshTokenPromise = null;
       }
     }
 
-    // ===== معالجة 403 =====
+    // ============================================================
+    // ===== 403 Forbidden =====
+    // ============================================================
+    
     if (error.response?.status === 403 && !originalRequest._permissionRetry) {
       originalRequest._permissionRetry = true;
 
-      const permissionName =
-        error.response?.data?.requiredPermission ||
-        error.response?.data?.permission ||
-        error.response?.data?.policy;
+      const store = userInfoStore.getState();
+      const hasExistingPermissions = store.delegatedPermissions?.length > 0;
 
       if (isRefreshingPermissions) {
         await refreshPermissionPromise;
-        return myAPI(originalRequest);
+        const updatedStore = userInfoStore.getState();
+        if (updatedStore.delegatedPermissions?.length > 0) {
+          return myAPI(originalRequest);
+        }
+        redirectToUnauthorized();
+        return Promise.reject(error);
       }
 
       isRefreshingPermissions = true;
@@ -62,28 +128,38 @@ myAPI.interceptors.response.use(
       try {
         refreshPermissionPromise = authService.refreshDelegatedPermissions();
         await refreshPermissionPromise;
+        await updateUserData();
 
-        const state = userInfoStore.getState();
-        const delegatedPermissions = state.delegatedPermissions || [];
-
-        if (permissionName && delegatedPermissions.includes(permissionName)) {
+        const updatedStore = userInfoStore.getState();
+        if (updatedStore.delegatedPermissions?.length > 0) {
           return myAPI(originalRequest);
         }
 
-        if (delegatedPermissions.length > 0) {
-          return myAPI(originalRequest);
+        const currentStore = userInfoStore.getState();
+        if (currentStore.isLoggedIn) {
+          redirectToUnauthorized();
+        } else {
+          if (typeof window !== "undefined") {
+            toast.error("انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى", { duration: 5000 });
+            window.location.href = "/auth/login";
+          }
         }
-
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem("redirectAfterAuth", window.location.pathname);
-          window.location.href = "/unauthorized";
-        }
-
         return Promise.reject(error);
+
       } catch {
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem("redirectAfterAuth", window.location.pathname);
-          window.location.href = "/unauthorized";
+        const currentStore = userInfoStore.getState();
+        
+        if (hasExistingPermissions && currentStore.delegatedPermissions?.length > 0) {
+          return myAPI(originalRequest);
+        }
+        
+        if (currentStore.isLoggedIn) {
+          redirectToUnauthorized();
+        } else {
+          if (typeof window !== "undefined") {
+            toast.error("انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى", { duration: 5000 });
+            window.location.href = "/auth/login";
+          }
         }
         return Promise.reject(error);
       } finally {
@@ -92,13 +168,19 @@ myAPI.interceptors.response.use(
       }
     }
 
-    // ===== معالجة أخطاء الشبكة =====
-    if (!error.response) {
-      toast.error("خطأ في الاتصال بالخادم");
+    if (!error.response && typeof window !== "undefined") {
+      toast.error("خطأ في الاتصال بالخادم", { duration: 5000 });
     }
 
     return Promise.reject(error);
   }
 );
+
+const redirectToUnauthorized = (): void => {
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("redirectAfterAuth", window.location.pathname);
+    window.location.href = "/unauthorized";
+  }
+};
 
 export default myAPI;

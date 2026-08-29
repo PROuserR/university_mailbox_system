@@ -21,7 +21,9 @@ import { UserInfo } from '@/types/api/User/UserInfo';
 import { apiWrapper } from '@/utils/apiClient';
 import useUserInfoStore from '@/store/userInfoStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { PERMISSIONS } from '@/lib/permissions';
 
 type Props = {
     user: UserInfo;
@@ -32,6 +34,7 @@ export default function UserSettingsOverlay({ user }: Props) {
     const overlayRef = useRef<HTMLDivElement>(null);
     const { triggerUserSettings } = userSettingsOverlayStore();
     const { role } = useUserInfoStore();
+    const { hasPermission, isLoading: authLoading } = useAuth();
 
     // ✅ إغلاق عند الضغط خارج الـ Overlay
     useEffect(() => {
@@ -69,6 +72,14 @@ export default function UserSettingsOverlay({ user }: Props) {
         }
     };
 
+    const canViewDelegations = useMemo(() => {
+        return hasPermission(PERMISSIONS.VIEW_DELEGATIONS);
+    }, [hasPermission]);
+
+    const canViewSettings = useMemo(() => {
+        return role === "Dean" || role === "Admin" || hasPermission(PERMISSIONS.SYSTEM_MANAGE);
+    }, [role, hasPermission]);
+
     return (
         <AnimatePresence>
             {true && (
@@ -78,7 +89,7 @@ export default function UserSettingsOverlay({ user }: Props) {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ duration: 0.15, ease: "easeInOut" }}
-                    className="absolute left-5  w-72 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-xl z-50"
+                    className="absolute left-5 w-72 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-xl z-50"
                     style={{ top: 'calc(100% - 7px)' }}
                 >
                     {/* ===== User Info ===== */}
@@ -115,7 +126,7 @@ export default function UserSettingsOverlay({ user }: Props) {
                             )}
                         />
 
-                        {role === "Dean" && (
+                        {canViewDelegations && (
                             <MenuItem
                                 icon={faUserAlt}
                                 label="التفويضات"
@@ -123,7 +134,7 @@ export default function UserSettingsOverlay({ user }: Props) {
                             />
                         )}
 
-                        {(role === "Dean" || role === "Admin") && (
+                        {canViewSettings && (
                             <MenuItem
                                 icon={faCog}
                                 label="الاعدادات"

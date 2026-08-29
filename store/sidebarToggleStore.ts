@@ -1,3 +1,5 @@
+// store/sidebarToggleStore.ts
+
 import { create } from 'zustand'
 
 type SidebarToggleStore = {
@@ -6,8 +8,10 @@ type SidebarToggleStore = {
 }
 
 const useSidebarToggleStore = create<SidebarToggleStore>()((set) => ({
-    isSidebarToggleShown: false,
-    triggerSidebar: () => set((state) => ({ isSidebarToggleShown: !state.isSidebarToggleShown })),
+    isSidebarToggleShown: true, 
+    triggerSidebar: () => set((state) => ({ 
+        isSidebarToggleShown: !state.isSidebarToggleShown 
+    })),
 }))
 
-export default useSidebarToggleStore;
+export default useSidebarToggleStore

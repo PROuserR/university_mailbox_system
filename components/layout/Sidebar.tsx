@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // components/layout/Sidebar.tsx
 
@@ -25,16 +26,18 @@ import {
     faArrowRight,
     faArrowLeft,
     faFileAlt,
-    faSitemap, 
+    faSitemap,
+    faHistory,
 } from "@fortawesome/free-solid-svg-icons";
 import useMailFilterStore from "@/store/mailFilterStore";
 import SidebarItem from "./SidebarItem";
 import { motion, AnimatePresence } from "framer-motion";
 import useUserInfoStore from "@/store/userInfoStore";
 import useSidebarToggleStore from "@/store/sidebarToggleStore";
-import { useEffect, useState, Suspense, useMemo, startTransition } from "react";
+import { useEffect, useState, Suspense, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { PERMISSIONS } from "@/lib/permissions";
+import { UserRole } from "@/types/api/user";
 
 // ============================================================
 // ===== Types =====
@@ -45,6 +48,7 @@ interface NavItem {
     label: string;
     path: string;
     permission?: string;
+    role?: UserRole;
 }
 
 // ============================================================
@@ -55,15 +59,14 @@ function SidebarContentWrapper() {
     const router = useRouter();
     const pathname = usePathname();
     const { hasPermission, isLoading: authLoading } = useAuth();
+    const { role, roles } = useUserInfoStore();
     const { filter, setFilter } = useMailFilterStore();
     const { isSidebarToggleShown, triggerSidebar } = useSidebarToggleStore();
     const [isMobile, setIsMobile] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        startTransition(() => {
-            setMounted(true);
-        });
+        setMounted(true);
     }, []);
 
     useEffect(() => {
@@ -71,9 +74,11 @@ function SidebarContentWrapper() {
             setIsMobile(window.innerWidth < 768);
         };
         checkMobile();
-        console.log(hasPermission)
+        window.addEventListener("resize", checkMobile);
+        return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
+    const isAdmin = role === UserRole.ADMIN || roles?.includes(UserRole.ADMIN);
 
     // ============================================================
     // ===== Navigation Items (ثابتة) =====
@@ -128,12 +133,20 @@ function SidebarContentWrapper() {
             permission: PERMISSIONS.MANAGE_USERS,
         });
 
-        // ===== الأقسام ===== ✅ إضافة قسم الأقسام
+        // ===== الأقسام =====
         items.push({
             icon: faSitemap,
             label: "الأقسام",
             path: "/departments",
             permission: PERMISSIONS.MANAGE_DEPARTMENT,
+        });
+
+        // ===== تاريخ العمداء =====
+        items.push({
+            icon: faHistory,
+            label: "تاريخ العمداء",
+            path: "/dean-history",
+            role: UserRole.ADMIN,
         });
 
         // ===== الجهات المرسلة =====
@@ -227,23 +240,28 @@ function SidebarContentWrapper() {
     }, []);
 
     // ============================================================
-    // ===== Filter Items by Permission (يعتمد على mounted) =====
+    // ===== Filter Items by Permission & Role =====
     // ============================================================
 
     const filteredNavItems = useMemo(() => {
-        // أثناء التصيير الأول (mounted == false) نعرض جميع العناصر بدون تصفية
         if (!mounted) {
             return navItems;
         }
-        // بعد التحميل نطبق التصفية حسب الصلاحيات
         if (authLoading) {
             return navItems.filter(item => item.path === "/" || item.path === "/profile");
         }
         return navItems.filter(item => {
-            if (!item.permission) return true;
-            return hasPermission(item.permission);
+            if (item.role) {
+                if (item.role === UserRole.ADMIN && !isAdmin) {
+                    return false;
+                }
+            }
+            if (item.permission) {
+                return hasPermission(item.permission);
+            }
+            return true;
         });
-    }, [navItems, hasPermission, authLoading, mounted]);
+    }, [navItems, hasPermission, authLoading, mounted, isAdmin]);
 
     // ============================================================
     // ===== Check if user can create correspondence =====
@@ -255,50 +273,56 @@ function SidebarContentWrapper() {
     // ===== Handlers =====
     // ============================================================
 
-    const handleDistributionClick = (tab: string) => {
+    const handleDistributionClick = useCallback((tab: string) => {
         router.push(`/distribution?tab=${tab}`);
         setFilter(tab);
-        if (isMobile) triggerSidebar();
-    };
+        if (isMobile) {
+            triggerSidebar();
+        }
+    }, [router, setFilter, isMobile, triggerSidebar]);
 
-    const goToHome = () => {
+    const goToHome = useCallback(() => {
         router.push("/");
         setFilter("");
-        if (isMobile) triggerSidebar();
-    };
+        if (isMobile) {
+            triggerSidebar();
+        }
+    }, [router, setFilter, isMobile, triggerSidebar]);
 
-    const handleNavigation = (path: string) => {
+    const handleNavigation = useCallback((path: string) => {
         router.push(path);
-        if (isMobile) triggerSidebar();
-    };
+        if (isMobile) {
+            triggerSidebar();
+        }
+    }, [router, isMobile, triggerSidebar]);
 
-    const isLinkActive = (path: string): boolean => {
+    const isLinkActive = useCallback((path: string): boolean => {
         if (path === "/") {
             return pathname === "/";
         }
         if (path === "/correspondences") {
-            return (
-                pathname === "/correspondences" ||
-                pathname?.startsWith("/correspondences/")
-            );
+            return pathname === "/correspondences" || pathname?.startsWith("/correspondences/");
         }
         if (path === "/departments") {
             return pathname === "/departments";
+        }
+        if (path === "/dean-history") {
+            return pathname === "/dean-history";
         }
         if (path.includes("?")) {
             const basePath = path.split("?")[0];
             return pathname === basePath;
         }
         return pathname === path;
-    };
+    }, [pathname]);
 
-    const isDistributionActive = (tab: string): boolean => {
+    const isDistributionActive = useCallback((tab: string): boolean => {
         return pathname === "/distribution" && filter === tab;
-    };
+    }, [pathname, filter]);
 
-    // ============================================================
-    // ===== Render =====
-    // ============================================================
+    if (!mounted) {
+        return <div className="w-[260px] h-full bg-blue-50/50 animate-pulse" />;
+    }
 
     return (
         <>

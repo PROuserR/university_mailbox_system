@@ -118,7 +118,7 @@ export const getCorrespondenceWithReplies = async (
 
 export const getDocumentTypes = async (): Promise<{ id: number; name: string }[]> => {
     const response = await apiWrapper.get<ApiResult<{ id: number; name: string }[]>>(
-        '/DocumentTypes'
+        '/DocumentTypes/active'
     );
 
     if (!isApiSuccess(response)) {
@@ -130,7 +130,7 @@ export const getDocumentTypes = async (): Promise<{ id: number; name: string }[]
 
 export const getSenderEntities = async (): Promise<{ id: number; name: string }[]> => {
     const response = await apiWrapper.get<ApiResult<{ id: number; name: string }[]>>(
-        '/SenderEntities'
+        '/SenderEntities/active'
     );
 
     if (!isApiSuccess(response)) {

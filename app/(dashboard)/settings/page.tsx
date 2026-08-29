@@ -29,12 +29,12 @@ import {
     faCloud,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
-import { PermissionGate } from "@/components/auth/PermissionGate";
 import { useSettings } from "@/hooks/useSettings";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { EditButton } from "@/components/settings/EditButton";
 import useUserInfoStore from "@/store/userInfoStore";
 import { CronEditor } from "@/components/settings/CronEditor";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 // ==============================
 // SUB-COMPONENTS
@@ -180,7 +180,7 @@ export default function DeanSettingsPage() {
     const { role } = useUserInfoStore();
 
     const { isLoading: isAuthLoading } = useAuthGuard({
-        requiredPermissions: ['ViewSettings'],
+        requiredPermissions: ['SystemManage'],
         redirectTo: '/auth/login',
         unauthorizedPath: '/unauthorized'
     });
@@ -311,7 +311,6 @@ export default function DeanSettingsPage() {
                         outgoingEmailUsername: settings.outgoingEmailUsername || "",
                         outgoingEmailPassword: "",
                         outgoingEmailUseSsl: settings.outgoingEmailUseSsl,
-                        outgoingEmailFrom: settings.outgoingEmailFrom || "",
                         outgoingEmailFromName: settings.outgoingEmailFromName || "",
                         outgoingEmailMaxRetryCount: settings.outgoingEmailMaxRetryCount,
                         outgoingEmailRetryIntervalMinutes: settings.outgoingEmailRetryIntervalMinutes,
@@ -374,14 +373,9 @@ export default function DeanSettingsPage() {
         }
     };
 
-    if (isAuthLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <FontAwesomeIcon icon={faSpinner} spin className="text-3xl text-blue-600" />
-                <span className="mr-3 text-blue-600 text-sm">جاري التحقق من الصلاحيات...</span>
-            </div>
-        );
-    }
+   if (isAuthLoading) {
+    return <LoadingSpinner />;
+}
 
     if (!canUpdate) {
         return (
@@ -424,7 +418,6 @@ export default function DeanSettingsPage() {
                         </div>
                     </div>
 
-                    <PermissionGate permissions={['UpdateSettings']}>
                         <button
                             onClick={resetSettings}
                             disabled={isSaving}
@@ -433,7 +426,6 @@ export default function DeanSettingsPage() {
                             <FontAwesomeIcon icon={faRotate} />
                             إعادة تعيين
                         </button>
-                    </PermissionGate>
                 </div>
             </div>
 
@@ -444,9 +436,7 @@ export default function DeanSettingsPage() {
                         <FontAwesomeIcon icon={faUsers} className="text-blue-500" />
                         إعدادات التوزيع
                     </h2>
-                    <PermissionGate permissions={['UpdateSettings']}>
                         <EditButton onClick={() => openModal("distribution")} />
-                    </PermissionGate>
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
@@ -497,9 +487,7 @@ export default function DeanSettingsPage() {
             <FontAwesomeIcon icon={faFile} className="text-blue-500" />
             إعدادات المرفقات
         </h2>
-        <PermissionGate permissions={['UpdateSettings']}>
             <EditButton onClick={() => openModal("file")} />
-        </PermissionGate>
     </div>
     <div className="space-y-4">
         <SettingCard
@@ -561,9 +549,7 @@ export default function DeanSettingsPage() {
                         <FontAwesomeIcon icon={faEnvelope} className="text-green-500" />
                         إعدادات البريد الوارد
                     </h2>
-                    <PermissionGate permissions={['UpdateSettings']}>
                         <EditButton onClick={() => openModal("email-incoming")} />
-                    </PermissionGate>
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
@@ -630,9 +616,7 @@ export default function DeanSettingsPage() {
                         <FontAwesomeIcon icon={faEnvelope} className="text-blue-500" />
                         إعدادات البريد الصادر
                     </h2>
-                    <PermissionGate permissions={['UpdateSettings']}>
                         <EditButton onClick={() => openModal("email-outgoing")} />
-                    </PermissionGate>
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
@@ -666,6 +650,12 @@ export default function DeanSettingsPage() {
                                 />
                             </div>
                             <SettingCard
+                                label="البريد المرسل"
+                                description="عنوان البريد الإلكتروني للمرسل"
+                                value={settings.outgoingEmailUsername || "-"}
+                                icon={faEnvelope}
+                            />
+                            <SettingCard
                                 label="اسم المرسل"
                                 description="اسم المرسل الظاهر"
                                 value={settings.outgoingEmailFromName || "-"}
@@ -698,9 +688,7 @@ export default function DeanSettingsPage() {
                         <FontAwesomeIcon icon={faBoxArchive} className="text-amber-500" />
                         إعدادات الأرشفة
                     </h2>
-                    <PermissionGate permissions={['UpdateSettings']}>
                         <EditButton onClick={() => openModal("archive")} />
-                    </PermissionGate>
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
@@ -737,9 +725,7 @@ export default function DeanSettingsPage() {
                         <FontAwesomeIcon icon={faTrash} className="text-red-500" />
                         إعدادات تنظيف الملفات المؤقتة
                     </h2>
-                    <PermissionGate permissions={['UpdateSettings']}>
                         <EditButton onClick={() => openModal("temp-cleanup")} />
-                    </PermissionGate>
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
@@ -777,9 +763,7 @@ export default function DeanSettingsPage() {
             <FontAwesomeIcon icon={faFolder} className="text-purple-500" />
             إعدادات النسخ الاحتياطي للملفات
         </h2>
-        <PermissionGate permissions={['UpdateSettings']}>
             <EditButton onClick={() => openModal("files-backup")} />
-        </PermissionGate>
     </div>
     <div className="space-y-4">
         {/* Job Control */}
@@ -904,9 +888,7 @@ export default function DeanSettingsPage() {
             <FontAwesomeIcon icon={faDatabase} className="text-blue-500" />
             إعدادات النسخ الاحتياطي لقاعدة البيانات
         </h2>
-        <PermissionGate permissions={['UpdateSettings']}>
             <EditButton onClick={() => openModal("database-backup")} />
-        </PermissionGate>
     </div>
     <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -982,9 +964,7 @@ export default function DeanSettingsPage() {
                         <FontAwesomeIcon icon={faClock} className="text-orange-500" />
                         إعدادات التنظيف
                     </h2>
-                    <PermissionGate permissions={['UpdateSettings']}>
                         <EditButton onClick={() => openModal("cleanup")} />
-                    </PermissionGate>
                 </div>
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">

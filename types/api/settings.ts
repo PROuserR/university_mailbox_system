@@ -35,7 +35,6 @@ export interface SystemSettingsDto {
   outgoingEmailPort: number;
   outgoingEmailUsername: string | null;
   outgoingEmailUseSsl: boolean;
-  outgoingEmailFrom: string | null;
   outgoingEmailFromName: string | null;
   outgoingEmailMaxRetryCount: number;
   outgoingEmailRetryIntervalMinutes: number;

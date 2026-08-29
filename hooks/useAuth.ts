@@ -112,7 +112,7 @@ export function useAuth() {
     }
   }, []);
 
-  const hasPermission = (permissionName: string): boolean => {
+  const  hasPermission = (permissionName: string): boolean => {
     return authService.hasPermission(permissionName);
   };
 

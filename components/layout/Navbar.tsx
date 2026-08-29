@@ -28,76 +28,12 @@ import { apiWrapper } from "@/utils/apiClient";
 import { useSearchStore } from "@/store/searchStore";
 
 // ==============================
-// ✅ NavButton Component (للموبايل فقط)
-// ==============================
-
-interface NavButtonProps {
-    icon: any;
-    label: string;
-    href?: string;
-    onClick?: () => void;
-    className?: string;
-    isActive?: boolean;
-    closeMenu?: () => void;
-}
-
-function NavButton({
-    icon,
-    label,
-    href,
-    onClick,
-    className = "",
-    isActive = false,
-    closeMenu,
-}: NavButtonProps) {
-    const router = useRouter();
-    const handleClick = () => {
-        if (onClick) {
-            onClick();
-        } else if (href) {
-            router.push(href);
-        }
-        if (closeMenu) {
-            closeMenu();
-        }
-    };
-
-    return (
-        <motion.button
-            whileHover={{ x: 4, backgroundColor: "rgba(59, 130, 246, 0.08)" }}
-            whileTap={{ scale: 0.97 }}
-            onClick={handleClick}
-            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 text-right text-sm ${
-                isActive
-                    ? "bg-blue-50 text-blue-700 font-semibold border-r-4 border-blue-500"
-                    : "text-gray-700 hover:text-blue-600"
-            } ${className}`}
-        >
-            <FontAwesomeIcon
-                icon={icon}
-                className={`w-5 ${
-                    isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-500"
-                }`}
-            />
-            <span>{label}</span>
-            {isActive && (
-                <motion.div
-                    layoutId="mobile-active"
-                    className="mr-auto w-1.5 h-1.5 rounded-full bg-blue-500"
-                />
-            )}
-        </motion.button>
-    );
-}
-
-// ==============================
 // ✅ MAIN COMPONENT
 // ==============================
 
 function NavbarContent() {
     const router = useRouter();
     const pathname = usePathname();
-    const menuRef = useRef<HTMLDivElement>(null);
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const { isUserSettingsShown, triggerUserSettings } =
@@ -111,39 +47,6 @@ function NavbarContent() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const isAuthPage = pathname?.startsWith("/auth");
-
-    // ✅ أزرار الموبايل حسب الدور
-    const getMobileNavButtons = () => {
-        const isUser = role === "User";
-        const isEmployee = role === "Employee";
-        const isDean = role === "Dean";
-        const isAdmin = role === "Admin";
-        const isDeanOrAdmin = isDean || isAdmin;
-
-        const commonButtons = [
-            { icon: faUserCircle, label: "الملف الشخصي", href: "/profile" },
-        ];
-
-        if (isUser) {
-            return [
-                { icon: faUserCircle, label: "الملف الشخصي", href: "/profile" },
-            ];
-        }
-
-        if (isEmployee) {
-            return [
-                { icon: faUserCircle, label: "الملف الشخصي", href: "/profile" },
-            ];
-        }
-
-        if (isDeanOrAdmin) {
-            return [
-                { icon: faUserCircle, label: "الملف الشخصي", href: "/profile" },
-            ];
-        }
-
-        return commonButtons;
-    };
 
     useEffect(() => {
         setSearchValue(searchQuery);
@@ -182,48 +85,18 @@ function NavbarContent() {
         };
     }, []);
 
-    useEffect(() => {
-        setIsMobileMenuOpen(false);
-    }, [pathname]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                const target = event.target as HTMLElement;
-                if (!target.closest("[data-menu-toggle]")) {
-                    setIsMobileMenuOpen(false);
-                }
-            }
-        };
-
-        if (isMobileMenuOpen) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [isMobileMenuOpen]);
-
-    useEffect(() => {
-        if (isMobileMenuOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "unset";
-        }
-
-        return () => {
-            document.body.style.overflow = "unset";
-        };
-    }, [isMobileMenuOpen]);
-
     const handleLogout = async () => {
-        await apiWrapper.post("/auth/logout");
-        localStorage.clear();
-        router.push("/auth/login");
+        try {
+            await apiWrapper.post("/auth/logout");
+            localStorage.clear();
+            sessionStorage.clear();
+            router.push("/auth/login");
+        } catch (error) {
+            localStorage.clear();
+            sessionStorage.clear();
+            router.push("/auth/login");
+        }
     };
-
-    const mobileNavButtons = getMobileNavButtons();
 
     return (
         <>
@@ -233,13 +106,10 @@ function NavbarContent() {
             >
                 {/* ===== LEFT - Logo + Toggle Sidebar ===== */}
                 <div className="flex items-center gap-2 sm:gap-4">
-                    {/* ✅ زر فتح/إغلاق الـ Sidebar - يظهر في جميع الصفحات (باستثناء Auth) */}
                     {!isAuthPage && (
-                        <motion.button
-                            whileHover={{ scale: 1.15 }}
-                            whileTap={{ scale: 0.95 }}
+                        <button
                             onClick={triggerSidebar}
-                            className="text-xl text-blue-700 hover:text-blue-900 transition p-1"
+                            className="text-xl text-blue-700 hover:text-blue-900 transition p-1 cursor-pointer"
                             title={isSidebarToggleShown ? "إغلاق القائمة" : "فتح القائمة"}
                         >
                             <FontAwesomeIcon
@@ -248,7 +118,7 @@ function NavbarContent() {
                                     isSidebarToggleShown ? "rotate-180" : "rotate-0"
                                 }`}
                             />
-                        </motion.button>
+                        </button>
                     )}
 
                     <Link href="/" className="flex items-center gap-2">
@@ -354,42 +224,6 @@ function NavbarContent() {
                     )}
                 </div>
             </div>
-
-            {/* ===== Mobile Menu ===== */}
-            <AnimatePresence>
-                {isMobileMenuOpen && (
-                    <motion.div
-                        ref={menuRef}
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2, ease: "easeInOut" }}
-                        className="lg:hidden fixed top-16 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-blue-100 shadow-xl py-2 px-4 max-h-[calc(100vh-4rem)] overflow-y-auto"
-                    >
-                        <div className="flex flex-col gap-0.5">
-                            {mobileNavButtons.map((btn) => (
-                                <NavButton
-                                    key={btn.href}
-                                    icon={btn.icon}
-                                    label={btn.label}
-                                    href={btn.href}
-                                    isActive={pathname === btn.href}
-                                    closeMenu={() => setIsMobileMenuOpen(false)}
-                                />
-                            ))}
-
-                            <div className="border-t border-gray-100 my-2" />
-
-                            <NavButton
-                                icon={faXmark}
-                                label="تسجيل الخروج"
-                                onClick={handleLogout}
-                                className="text-red-600 hover:bg-red-50"
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             {/* ===== User Settings Overlay ===== */}
             {isUserSettingsShown && (

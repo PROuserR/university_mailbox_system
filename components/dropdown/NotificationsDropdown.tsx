@@ -30,12 +30,15 @@ import {
 import { apiWrapper } from "@/utils/apiClient";
 import { NotificationItem, NotificationsResponse } from "@/types/api/notification";
 import { authService } from "@/services/auth.service";
+import useUserInfoStore from "@/store/userInfoStore";
 
 export default function NotificationsDropdown() {
     const [open, setOpen] = useState(false);
     const [isRefreshingPermissions, setIsRefreshingPermissions] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const queryClient = useQueryClient();
+    const { isLoggedIn } = useUserInfoStore();
+    const toastIdRef = useRef<string | null>(null);
 
     const {
         data,
@@ -60,25 +63,34 @@ export default function NotificationsDropdown() {
                 }
 
                 return response.data;
-            } catch (error) {
-                console.error("❌ Failed to fetch notifications:", error);
-                toast.error("فشل في تحميل الإشعارات");
+            } catch (error: any) {
                 throw error;
             }
         },
-        refetchInterval: 30000,
-        enabled: true,
+        refetchInterval: isLoggedIn ? 30000 : false,
+        enabled: isLoggedIn,
         staleTime: 10000,
+        retry: (failureCount, error: any) => {
+            if (error?.response?.status === 401 || error?.status === 401) {
+                return false;
+            }
+            return failureCount < 2;
+        }
     });
 
     const handleRefreshPermissions = async () => {
         setIsRefreshingPermissions(true);
         try {
             await authService.refreshDelegatedPermissions();
-            toast.success("تم تحديث الصلاحيات بنجاح", { icon: "🔑" });
+            if (toastIdRef.current) {
+                toast.dismiss(toastIdRef.current);
+            }
+            toastIdRef.current = toast.success("تم تحديث الصلاحيات بنجاح", { duration: 3000 });
         } catch (error) {
-            toast.error("فشل تحديث الصلاحيات");
-            console.error("Failed to refresh permissions:", error);
+            if (toastIdRef.current) {
+                toast.dismiss(toastIdRef.current);
+            }
+            toastIdRef.current = toast.error("فشل تحديث الصلاحيات", { duration: 3000 });
         } finally {
             setIsRefreshingPermissions(false);
         }
@@ -94,9 +106,18 @@ export default function NotificationsDropdown() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            if (toastIdRef.current) {
+                toast.dismiss(toastIdRef.current);
+            }
+            toastIdRef.current = toast.success("تم تحديد الإشعار كمقروء", { duration: 3000 });
         },
         onError: (error: any) => {
-            toast.error(error?.message || "فشل في تحديد الإشعار كمقروء");
+            if (error?.response?.status !== 401 && error?.status !== 401) {
+                if (toastIdRef.current) {
+                    toast.dismiss(toastIdRef.current);
+                }
+                toastIdRef.current = toast.error(error?.message || "فشل في تحديد الإشعار كمقروء", { duration: 3000 });
+            }
         },
     });
 
@@ -109,11 +130,19 @@ export default function NotificationsDropdown() {
             return response;
         },
         onSuccess: () => {
-            toast.success("تم تحديد جميع الإشعارات كمقروءة");
             queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            if (toastIdRef.current) {
+                toast.dismiss(toastIdRef.current);
+            }
+            toastIdRef.current = toast.success("تم تحديد جميع الإشعارات كمقروءة", { duration: 3000 });
         },
         onError: (error: any) => {
-            toast.error(error?.message || "فشل في تحديد جميع الإشعارات كمقروءة");
+            if (error?.response?.status !== 401 && error?.status !== 401) {
+                if (toastIdRef.current) {
+                    toast.dismiss(toastIdRef.current);
+                }
+                toastIdRef.current = toast.error(error?.message || "فشل في تحديد جميع الإشعارات كمقروءة", { duration: 3000 });
+            }
         },
     });
 
@@ -126,11 +155,19 @@ export default function NotificationsDropdown() {
             return response;
         },
         onSuccess: () => {
-            toast.success("تم حذف الإشعار");
             queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            if (toastIdRef.current) {
+                toast.dismiss(toastIdRef.current);
+            }
+            toastIdRef.current = toast.success("تم حذف الإشعار", { duration: 3000 });
         },
         onError: (error: any) => {
-            toast.error(error?.message || "فشل في حذف الإشعار");
+            if (error?.response?.status !== 401 && error?.status !== 401) {
+                if (toastIdRef.current) {
+                    toast.dismiss(toastIdRef.current);
+                }
+                toastIdRef.current = toast.error(error?.message || "فشل في حذف الإشعار", { duration: 3000 });
+            }
         },
     });
 
@@ -144,6 +181,9 @@ export default function NotificationsDropdown() {
         document.addEventListener("mousedown", handleClickOutside);
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
+            if (toastIdRef.current) {
+                toast.dismiss(toastIdRef.current);
+            }
         };
     }, []);
 
@@ -186,9 +226,12 @@ export default function NotificationsDropdown() {
         }
     };
 
+    if (!isLoggedIn) {
+        return null;
+    }
+
     return (
         <div className="relative z-10" ref={dropdownRef} dir="rtl">
-            {/* ===== زر الجرس ===== */}
             <button
                 onClick={() => {
                     setOpen((prev) => !prev);
@@ -209,7 +252,6 @@ export default function NotificationsDropdown() {
                 )}
             </button>
 
-            {/* ===== القائمة المنسدلة ===== */}
             <AnimatePresence>
                 {open && (
                     <motion.div
@@ -223,7 +265,6 @@ export default function NotificationsDropdown() {
                             left-0 max-sm:left-[-20px] max-sm:-translate-x-1/2
                             max-sm:origin-top"
                     >
-                        {/* ===== الهيدر ===== */}
                         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white">
                             <div className="flex items-center gap-1.5">
                                 <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
@@ -238,7 +279,6 @@ export default function NotificationsDropdown() {
                             </div>
 
                             <div className="flex items-center gap-1">
-                                {/* ✅ زر تحديث الصلاحيات */}
                                 <button
                                     onClick={handleRefreshPermissions}
                                     disabled={isRefreshingPermissions}
@@ -277,9 +317,7 @@ export default function NotificationsDropdown() {
                             </div>
                         </div>
 
-                        {/* ===== المحتوى ===== */}
                         <div className="max-h-[350px] overflow-y-auto">
-                            {/* تحميل */}
                             {isLoading && (
                                 <div className="flex flex-col items-center justify-center gap-1.5 py-8 text-blue-600">
                                     <FontAwesomeIcon icon={faSpinner} spin className="text-lg" />
@@ -287,7 +325,6 @@ export default function NotificationsDropdown() {
                                 </div>
                             )}
 
-                            {/* خطأ */}
                             {isError && (
                                 <div className="flex flex-col items-center justify-center gap-1.5 py-8 text-yellow-500">
                                     <FontAwesomeIcon icon={faTriangleExclamation} className="text-lg" />
@@ -301,7 +338,6 @@ export default function NotificationsDropdown() {
                                 </div>
                             )}
 
-                            {/* فارغ */}
                             {!isLoading && !isError && notifications.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-8 text-gray-400">
                                     <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1.5">
@@ -312,7 +348,6 @@ export default function NotificationsDropdown() {
                                 </div>
                             )}
 
-                            {/* القائمة */}
                             {!isLoading && !isError && notifications.length > 0 && (
                                 <div className="divide-y divide-gray-100">
                                     {notifications.map((notification, index) => {
@@ -321,7 +356,6 @@ export default function NotificationsDropdown() {
                                                 className={`p-2.5 transition-all duration-150 cursor-pointer ${getNotificationBg(notification.type, notification.isRead)}`}
                                             >
                                                 <div className="flex items-start gap-2">
-                                                    {/* أيقونة */}
                                                     <div
                                                         className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 border ${getNotificationStyle(notification.type)}`}
                                                     >
@@ -331,7 +365,6 @@ export default function NotificationsDropdown() {
                                                         />
                                                     </div>
 
-                                                    {/* المحتوى */}
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-start justify-between gap-1.5">
                                                             <div className="flex-1 min-w-0">
@@ -351,13 +384,11 @@ export default function NotificationsDropdown() {
                                                                 </p>
                                                             </div>
 
-                                                            {/* نقطة غير مقروء */}
                                                             {!notification.isRead && (
                                                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-1" />
                                                             )}
                                                         </div>
 
-                                                        {/* الأزرار */}
                                                         <div className="flex items-center gap-1 mt-1">
                                                             {!notification.isRead && (
                                                                 <button
@@ -372,7 +403,7 @@ export default function NotificationsDropdown() {
                                                                     {markAsReadMutation.isPending ? (
                                                                         <FontAwesomeIcon icon={faSpinner} spin className="text-[6px]" />
                                                                     ) : (
-                                                                        <FontAwesomeIcon icon={faCheck} className="text-[6px]" />
+                                                                    <FontAwesomeIcon icon={faCheck} className="text-[6px]" />
                                                                     )}
                                                                     مقروء
                                                                 </button>
@@ -424,7 +455,6 @@ export default function NotificationsDropdown() {
                             )}
                         </div>
 
-                        {/* ===== الفوتر ===== */}
                         {notifications.length > 0 && (
                             <div className="border-t border-gray-100 p-1.5 text-center">
                                 <button
