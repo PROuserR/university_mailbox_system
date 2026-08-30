@@ -22,6 +22,18 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { PERMISSIONS } from "@/lib/permissions";
 import { useReceiverDashboard } from "@/hooks/useAnalytics";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
+import { format, parseISO } from "date-fns";
+import { ar } from "date-fns/locale";
 
 // ============================================================
 // ===== Helpers =====
@@ -52,12 +64,115 @@ const getDaysColor = (days: number) => {
   return "text-red-700";
 };
 
+const getDaysBg = (days: number) => {
+  if (days <= 3) return "bg-yellow-50";
+  if (days <= 7) return "bg-orange-50";
+  if (days <= 14) return "bg-red-50";
+  return "bg-red-100";
+};
+
+const COLORS = ["#10b981", "#f59e0b", "#ef4444"];
+
+// ============================================================
+// ===== Monthly Reading Chart =====
+// ============================================================
+
+const MonthlyReadingChart = ({ data, year }: { data: any[]; year: number }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-64 items-center justify-center text-gray-400">
+        لا توجد بيانات
+      </div>
+    );
+  }
+
+  const chartData = data.map((item) => ({
+    ...item,
+    name: item.month,
+    read: item.read,
+    received: item.received,
+    readPercentage: item.readPercentage,
+  }));
+
+  const maxReceived = Math.max(...data.map((d) => d.received), 1);
+
+  return (
+    <div>
+      <ResponsiveContainer width="100%" height={250}>
+        <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+          <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+          <Tooltip
+            formatter={(value: any, name: any) => {
+              const labels: Record<string, string> = {
+                read: "مقروء",
+                received: "مستلم",
+              };
+              return [`${value}`, labels[name] || name];
+            }}
+            contentStyle={{
+              borderRadius: "12px",
+              border: "none",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              padding: "8px 12px",
+            }}
+          />
+          <Bar dataKey="received" fill="#93c5fd" radius={[4, 4, 0, 0]} barSize={30} />
+          <Bar dataKey="read" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
+        </BarChart>
+      </ResponsiveContainer>
+
+      {/* ===== Legend ===== */}
+      <div className="flex items-center justify-center gap-6 mt-3 pt-2 border-t border-gray-100">
+        <div className="flex items-center gap-2">
+          <span className="w-3.5 h-3.5 rounded bg-emerald-500" />
+          <span className="text-xs text-gray-600">مقروء</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3.5 h-3.5 rounded bg-blue-300" />
+          <span className="text-xs text-gray-600">مستلم</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3.5 h-3.5 rounded-full bg-gray-200" />
+          <span className="text-xs text-gray-600">
+            الإجمالي: {data.reduce((acc, d) => acc + d.received, 0)}
+          </span>
+        </div>
+      </div>
+
+      {/* ===== إحصائيات سريعة ===== */}
+      <div className="grid grid-cols-3 gap-3 mt-3 pt-2 border-t border-gray-100">
+        <div className="text-center">
+          <p className="text-[10px] text-gray-400">أعلى قراءة</p>
+          <p className="text-sm font-bold text-emerald-600">
+            {Math.max(...data.map((d) => d.read))}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] text-gray-400">أعلى استلام</p>
+          <p className="text-sm font-bold text-blue-600">
+            {Math.max(...data.map((d) => d.received))}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] text-gray-400">متوسط القراءة</p>
+          <p className="text-sm font-bold text-purple-600">
+            {(data.reduce((acc, d) => acc + d.readPercentage, 0) / data.length).toFixed(1)}%
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ============================================================
 // ===== Main Component =====
 // ============================================================
 
 export default function ReceiverDashboardPage() {
   const { isLoading: isAuthLoading, isAuthorized } = useAuthGuard({
+    requiredPermissions: [PERMISSIONS.VIEW_ANALYTICS],
     redirectTo: "/auth/login",
     unauthorizedPath: "/unauthorized",
   });
@@ -226,97 +341,7 @@ export default function ReceiverDashboardPage() {
           </span>
           القراءة الشهرية ({monthlyReading.year})
         </h3>
-        {monthlyReading.data.length === 0 ? (
-          <div className="flex h-64 items-center justify-center text-gray-400">
-            لا توجد بيانات
-          </div>
-        ) : (
-          <>
-            {/* ===== الرسم البياني ===== */}
-            <div className="relative h-64 w-full">
-              <div className="flex items-end justify-between h-full gap-2">
-                {monthlyReading.data.map((item, index) => {
-                  const maxReceived = Math.max(...monthlyReading.data.map(d => d.received), 1);
-                  const receivedHeight = (item.received / maxReceived) * 100;
-                  const readHeight = (item.read / maxReceived) * 100;
-
-                  return (
-                    <div key={index} className="flex-1 flex flex-col items-center h-full justify-end">
-                      <div className="w-full flex flex-col items-center gap-0.5">
-                        {/* شريط المستلم (الجزء غير المقروء) */}
-                        <div
-                          className="w-full max-w-[48px] bg-blue-200 rounded-t-lg transition-all hover:bg-blue-300"
-                          style={{
-                            height: `${Math.max((receivedHeight - readHeight), 2)}%`,
-                            minHeight: '4px',
-                          }}
-                        />
-                        {/* شريط المقروء */}
-                        <div
-                          className="w-full max-w-[48px] bg-emerald-500 rounded-t-lg transition-all hover:bg-emerald-600 cursor-pointer relative group"
-                          style={{
-                            height: `${Math.max(readHeight, 2)}%`,
-                            minHeight: '4px',
-                          }}
-                        >
-                          {/* Tooltip عند التمرير */}
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            مقروء: {item.read} / {item.received}
-                          </div>
-                        </div>
-                      </div>
-                      {/* التسميات */}
-                      <span className="text-[10px] text-gray-500 mt-2 font-medium">
-                        {item.month}
-                      </span>
-                      <span className={`text-[9px] font-medium ${item.readPercentage >= 70 ? 'text-emerald-600' : item.readPercentage >= 40 ? 'text-yellow-600' : 'text-red-500'}`}>
-                        {item.readPercentage.toFixed(0)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ===== Legend ===== */}
-            <div className="flex items-center justify-center gap-6 mt-4 pt-3 border-t border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 rounded bg-emerald-500" />
-                <span className="text-xs text-gray-600">مقروء</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 rounded bg-blue-200" />
-                <span className="text-xs text-gray-600">غير مقروء</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 rounded-full bg-gray-200" />
-                <span className="text-xs text-gray-600">الإجمالي: {monthlyReading.data.reduce((acc, d) => acc + d.received, 0)}</span>
-              </div>
-            </div>
-
-            {/* ===== إحصائيات سريعة ===== */}
-            <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-gray-100">
-              <div className="text-center">
-                <p className="text-[10px] text-gray-400">أعلى قراءة</p>
-                <p className="text-sm font-bold text-emerald-600">
-                  {Math.max(...monthlyReading.data.map(d => d.read))}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-gray-400">أعلى استلام</p>
-                <p className="text-sm font-bold text-blue-600">
-                  {Math.max(...monthlyReading.data.map(d => d.received))}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-gray-400">متوسط القراءة</p>
-                <p className="text-sm font-bold text-purple-600">
-                  {(monthlyReading.data.reduce((acc, d) => acc + d.readPercentage, 0) / monthlyReading.data.length).toFixed(1)}%
-                </p>
-              </div>
-            </div>
-          </>
-        )}
+        <MonthlyReadingChart data={monthlyReading.data} year={monthlyReading.year} />
       </div>
 
       {/* ===== PENDING & RECENT READS ===== */}
@@ -338,7 +363,7 @@ export default function ReceiverDashboardPage() {
               {pending.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition"
+                  className={`flex items-center justify-between p-2 rounded-lg ${getDaysBg(item.daysPending)} hover:opacity-80 transition`}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-800 truncate">{item.title}</p>

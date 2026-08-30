@@ -14,6 +14,9 @@ import {
   DeanDashboardDto,
   ReceiverDashboardFullDto,
   ReadingBehaviorReportDto,
+  GetCorrespondenceFullQuery,
+  CorrespondenceFullReportDto,
+  DistributionStatusDto,
 } from "@/types/api/analytics.types";
 import PagedResult from "@/types/api/PagedResponse";
 
@@ -249,6 +252,80 @@ export const getReadingBehavior = async (): Promise<ReadingBehaviorReportDto> =>
 
   if (!response.data.isSuccess) {
     const error = new Error(response.data.message || "فشل تحميل تقرير سلوك القراءة");
+    (error as any).statusCode = response.data.statusCode || response.status;
+    throw error;
+  }
+
+  return extractData(response)!;
+};
+
+// ============================================================
+// ===== Get Correspondence Full Report =====
+// ============================================================
+
+export const getCorrespondenceFull = async (
+  query: GetCorrespondenceFullQuery = {}
+): Promise<CorrespondenceFullReportDto> => {
+  const {
+    fromDate = null,
+    toDate = null,
+    mainType = null,
+    documentTypeId = null,
+    senderEntityId = null,
+    groupBy = "day",
+    topIgnoredCount = 10,
+  } = query;
+
+  const params: Record<string, any> = {
+    groupBy,
+    topIgnoredCount,
+  };
+
+  if (fromDate) params.fromDate = fromDate;
+  if (toDate) params.toDate = toDate;
+  if (mainType) params.mainType = mainType;
+  if (documentTypeId) params.documentTypeId = documentTypeId;
+  if (senderEntityId) params.senderEntityId = senderEntityId;
+
+  const response = await apiWrapper.get<ApiResult<CorrespondenceFullReportDto>>(
+    `${BASE_URL}/correspondence/full`,
+    params
+  );
+
+  if (!response.success || !response.data) {
+    const error = new Error(response?.message || "فشل تحميل تقرير المراسلات الكامل");
+    (error as any).statusCode = response?.status || 500;
+    throw error;
+  }
+
+  if (!response.data.isSuccess) {
+    const error = new Error(response.data.message || "فشل تحميل تقرير المراسلات الكامل");
+    (error as any).statusCode = response.data.statusCode || response.status;
+    throw error;
+  }
+
+  return extractData(response)!;
+};
+
+// ============================================================
+// ===== Get Distribution Status Report =====
+// ============================================================
+
+export const getDistributionStatus = async (
+  correspondenceId: number
+): Promise<DistributionStatusDto> => {
+  const response = await apiWrapper.get<ApiResult<DistributionStatusDto>>(
+    `${BASE_URL}/distribution-status-report/${correspondenceId}`
+  );
+
+  if (!response.success || !response.data) {
+    const error = new Error(response?.message || "فشل تحميل حالة التوزيع");
+    (error as any).statusCode = response?.status || 500;
+    throw error;
+  }
+
+  if (!response.data.isSuccess) {
+    const error = new Error(response.data.message || "فشل تحميل حالة التوزيع");
     (error as any).statusCode = response.data.statusCode || response.status;
     throw error;
   }
