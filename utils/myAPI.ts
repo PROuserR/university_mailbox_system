@@ -6,7 +6,7 @@ import userInfoStore from "@/store/userInfoStore";
 import toast from "react-hot-toast";
 
 const myAPI = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://localhost:7236/api",
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
   withCredentials: true,
 });
 
@@ -17,6 +17,7 @@ let refreshPermissionPromise: Promise<void> | null = null;
 
 const updateUserData = async (): Promise<boolean> => {
   try {
+    
     const user = await authService.getCurrentUser();
     const store = userInfoStore.getState();
     

@@ -8,7 +8,7 @@ type SidebarToggleStore = {
 }
 
 const useSidebarToggleStore = create<SidebarToggleStore>()((set) => ({
-    isSidebarToggleShown: true, 
+    isSidebarToggleShown: false, 
     triggerSidebar: () => set((state) => ({ 
         isSidebarToggleShown: !state.isSidebarToggleShown 
     })),
