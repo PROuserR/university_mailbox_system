@@ -278,6 +278,13 @@ function SidebarContentWrapper() {
       path: "/user-statistics",
     });
 
+    items.push({
+      icon: faFile,
+      label: "إدارة الملفات",
+      path: "/file-management",
+      permission: PERMISSIONS.MANAGE_FAILED_FILE_DELETIONS,
+    });
+
     return items;
   }, []);
 
