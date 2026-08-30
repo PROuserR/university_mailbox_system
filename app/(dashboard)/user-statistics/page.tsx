@@ -18,8 +18,6 @@ import {
   faCalendarAlt,
   faClock as faClockIcon,
 } from "@fortawesome/free-solid-svg-icons";
-import { useAuthGuard } from "@/hooks/useAuthGuard";
-import { PERMISSIONS } from "@/lib/permissions";
 import { useReceiverDashboard } from "@/hooks/useAnalytics";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import {
@@ -34,6 +32,7 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 // ============================================================
 // ===== Helpers =====
@@ -172,9 +171,7 @@ const MonthlyReadingChart = ({ data, year }: { data: any[]; year: number }) => {
 
 export default function ReceiverDashboardPage() {
   const { isLoading: isAuthLoading, isAuthorized } = useAuthGuard({
-    requiredPermissions: [PERMISSIONS.VIEW_ANALYTICS],
     redirectTo: "/auth/login",
-    unauthorizedPath: "/unauthorized",
   });
 
   // ===== Query =====

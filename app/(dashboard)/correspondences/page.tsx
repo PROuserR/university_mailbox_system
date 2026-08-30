@@ -66,7 +66,7 @@ const {
     setProfessional,
     setDocumentType,
     setSenderEntity,
-    setStatus,
+    setCorrespondenceStatus,
     setSort,
     setNumber,
     setCreatedAtRange,
@@ -234,8 +234,8 @@ const apiParams = useMemo(() => {
     if (advSearchParams.senderEntityId) {
         params.senderEntityId = advSearchParams.senderEntityId;
     }
-    if (advSearchParams.status !== undefined) {
-        params.status = advSearchParams.status;
+    if (advSearchParams.correspondenceStatus !== undefined) {
+        params.status = advSearchParams.correspondenceStatus;
     }
     
     // ✅ تحويل Date إلى string (YYYY-MM-DD)
@@ -341,7 +341,7 @@ const apiParams = useMemo(() => {
         if (advSearchParams.isProfessional !== undefined) count++;
         if (advSearchParams.documentTypeId) count++;
         if (advSearchParams.senderEntityId) count++;
-        if (advSearchParams.status !== undefined) count++;
+        if (advSearchParams.correspondenceStatus !== undefined) count++;
         if (advSearchParams.createdAtFrom) count++;
         if (advSearchParams.createdAtTo) count++;
         if (advSearchParams.issuedDateFrom) count++;
@@ -511,8 +511,8 @@ const apiParams = useMemo(() => {
                 senderEntityId={tempParams.senderEntityId}
                 onSenderEntityChange={setSenderEntity}
                 senderEntities={senderEntities}
-                status={tempParams.status}
-                onStatusChange={setStatus}
+                correspondenceStatus={tempParams.correspondenceStatus}
+                onCorrespondenceStatusChange={setCorrespondenceStatus}
                 sortField={tempParams.sortField}
                 sortDirection={tempParams.sortDirection}
                 onSortChange={setSort}
@@ -624,8 +624,8 @@ const apiParams = useMemo(() => {
             senderEntityId={tempParams.senderEntityId}
             onSenderEntityChange={setSenderEntity}
             senderEntities={senderEntities}
-            status={tempParams.status}
-            onStatusChange={setStatus}
+            correspondenceStatus={tempParams.correspondenceStatus}
+            onCorrespondenceStatusChange={setCorrespondenceStatus}
             sortField={tempParams.sortField}
             sortDirection={tempParams.sortDirection}
             onSortChange={setSort}

@@ -34,6 +34,20 @@ import {
   faEye,
   faChevronDown,
   faChevronLeft,
+  faBoxes,
+  faMailBulk,
+  faLayerGroup,
+  faListCheck,
+  faCog,
+  faUserShield,
+  faUniversity,
+  faBuildingColumns,
+  faFileLines,
+  faHandshake,
+  faBriefcase,        // ✅ أيقونة الوظائف
+  faTrashCan,         // ✅ أيقونة الملفات المؤقتة
+  faServer,           // ✅ أيقونة إدارة النظام
+  faUsersGear,        // ✅ أيقونة إدارة المستخدمين
 } from "@fortawesome/free-solid-svg-icons";
 import useMailFilterStore from "@/store/mailFilterStore";
 import SidebarItem from "./SidebarItem";
@@ -58,6 +72,13 @@ interface NavItem {
 }
 
 interface ReportItem {
+  icon: any;
+  label: string;
+  path: string;
+  permission?: string;
+}
+
+interface AdminItem {
   icon: any;
   label: string;
   path: string;
@@ -114,6 +135,61 @@ const REPORT_ITEMS: ReportItem[] = [
 ];
 
 // ============================================================
+// ===== Admin Items (يتم تجميعها فقط لغير الـ Admin) =====
+// ============================================================
+
+const ADMIN_ITEMS: AdminItem[] = [
+  {
+    icon: faUsersGear,
+    label: "المستخدمين",
+    path: "/users",
+    permission: PERMISSIONS.MANAGE_USERS,
+  },
+  {
+    icon: faBriefcase,
+    label: "الوظائف",
+    path: "/jobs",
+    permission: PERMISSIONS.MANAGE_JOBS,
+  },
+  {
+    icon: faTrashCan,
+    label: "الملفات المؤقتة",
+    path: "/temp-files",
+    permission: PERMISSIONS.MANAGE_TEMP_FILES,
+  },
+  {
+    icon: faDatabase,
+    label: "النسخ الاحتياطية",
+    path: "/backup",
+    permission: PERMISSIONS.MANAGE_BACKUP,
+  },
+  {
+    icon: faUniversity,
+    label: "الأقسام",
+    path: "/departments",
+    permission: PERMISSIONS.MANAGE_DEPARTMENT,
+  },
+  {
+    icon: faFileLines,
+    label: "أنواع الوثائق",
+    path: "/document-types",
+    permission: PERMISSIONS.MANAGE_DOCUMENT_TYPES,
+  },
+  {
+    icon: faBuildingColumns,
+    label: "الجهات المرسلة",
+    path: "/sender-entities",
+    permission: PERMISSIONS.MANAGE_SENDER_ENTITIES,
+  },
+  {
+    icon: faHandshake,
+    label: "التفويضات",
+    path: "/delegations",
+    permission: PERMISSIONS.VIEW_DELEGATIONS,
+  },
+];
+
+// ============================================================
 // ===== Main Component =====
 // ============================================================
 
@@ -127,6 +203,7 @@ function SidebarContentWrapper() {
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -153,24 +230,54 @@ function SidebarContentWrapper() {
     }
   }, [pathname, mounted]);
 
+  useEffect(() => {
+    if (mounted) {
+      const isAdminActive = ADMIN_ITEMS.some(
+        (item) => pathname === item.path || pathname?.startsWith(item.path + "/")
+      );
+      if (isAdminActive) {
+        setIsAdminOpen(true);
+      }
+    }
+  }, [pathname, mounted]);
+
   const isAdmin = role === UserRole.ADMIN || roles?.includes(UserRole.ADMIN);
 
   // ============================================================
-  // ===== Navigation Items (ثابتة) =====
+  // ===== Navigation Items (مرتبة حسب الأولوية) =====
   // ============================================================
 
   const navItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
-      { icon: faHome, label: "الرئيسية", path: "/" },
     ];
 
-    // ===== التوزيعات =====
+    // ============================================================
+    // ===== 1. المراسلات =====
+    // ============================================================
+    items.push({
+      icon: faLayerGroup,
+      label: "المراسلات",
+      path: "/correspondences",
+      permission: PERMISSIONS.VIEW_CORRESPONDENCE,
+    });
+
+    // ============================================================
+    // ===== 2. التوزيعات =====
+    // ============================================================
+    items.push({
+      icon: faBoxes,
+      label: "جميع التوزيعات",
+      path: "/distribution/all",
+      permission: PERMISSIONS.VIEW_ALL_DISTRIBUTIONS,
+    });
+
     items.push({
       icon: faInbox,
       label: "التوزيعات الواردة",
       path: "/distribution?tab=inbox",
       permission: PERMISSIONS.VIEW_DISTRIBUTION,
     });
+
     items.push({
       icon: faPaperPlane,
       label: "التوزيعات الصادرة",
@@ -178,45 +285,26 @@ function SidebarContentWrapper() {
       permission: PERMISSIONS.VIEW_DISTRIBUTION,
     });
 
-    // ===== البريد =====
+    // ============================================================
+    // ===== 3. البريد الإلكتروني =====
+    // ============================================================
     items.push({
-      icon: faEnvelope,
+      icon: faMailBulk,
       label: "البريد الوارد",
       path: "/incoming-emails",
       permission: PERMISSIONS.MANAGE_INCOMING_EMAIL,
     });
+
     items.push({
-      icon: faPaperPlane,
+      icon: faEnvelope,
       label: "البريد الصادر",
       path: "/outgoing-emails",
       permission: PERMISSIONS.MANAGE_OUTGOING_EMAIL,
     });
 
-    // ===== المراسلات =====
-    items.push({
-      icon: faFolder,
-      label: "المراسلات",
-      path: "/correspondences",
-      permission: PERMISSIONS.VIEW_CORRESPONDENCE,
-    });
-
-    // ===== المستخدمين =====
-    items.push({
-      icon: faUsers,
-      label: "المستخدمين",
-      path: "/users",
-      permission: PERMISSIONS.MANAGE_USERS,
-    });
-
-    // ===== الأقسام =====
-    items.push({
-      icon: faSitemap,
-      label: "الأقسام",
-      path: "/departments",
-      permission: PERMISSIONS.MANAGE_DEPARTMENT,
-    });
-
-    // ===== تاريخ العمداء =====
+    // ============================================================
+    // ===== 4. باقي العناصر =====
+    // ============================================================
     items.push({
       icon: faHistory,
       label: "تاريخ العمداء",
@@ -224,54 +312,13 @@ function SidebarContentWrapper() {
       role: UserRole.ADMIN,
     });
 
-    // ===== النسخ الاحتياطية =====
     items.push({
-      icon: faDatabase,
-      label: "النسخ الاحتياطية",
-      path: "/backup",
-      permission: PERMISSIONS.MANAGE_BACKUP,
-    });
-
-    items.push({
-      icon: faClock,
-      label: "تقدم العمليات",
-      path: "/backup-progress",
-      permission: PERMISSIONS.MANAGE_BACKUP,
-    });
-
-    // ===== الجهات المرسلة =====
-    items.push({
-      icon: faBuilding,
-      label: "الجهات المرسلة",
-      path: "/sender-entities",
-      permission: PERMISSIONS.MANAGE_SENDER_ENTITIES,
-    });
-
-    // ===== أنواع الوثائق =====
-    items.push({
-      icon: faFile,
-      label: "أنواع الوثائق",
-      path: "/document-types",
-      permission: PERMISSIONS.MANAGE_DOCUMENT_TYPES,
-    });
-
-    // ===== الموافقات =====
-    items.push({
-      icon: faCheckCircle,
+      icon: faListCheck,
       label: "الموافقات",
       path: "/pending-approvals",
       permission: PERMISSIONS.VIEW_PENDING_APPROVALS,
     });
 
-    // ===== التفويضات =====
-    items.push({
-      icon: faUserCog,
-      label: "التفويضات",
-      path: "/delegations",
-      permission: PERMISSIONS.VIEW_DELEGATIONS,
-    });
-
-    // ===== إحصائياتي =====
     items.push({
       icon: faChartBar,
       label: "إحصائياتي",
@@ -279,7 +326,7 @@ function SidebarContentWrapper() {
     });
 
     items.push({
-      icon: faFile,
+      icon: faFileAlt,
       label: "إدارة الملفات",
       path: "/file-management",
       permission: PERMISSIONS.MANAGE_FAILED_FILE_DELETIONS,
@@ -326,6 +373,31 @@ function SidebarContentWrapper() {
       return true;
     });
   }, [hasPermission, authLoading, mounted]);
+
+  // ============================================================
+  // ===== Filter Admin Items by Permission =====
+  // ============================================================
+
+  const filteredAdminItems = useMemo(() => {
+    if (!mounted) return [];
+    if (authLoading) return [];
+    
+    if (isAdmin) {
+      return ADMIN_ITEMS.filter((item) => {
+        if (item.permission) {
+          return hasPermission(item.permission);
+        }
+        return true;
+      });
+    }
+    
+    return ADMIN_ITEMS.filter((item) => {
+      if (item.permission) {
+        return hasPermission(item.permission);
+      }
+      return true;
+    });
+  }, [hasPermission, authLoading, mounted, isAdmin]);
 
   // ============================================================
   // ===== Check if user can create correspondence =====
@@ -375,11 +447,17 @@ function SidebarContentWrapper() {
       if (path === "/correspondences") {
         return pathname === "/correspondences" || pathname?.startsWith("/correspondences/");
       }
+      if (path === "/distribution/all") {
+        return pathname === "/distribution/all";
+      }
       if (path === "/departments") {
         return pathname === "/departments";
       }
       if (path === "/dean-history") {
         return pathname === "/dean-history";
+      }
+      if (path === "/jobs") {
+        return pathname === "/jobs" || pathname?.startsWith("/jobs/");
       }
       if (path.includes("?")) {
         const basePath = path.split("?")[0];
@@ -404,8 +482,19 @@ function SidebarContentWrapper() {
     [pathname]
   );
 
+  const isAdminActive = useCallback(
+    (path: string): boolean => {
+      return pathname === path || pathname?.startsWith(path + "/");
+    },
+    [pathname]
+  );
+
   const toggleReports = () => {
     setIsReportsOpen((prev) => !prev);
+  };
+
+  const toggleAdmin = () => {
+    setIsAdminOpen((prev) => !prev);
   };
 
   if (!mounted) {
@@ -494,7 +583,105 @@ function SidebarContentWrapper() {
               );
             })}
 
-            {/* ===== Reports Dropdown ===== */}
+            {/* ============================================================ */}
+            {filteredAdminItems.length > 0 && (
+              <>
+                {isAdmin ? (
+                  <div >
+                    {filteredAdminItems.map((item) => (
+                      <SidebarItem
+                        key={item.path}
+                        icon={item.icon}
+                        label={isSidebarToggleShown ? item.label : ""}
+                        onClick={() => handleNavigation(item.path)}
+                        active={isAdminActive(item.path)}
+                        isCollapsed={!isSidebarToggleShown}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-2 border-t border-blue-100/50 pt-2">
+                    {/* ===== زر الإدارة ===== */}
+                    <button
+                      onClick={toggleAdmin}
+                      className={`
+                        flex items-center gap-2 w-full px-4 py-2.5 rounded-xl
+                        transition-all duration-200 text-right text-sm
+                        ${isAdminOpen ? "bg-blue-100 text-blue-700" : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"}
+                        ${!isSidebarToggleShown ? "justify-center px-0" : ""}
+                      `}
+                    >
+                      <FontAwesomeIcon
+                        icon={faCog}
+                        className={`w-5 shrink-0 ${isAdminOpen ? "text-blue-600" : "text-gray-400"}`}
+                      />
+                      {isSidebarToggleShown && (
+                        <span className="flex-1 text-right truncate">الإدارة</span>
+                      )}
+                      {isSidebarToggleShown && (
+                        <FontAwesomeIcon
+                          icon={isAdminOpen ? faChevronDown : faChevronLeft}
+                          className="text-xs text-gray-400 shrink-0"
+                        />
+                      )}
+                    </button>
+
+                    {/* ===== قائمة الإدارة ===== */}
+                    <AnimatePresence>
+                      {isAdminOpen && isSidebarToggleShown && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pr-4 space-y-0.5">
+                            {filteredAdminItems.map((item) => (
+                              <SidebarItem
+                                key={item.path}
+                                icon={item.icon}
+                                label={item.label}
+                                onClick={() => handleNavigation(item.path)}
+                                active={isAdminActive(item.path)}
+                                isCollapsed={false}
+                                className="text-xs !py-2 !px-3 !rounded-lg"
+                              />
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* ===== عرض أيقونات الإدارة في حالة التصغير ===== */}
+                    {!isSidebarToggleShown && isAdminOpen && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="space-y-0.5 mt-1"
+                      >
+                        {filteredAdminItems.map((item) => (
+                          <SidebarItem
+                            key={item.path}
+                            icon={item.icon}
+                            label=""
+                            onClick={() => handleNavigation(item.path)}
+                            active={isAdminActive(item.path)}
+                            isCollapsed={true}
+                            className="!py-2"
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ============================================================ */}
+            {/* ===== قسم التقارير (Reports Dropdown) ===== */}
+            {/* ============================================================ */}
             {filteredReportItems.length > 0 && (
               <div className="mt-2 border-t border-blue-100/50 pt-2">
                 {/* ===== زر التقارير ===== */}
@@ -696,7 +883,84 @@ function SidebarContentWrapper() {
                     );
                   })}
 
-                  {/* ===== Reports Dropdown (Mobile) ===== */}
+                  {/* ============================================================ */}
+                  {/* ===== قسم الإدارة (Mobile) - فقط لغير الـ Admin ===== */}
+                  {/* ============================================================ */}
+                  {filteredAdminItems.length > 0 && (
+                    <>
+                      {isAdmin ? (
+                        <div >
+                          {filteredAdminItems.map((item) => (
+                            <SidebarItem
+                              key={item.path}
+                              icon={item.icon}
+                              label={item.label}
+                              onClick={() => {
+                                handleNavigation(item.path);
+                                triggerSidebar();
+                              }}
+                              active={isAdminActive(item.path)}
+                              isCollapsed={false}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-2 border-t border-blue-100/50 pt-2">
+                          <button
+                            onClick={toggleAdmin}
+                            className={`
+                              flex items-center gap-2 w-full px-4 py-2.5 rounded-xl
+                              transition-all duration-200 text-right text-sm
+                              ${isAdminOpen ? "bg-blue-100 text-blue-700" : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"}
+                            `}
+                          >
+                            <FontAwesomeIcon
+                              icon={faCog}
+                              className={`w-5 shrink-0 ${isAdminOpen ? "text-blue-600" : "text-gray-400"}`}
+                            />
+                            <span className="flex-1 text-right truncate">الإدارة</span>
+                            <FontAwesomeIcon
+                              icon={isAdminOpen ? faChevronDown : faChevronLeft}
+                              className="text-xs text-gray-400 shrink-0"
+                            />
+                          </button>
+
+                          <AnimatePresence>
+                            {isAdminOpen && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="pr-4 space-y-0.5">
+                                  {filteredAdminItems.map((item) => (
+                                    <SidebarItem
+                                      key={item.path}
+                                      icon={item.icon}
+                                      label={item.label}
+                                      onClick={() => {
+                                        handleNavigation(item.path);
+                                        triggerSidebar();
+                                      }}
+                                      active={isAdminActive(item.path)}
+                                      isCollapsed={false}
+                                      className="text-xs !py-2 !px-3 !rounded-lg"
+                                    />
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* ============================================================ */}
+                  {/* ===== قسم التقارير (Reports Dropdown - Mobile) ===== */}
+                  {/* ============================================================ */}
                   {filteredReportItems.length > 0 && (
                     <div className="mt-2 border-t border-blue-100/50 pt-2">
                       <button
