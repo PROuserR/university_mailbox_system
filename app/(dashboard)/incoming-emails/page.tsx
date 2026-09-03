@@ -19,6 +19,7 @@ import {
     useIncomingEmails, 
     useInfiniteScroll 
 } from "@/hooks/useIncomingEmail";
+import { Badge } from "@/components/ui/badge";
 
 const PAGE_HEIGHT = "calc(100vh - 64px)";
 
@@ -56,7 +57,7 @@ function IncomingEmailsContent() {
         search: "",
         from: "",
         subject: "",
-        status: undefined  as IncomingEmailStatus | undefined,
+        status: undefined as IncomingEmailStatus | undefined,
         hasAttachments: undefined as boolean | undefined,
         dateFrom: "",
         dateTo: "",
@@ -81,8 +82,8 @@ function IncomingEmailsContent() {
         pageSize,
         search: filters.search || undefined,
         from: filters.from || undefined,
-        subject: filters.subject ,
-        status: filters.status || undefined,
+        subject: filters.subject || undefined,
+        status: filters.status !== undefined ? filters.status : undefined,
         hasAttachments: filters.hasAttachments,
         dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
         dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
@@ -195,7 +196,7 @@ function IncomingEmailsContent() {
             search: "",
             from: "",
             subject: "",
-            status: undefined  as IncomingEmailStatus | undefined ,
+            status: undefined as IncomingEmailStatus | undefined,
             hasAttachments: undefined,
             dateFrom: "",
             dateTo: "",
@@ -213,7 +214,7 @@ function IncomingEmailsContent() {
         if (filters.search) count++;
         if (filters.from) count++;
         if (filters.subject) count++;
-        if (filters.status) count++;
+        if (filters.status !== undefined) count++;
         if (filters.hasAttachments !== undefined) count++;
         if (filters.dateFrom) count++;
         if (filters.dateTo) count++;
@@ -402,26 +403,26 @@ function IncomingEmailsContent() {
                                         className="w-full mt-1 border rounded-xl p-2.5 text-sm"
                                     />
                                 </div>
-                              <div>
-    <label className="text-sm font-medium">الحالة</label>
-    <select
-        value={tempFilters.status ?? ""}
-        onChange={(e) => {
-            const val = e.target.value;
-            setTempFilters({
-                ...tempFilters,
-                status: val === "" ? undefined : Number(val) as IncomingEmailStatus,
-            });
-        }}
-        className="w-full mt-1 border rounded-xl p-2.5 text-sm"
-    >
-        <option value="">الكل</option>
-        <option value={IncomingEmailStatus.Pending}>قيد الانتظار</option>
-        <option value={IncomingEmailStatus.Rejected}>مرفوض</option>
-        <option value={IncomingEmailStatus.Converted}>محول</option>
-        <option value={IncomingEmailStatus.Skipped}>تم التخطي</option>
-    </select>
-</div>
+                                <div>
+                                    <label className="text-sm font-medium">الحالة</label>
+                                    <select
+                                        value={tempFilters.status ?? ""}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setTempFilters({
+                                                ...tempFilters,
+                                                status: val === "" ? undefined : Number(val) as IncomingEmailStatus,
+                                            });
+                                        }}
+                                        className="w-full mt-1 border rounded-xl p-2.5 text-sm"
+                                    >
+                                        <option value="">الكل</option>
+                                        <option value={IncomingEmailStatus.Pending}>قيد الانتظار</option>
+                                        <option value={IncomingEmailStatus.Rejected}>مرفوض</option>
+                                        <option value={IncomingEmailStatus.Converted}>محول</option>
+                                        <option value={IncomingEmailStatus.Skipped}>تم التخطي</option>
+                                    </select>
+                                </div>
                                 <div>
                                     <label className="text-sm font-medium">مرفقات</label>
                                     <select
@@ -546,6 +547,25 @@ function IncomingEmailsContent() {
                             </Button>
                         </div>
                     </div>
+
+                    {/* ===== Status Filter Badge ===== */}
+                    {filters.status !== undefined && (
+                        <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="flex items-center gap-1 text-xs py-0.5 px-2">
+                                الحالة: {statusLabels[filters.status]}
+                                <button
+                                    onClick={() => {
+                                        setFilters(prev => ({ ...prev, status: undefined }));
+                                        setTempFilters(prev => ({ ...prev, status: undefined }));
+                                        setPage(1);
+                                    }}
+                                    className="hover:text-red-500 transition"
+                                >
+                                    ✕
+                                </button>
+                            </Badge>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto hide-scrollbar">
@@ -628,26 +648,26 @@ function IncomingEmailsContent() {
                                     className="w-full mt-1 border rounded-xl p-2.5 text-sm"
                                 />
                             </div>
-<div>
-    <label className="text-sm font-medium">الحالة</label>
-    <select
-        value={tempFilters.status ?? ""}
-        onChange={(e) => {
-            const val = e.target.value;
-            setTempFilters({
-                ...tempFilters,
-                status: val === "" ? undefined : Number(val) as IncomingEmailStatus,
-            });
-        }}
-        className="w-full mt-1 border rounded-xl p-2.5 text-sm"
-    >
-        <option value="">الكل</option>
-        <option value={IncomingEmailStatus.Pending}>قيد الانتظار</option>
-        <option value={IncomingEmailStatus.Rejected}>مرفوض</option>
-        <option value={IncomingEmailStatus.Converted}>محول</option>
-        <option value={IncomingEmailStatus.Skipped}>تم التخطي</option>
-    </select>
-</div>
+                            <div>
+                                <label className="text-sm font-medium">الحالة</label>
+                                <select
+                                    value={tempFilters.status ?? ""}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setTempFilters({
+                                            ...tempFilters,
+                                            status: val === "" ? undefined : Number(val) as IncomingEmailStatus,
+                                        });
+                                    }}
+                                    className="w-full mt-1 border rounded-xl p-2.5 text-sm"
+                                >
+                                    <option value="">الكل</option>
+                                    <option value={IncomingEmailStatus.Pending}>قيد الانتظار</option>
+                                    <option value={IncomingEmailStatus.Rejected}>مرفوض</option>
+                                    <option value={IncomingEmailStatus.Converted}>محول</option>
+                                    <option value={IncomingEmailStatus.Skipped}>تم التخطي</option>
+                                </select>
+                            </div>
                             <div>
                                 <label className="text-sm font-medium">مرفقات</label>
                                 <select

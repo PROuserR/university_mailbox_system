@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/incoming-email/IncomingEmailList.tsx
 
 "use client";
@@ -19,6 +20,29 @@ interface IncomingEmailListProps {
     bottomRef?: React.RefObject<HTMLDivElement | null>;
     isFetchingNextPage?: boolean;
 }
+
+// ✅ دالة مساعدة لتحويل الحالة إلى رقم
+const getStatusEnum = (status: any): IncomingEmailStatus => {
+    if (typeof status === 'number') {
+        return status as IncomingEmailStatus;
+    }
+    
+    if (typeof status === 'string') {
+        const statusMap: Record<string, IncomingEmailStatus> = {
+            'Pending': IncomingEmailStatus.Pending,
+            'Rejected': IncomingEmailStatus.Rejected,
+            'Converted': IncomingEmailStatus.Converted,
+            'Skipped': IncomingEmailStatus.Skipped,
+            '0': IncomingEmailStatus.Pending,
+            '1': IncomingEmailStatus.Rejected,
+            '2': IncomingEmailStatus.Converted,
+            '3': IncomingEmailStatus.Skipped,
+        };
+        return statusMap[status] ?? IncomingEmailStatus.Pending;
+    }
+    
+    return IncomingEmailStatus.Pending;
+};
 
 export const IncomingEmailList = forwardRef<HTMLDivElement, IncomingEmailListProps>(
     ({ 
@@ -71,8 +95,11 @@ export const IncomingEmailList = forwardRef<HTMLDivElement, IncomingEmailListPro
                 <div className="flex-1 overflow-y-auto">
                     {uniqueItems.map((item) => {
                         const isSelected = selectedId === item.id;
-                        const statusColor = statusColors[item.status] || "bg-gray-100 text-gray-700";
-                        const statusLabel = statusLabels[item.status] || item.status;
+                        
+                        // ✅ تحويل الحالة إلى enum بشكل صحيح
+                        const statusEnum = getStatusEnum(item.status);
+                        const statusColor = statusColors[statusEnum] || "bg-gray-100 text-gray-700";
+                        const statusLabel = statusLabels[statusEnum] || item.status;
 
                         return (
                             <div
