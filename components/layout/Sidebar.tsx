@@ -388,7 +388,7 @@ items.push({
                         </div>
                     )}
 
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                         {filteredNavItems.map((item) => {
                             if (item.path.includes("/distribution?tab=")) {
                                 const tab = item.path.split("?tab=")[1];
@@ -417,22 +417,6 @@ items.push({
                     </div>
                 </div>
 
-                {isSidebarToggleShown && (
-                    <div className="sticky bottom-0 bg-gradient-to-t from-blue-50 to-transparent pt-2">
-                        <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-100/50">
-                            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                                <span>التخزين</span>
-                                <span>2.4GB / 10GB</span>
-                            </div>
-                            <div className="w-full bg-blue-200/50 h-1.5 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600"
-                                    style={{ width: "24%" }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                )}
             </motion.aside>
 
             {/* ===== Mobile Sidebar ===== */}
@@ -505,7 +489,7 @@ items.push({
                                     </button>
                                 )}
 
-                                <div className="space-y-1">
+                                <div >
                                     {filteredNavItems.map((item) => {
                                         if (item.path.includes("/distribution?tab=")) {
                                             const tab = item.path.split("?tab=")[1];
@@ -537,21 +521,6 @@ items.push({
                                             />
                                         );
                                     })}
-                                </div>
-                            </div>
-
-                            <div className="w-full">
-                                <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100/50">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                                        <span>التخزين</span>
-                                        <span>2.4GB / 10GB</span>
-                                    </div>
-                                    <div className="w-full bg-blue-200/50 h-1.5 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600"
-                                            style={{ width: "24%" }}
-                                        />
-                                    </div>
                                 </div>
                             </div>
                         </motion.aside>

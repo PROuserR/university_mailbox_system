@@ -33,7 +33,7 @@ export default function SidebarItem({
             onClick={onClick}
             className={cn(
                 `
-                    flex items-center gap-3
+                    flex items-center gap-4
                     w-full px-4 py-2.5
                     rounded-xl
                     transition-all duration-200
@@ -52,7 +52,7 @@ export default function SidebarItem({
             <FontAwesomeIcon
                 icon={icon}
                 className={cn(
-                    "w-5 transition-colors duration-200 shrink-0",
+                    "w-5 h-5 transition-colors duration-200 shrink-0",
                     // ✅ الحالة العادية
                     !active && "text-gray-400 group-hover:text-blue-500",
                     // ✅ الحالة النشطة
