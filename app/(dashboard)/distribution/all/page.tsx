@@ -1,56 +1,71 @@
-// src/app/(dashboard)/correspondences/page.tsx
+// ============================================================
+// ===== app/(dashboard)/distribution/all/page.tsx =====
+// ============================================================
 
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
-// ✅ استبدال useCorrespondences بـ useCorrespondencesInfinite
-import { useCorrespondencesInfinite, useDocumentTypes, useSenderEntities } from "@/hooks/useCorrespondence";
+import { useRouter, useSearchParams } from "next/navigation";
+import { RefreshCw, Filter } from "lucide-react";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { PERMISSIONS } from "@/lib/permissions";
 import { useAdvancedSearch } from "@/hooks/useAdvancedSearch";
-import { CorrespondenceEmailList } from "@/components/correspondence/CorrespondenceEmailList";
-import { CorrespondenceEmailDetail } from "@/components/correspondence/CorrespondenceEmailDetail";
+import { DistributionList } from "@/components/distribution/DistributionList";
+import { DistributionDetail } from "@/components/distribution/DistributionDetail";
 import { AdvancedSearchModal } from "@/components/ui/AdvancedSearchModal";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, Filter } from "lucide-react";
-import Link from "next/link";
-import { useAuthGuard } from "@/hooks/useAuthGuard";
-import { useSearchStore } from "@/store/searchStore";
-import {
-    CorrespondenceMainType,
-    CorrespondenceSearchDto,
-} from "@/types/api/correspondence.types";
-import toast from "react-hot-toast";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Drawer } from "vaul";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchStore } from "@/store/searchStore";
+import { useDocumentTypes } from "@/hooks/useCorrespondence";
+import { useSenderEntities } from "@/hooks/useCorrespondence";
+import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import { useAllDistributionsInfinite } from "@/hooks/useDistribute";
+import { format } from "date-fns";
+import { DistributionResponseByIdDto } from "@/types/api/distribution.types";
 
 const PAGE_HEIGHT = "calc(100vh - 64px)";
+
+// ============================================================
+// ===== Clean Text =====
+// ============================================================
 
 const cleanText = (text: string): string => {
     return text.replace(/\s+/g, " ").trim();
 };
 
-interface DateValidationErrors {
-    createdAt?: string;
-    issuedDate?: string;
-    receivedDate?: string;
-    sentDate?: string;
-}
+// ============================================================
+// ===== Main Component =====
+// ============================================================
 
-function CorrespondencesContent() {
+function DistributionsAllContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
     const { isLoading: isAuthLoading, isAuthorized } = useAuthGuard({
-        requiredPermissions: ['ViewCorrespondence'],
-        redirectTo: '/auth/login'
+        requiredPermissions: [PERMISSIONS.VIEW_ALL_DISTRIBUTIONS],
+        redirectTo: "/auth/login",
+        unauthorizedPath: "/unauthorized",
     });
 
+    // ===== State =====
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
+    // ===== Search Store =====
     const { searchQuery, clearSearch } = useSearchStore();
 
+    // ===== Document Types & Sender Entities =====
+    const { data: documentTypesData } = useDocumentTypes();
+    const { data: senderEntitiesData } = useSenderEntities();
+    const documentTypes = documentTypesData || [];
+    const senderEntities = senderEntitiesData || [];
+
+    // ===== Advanced Search =====
     const {
         searchParams: advSearchParams,
         tempParams,
@@ -60,37 +75,27 @@ function CorrespondencesContent() {
         setProfessional,
         setDocumentType,
         setSenderEntity,
+        setDistributionStatus,
         setCorrespondenceStatus,
         setSort,
         setNumber,
-        setCreatedAtRange,
-        setIssuedDateRange,
-        setReceivedDateRange,
-        setSentDateRange,
         setTempParams,
         resetFilters,
         openModal,
         closeModal,
         applyFilters,
-    } = useAdvancedSearch<CorrespondenceSearchDto>({
-        sortField: "issuedDate",
+    } = useAdvancedSearch<any>({
+        sortField: "distributedDate",
         sortDirection: "desc",
     });
 
-    const correspondenceId = searchParams.get("id");
-
-    const { data: documentTypesData } = useDocumentTypes();
-    const { data: senderEntitiesData } = useSenderEntities();
-
-    const documentTypes = documentTypesData || [];
-    const senderEntities = senderEntitiesData || [];
-
+    // ===== URL Param Handler =====
+    const distributionId = searchParams.get("id");
     const hasSetFromUrl = useRef(false);
 
-    // ===== URL Param Handler =====
     useEffect(() => {
-        if (correspondenceId) {
-            const id = Number(correspondenceId);
+        if (distributionId) {
+            const id = Number(distributionId);
             if (!isNaN(id) && id > 0) {
                 const rafId = requestAnimationFrame(() => {
                     setSelectedId(id);
@@ -98,7 +103,7 @@ function CorrespondencesContent() {
                     hasSetFromUrl.current = true;
                 });
 
-                router.replace('/correspondences');
+                router.replace("/distribution/all");
 
                 return () => cancelAnimationFrame(rafId);
             }
@@ -111,13 +116,9 @@ function CorrespondencesContent() {
                 return () => cancelAnimationFrame(rafId);
             }
         }
-    }, [correspondenceId, router]);
+    }, [distributionId, router]);
 
-    useEffect(() => {
-        const cleaned = cleanText(searchQuery);
-        setSearchText(cleaned);
-    }, [searchQuery, setSearchText]);
-
+    // ===== Mobile Detection =====
     useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
@@ -127,170 +128,86 @@ function CorrespondencesContent() {
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
-    // ============================================================
-    // ===== Validation Functions =====
-    // ============================================================
-
-    const validateDateRange = useCallback((
-        from: Date | undefined,
-        to: Date | undefined,
-        field: keyof DateValidationErrors
-    ): string | undefined => {
-        if (from && to && to < from) {
-            const fieldNames: Record<keyof DateValidationErrors, string> = {
-                createdAt: "تاريخ الإنشاء",
-                issuedDate: "تاريخ الإصدار",
-                receivedDate: "تاريخ الاستلام",
-                sentDate: "تاريخ الإرسال",
-            };
-            return `${fieldNames[field]} (إلى) لا يمكن أن يكون أقدم من ${fieldNames[field]} (من)`;
-        }
-        return undefined;
-    }, []);
-
-    const validateAllDates = useCallback(() => {
-        const errors: DateValidationErrors = {};
-
-        const createdAtError = validateDateRange(
-            tempParams.createdAtFrom,
-            tempParams.createdAtTo,
-            'createdAt'
-        );
-        if (createdAtError) errors.createdAt = createdAtError;
-
-        const issuedDateError = validateDateRange(
-            tempParams.issuedDateFrom,
-            tempParams.issuedDateTo,
-            'issuedDate'
-        );
-        if (issuedDateError) errors.issuedDate = issuedDateError;
-
-        const receivedDateError = validateDateRange(
-            tempParams.receivedDateFrom,
-            tempParams.receivedDateTo,
-            'receivedDate'
-        );
-        if (receivedDateError) errors.receivedDate = receivedDateError;
-
-        const sentDateError = validateDateRange(
-            tempParams.sentDateFrom,
-            tempParams.sentDateTo,
-            'sentDate'
-        );
-        if (sentDateError) errors.sentDate = sentDateError;
-
-        return Object.keys(errors).length === 0;
-    }, [tempParams, validateDateRange]);
-
-    // ===== API Params =====
-
-    const apiParams = useMemo(() => {
-        const params: CorrespondenceSearchDto = {
-            page: 1,
-            pageSize: 50,
-            sortBy:
-                advSearchParams.sortField === "issuedDate"
-                    ? "IssuedDate"
-                    : advSearchParams.sortField === "createdAt"
-                        ? "CreatedAt"
-                        : advSearchParams.sortField === "receivedDate"
-                            ? "ReceivedDate"
-                            : advSearchParams.sortField === "sentDate"
-                                ? "SentDate"
-                                : advSearchParams.sortField === "title"
-                                    ? "Title"
-                                    : advSearchParams.sortField === "number"
-                                        ? "Number"
-                                        : advSearchParams.sortField === "senderEntity"
-                                            ? "SenderEntity"
-                                            : "MainType",
-            sortOrderDESC: advSearchParams.sortDirection === "desc",
-        };
-
-        if (advSearchParams.searchText && advSearchParams.searchText.trim() !== "") {
-            params.search = advSearchParams.searchText.trim();
-        }
-
-        if (advSearchParams.number) {
-            params.number = advSearchParams.number;
-        }
-
-        if (advSearchParams.mainType) {
-            params.mainType = Number(advSearchParams.mainType) as CorrespondenceMainType;
-        }
-        if (advSearchParams.isProfessional !== undefined) {
-            params.isProfessional = advSearchParams.isProfessional;
-        }
-        if (advSearchParams.documentTypeId) {
-            params.documentTypeId = advSearchParams.documentTypeId;
-        }
-        if (advSearchParams.senderEntityId) {
-            params.senderEntityId = advSearchParams.senderEntityId;
-        }
-        if (advSearchParams.correspondenceStatus !== undefined) {
-            params.status = advSearchParams.correspondenceStatus;
-        }
-
-        if (advSearchParams.createdAtFrom) {
-            params.createdAtFrom = advSearchParams.createdAtFrom.toISOString().split('T')[0];
-        }
-        if (advSearchParams.createdAtTo) {
-            params.createdAtTo = advSearchParams.createdAtTo.toISOString().split('T')[0];
-        }
-        if (advSearchParams.issuedDateFrom) {
-            params.issuedDateFrom = advSearchParams.issuedDateFrom.toISOString().split('T')[0];
-        }
-        if (advSearchParams.issuedDateTo) {
-            params.issuedDateTo = advSearchParams.issuedDateTo.toISOString().split('T')[0];
-        }
-        if (advSearchParams.receivedDateFrom) {
-            params.receivedDateFrom = advSearchParams.receivedDateFrom.toISOString().split('T')[0];
-        }
-        if (advSearchParams.receivedDateTo) {
-            params.receivedDateTo = advSearchParams.receivedDateTo.toISOString().split('T')[0];
-        }
-        if (advSearchParams.sentDateFrom) {
-            params.sentDateFrom = advSearchParams.sentDateFrom.toISOString().split('T')[0];
-        }
-        if (advSearchParams.sentDateTo) {
-            params.sentDateTo = advSearchParams.sentDateTo.toISOString().split('T')[0];
-        }
-
-        return params;
-    }, [advSearchParams]);
+    // ===== Sync search from store =====
+    useEffect(() => {
+        const cleaned = cleanText(searchQuery);
+        setSearchText(cleaned);
+    }, [searchQuery, setSearchText]);
 
     // ============================================================
-    // ✅ استخدم useCorrespondencesInfinite بدلاً من useCorrespondences
+    // ===== Query (Infinite Scroll) =====
     // ============================================================
+
     const {
         data,
-        isLoading,
-        error,
+        isLoading: isDataLoading,
         refetch,
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage,
-    } = useCorrespondencesInfinite(apiParams);
+    } = useAllDistributionsInfinite({
+        search: advSearchParams.searchText || undefined,
+        status: advSearchParams.distributionStatus !== undefined
+            ? Number(advSearchParams.distributionStatus)
+            : undefined,
+        correspondenceStatus: advSearchParams.correspondenceStatus !== undefined
+            ? Number(advSearchParams.correspondenceStatus)
+            : undefined,
+        correspondenceNumber: advSearchParams.number !== undefined && advSearchParams.number > 0
+            ? advSearchParams.number
+            : undefined,
+        correspondenceMainType: advSearchParams.mainType && advSearchParams.mainType !== "0"
+            ? Number(advSearchParams.mainType)
+            : undefined,
+        isProfessional: advSearchParams.isProfessional,
+        documentTypeId: advSearchParams.documentTypeId || undefined,
+        senderEntityId: advSearchParams.senderEntityId || undefined,
+        sortBy: advSearchParams.sortField === "distributedDate"
+            ? "DistributedDate"
+            : advSearchParams.sortField === "issuedDate"
+                ? "IssuedDate"
+                : advSearchParams.sortField === "createdAt"
+                    ? "CreatedAt"
+                    : advSearchParams.sortField === "receivedDate"
+                        ? "ReceivedDate"
+                        : advSearchParams.sortField === "sentDate"
+                            ? "SentDate"
+                            : advSearchParams.sortField === "number"
+                                ? "CorrespondenceNumber"
+                                : "DistributedDate",
+        sortDescending: advSearchParams.sortDirection === "desc",
+    });
+
+    const isLoading = isAuthLoading || isDataLoading;
 
     const handleRefresh = useCallback(() => {
         refetch();
     }, [refetch]);
 
-    const isApplyingFilters = useRef(false);
-    const isResetting = useRef(false);
-
-    useEffect(() => {
-        if (error) {
-            toast.error(error.message || "حدث خطأ أثناء تحميل المراسلات");
-        }
-    }, [error]);
-
-    // ===== Flatten items from all pages =====
+    // ============================================================
+    // ✅ منع تكرار الـ keys باستخدام Set
+    // ============================================================
     const items = useMemo(() => {
-        return data?.pages?.flatMap((page) => page.items) || [];
+        if (!data?.pages) return [];
+        
+        const seen = new Set<number>();
+        const result: DistributionResponseByIdDto[] = [];
+        
+        data.pages.forEach((page) => {
+            page.items.forEach((item) => {
+                if (!seen.has(item.id)) {
+                    seen.add(item.id);
+                    result.push(item);
+                }
+            });
+        });
+        
+        return result;
     }, [data]);
 
     const totalCount = data?.pages?.[0]?.totalCount || 0;
+
+    // ===== Selected Item =====
     const selectedItem = items.find((item) => item.id === selectedId) || null;
 
     const getCurrentIndex = () => items.findIndex((i) => i.id === selectedId);
@@ -298,48 +215,51 @@ function CorrespondencesContent() {
     const hasPrevious = currentIndex > 0;
     const hasNext = currentIndex < items.length - 1;
 
-    const handleSelectItem = (id: number) => {
+    const handleSelectItem = useCallback((id: number) => {
         setSelectedId(id);
         setDetailOpen(true);
-        router.push(`/correspondences?id=${id}`);
-    };
+        router.push(`/distribution/all?id=${id}`);
+    }, [router]);
 
-    const handleCloseDetail = () => {
+    const handleCloseDetail = useCallback(() => {
         setDetailOpen(false);
         setSelectedId(null);
-        router.push('/correspondences');
-    };
+        hasSetFromUrl.current = false;
+        router.push("/distribution/all");
+    }, [router]);
 
-    const handlePrevious = () => {
+    const handlePrevious = useCallback(() => {
         if (hasPrevious) {
             const newId = items[currentIndex - 1].id;
             setSelectedId(newId);
-            router.push(`/correspondences?id=${newId}`);
+            router.push(`/distribution/all?id=${newId}`);
         }
-    };
+    }, [hasPrevious, currentIndex, items, router]);
 
-    const handleNext = () => {
+    const handleNext = useCallback(() => {
         if (hasNext) {
             const newId = items[currentIndex + 1].id;
             setSelectedId(newId);
-            router.push(`/correspondences?id=${newId}`);
+            router.push(`/distribution/all?id=${newId}`);
         }
-    };
+    }, [hasNext, currentIndex, items, router]);
+
+    // ============================================================
+    // ===== Apply Filters =====
+    // ============================================================
 
     const handleApplyFilters = useCallback(() => {
-        if (!validateAllDates()) {
-            toast.error("يرجى تصحيح الأخطاء في التواريخ");
-            return;
-        }
-        isApplyingFilters.current = true;
         applyFilters();
-    }, [applyFilters, validateAllDates]);
+    }, [applyFilters]);
 
     const handleResetFilters = useCallback(() => {
-        isResetting.current = true;
         resetFilters();
         clearSearch();
     }, [resetFilters, clearSearch]);
+
+    // ============================================================
+    // ===== Active Filters Count =====
+    // ============================================================
 
     const activeFiltersCount = useMemo(() => {
         let count = 0;
@@ -347,72 +267,34 @@ function CorrespondencesContent() {
         if (advSearchParams.isProfessional !== undefined) count++;
         if (advSearchParams.documentTypeId) count++;
         if (advSearchParams.senderEntityId) count++;
+        if (advSearchParams.distributionStatus !== undefined) count++;
         if (advSearchParams.correspondenceStatus !== undefined) count++;
-        if (advSearchParams.createdAtFrom) count++;
-        if (advSearchParams.createdAtTo) count++;
-        if (advSearchParams.issuedDateFrom) count++;
-        if (advSearchParams.issuedDateTo) count++;
-        if (advSearchParams.receivedDateFrom) count++;
-        if (advSearchParams.receivedDateTo) count++;
-        if (advSearchParams.sentDateFrom) count++;
-        if (advSearchParams.sentDateTo) count++;
+        if (advSearchParams.number && advSearchParams.number > 0) count++;
         return count;
     }, [advSearchParams]);
 
+    // ============================================================
+    // ===== Render =====
+    // ============================================================
+
     if (isAuthLoading) {
-        return (
-            <div
-                className="flex items-center justify-center"
-                style={{ height: PAGE_HEIGHT }}
-            >
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-        );
+        return <LoadingSpinner />;
     }
 
     if (!isAuthorized) {
-        return (
-            <div
-                className="flex items-center justify-center"
-                style={{ height: PAGE_HEIGHT }}
-            >
-                <div className="text-center">
-                    <p className="text-red-500 text-lg">ليس لديك صلاحية لعرض هذه الصفحة</p>
-                    <Button
-                        onClick={() => window.location.href = "/"}
-                        className="mt-4"
-                    >
-                        العودة للرئيسية
-                    </Button>
-                </div>
-            </div>
-        );
-    }
-
-    if (isLoading && items.length === 0) {
-        return (
-            <div
-                className="flex items-center justify-center"
-                style={{ height: PAGE_HEIGHT }}
-            >
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-        );
+        return null;
     }
 
     // ========== Mobile View ==========
     if (isMobile) {
         return (
-            <div
-                className="flex flex-col overflow-hidden"
-                style={{ height: PAGE_HEIGHT }}
-            >
+            <div className="flex flex-col overflow-hidden" style={{ height: PAGE_HEIGHT }}>
                 <div className="shrink-0 bg-background border-b border-border p-3 space-y-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-xl font-bold">المراسلات</h1>
+                            <h1 className="text-xl font-bold">جميع التوزيعات</h1>
                             <p className="text-xs text-muted-foreground">
-                                إجمالي {totalCount} مراسلة
+                                إجمالي {totalCount} توزيع
                                 {items.length > 0 && ` · عرض ${items.length}`}
                             </p>
                         </div>
@@ -439,25 +321,17 @@ function CorrespondencesContent() {
                                     </span>
                                 )}
                             </Button>
-
-                            <Link href="/correspondences/create">
-                                <Button size="sm" className="gap-1">
-                                    <Plus className="h-4 w-4" />
-                                    جديد
-                                </Button>
-                            </Link>
                         </div>
                     </div>
                 </div>
 
                 {!detailOpen && (
                     <div className="flex-1 overflow-y-auto">
-                        <CorrespondenceEmailList
+                        <DistributionList
                             items={items}
                             selectedId={selectedId}
                             onSelectItem={handleSelectItem}
                             isLoading={isLoading}
-                            // ✅ تمرير Props الخاصة بـ Infinite Scroll
                             hasNextPage={hasNextPage}
                             isFetchingNextPage={isFetchingNextPage}
                             fetchNextPage={fetchNextPage}
@@ -471,8 +345,8 @@ function CorrespondencesContent() {
                         setDetailOpen(open);
                         if (!open) {
                             document.body.style.overflow = "unset";
-                            if (!correspondenceId) {
-                                router.push('/correspondences');
+                            if (!distributionId) {
+                                router.push("/distribution/all");
                             }
                         }
                     }}
@@ -489,7 +363,7 @@ function CorrespondencesContent() {
 
                             <div className="flex-1 overflow-y-auto px-4 pb-4">
                                 {selectedItem && (
-                                    <CorrespondenceEmailDetail
+                                    <DistributionDetail
                                         item={selectedItem}
                                         onClose={handleCloseDetail}
                                         onPrevious={handlePrevious}
@@ -520,10 +394,12 @@ function CorrespondencesContent() {
                     senderEntityId={tempParams.senderEntityId}
                     onSenderEntityChange={setSenderEntity}
                     senderEntities={senderEntities}
+                    distributionStatus={tempParams.distributionStatus}
+                    onDistributionStatusChange={setDistributionStatus}
                     correspondenceStatus={tempParams.correspondenceStatus}
                     onCorrespondenceStatusChange={setCorrespondenceStatus}
-                    sortField={tempParams.sortField}
-                    sortDirection={tempParams.sortDirection}
+                    sortField={tempParams.sortField || "distributedDate"}
+                    sortDirection={tempParams.sortDirection || "desc"}
                     onSortChange={setSort}
                     activeFiltersCount={activeFiltersCount}
                     number={tempParams.number}
@@ -542,9 +418,9 @@ function CorrespondencesContent() {
                 <div className="shrink-0 p-3 space-y-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-lg font-semibold">المراسلات</h2>
+                            <h2 className="text-lg font-semibold">جميع التوزيعات</h2>
                             <p className="text-xs text-muted-foreground">
-                                إجمالي {totalCount} مراسلة
+                                إجمالي {totalCount} توزيع
                                 {items.length > 0 && ` · عرض ${items.length}`}
                             </p>
                         </div>
@@ -572,23 +448,16 @@ function CorrespondencesContent() {
                                     </span>
                                 )}
                             </Button>
-
-                            <Link href="/correspondences/create">
-                                <Button variant="ghost" size="icon-sm">
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </Link>
                         </div>
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto hide-scrollbar">
-                    <CorrespondenceEmailList
+                    <DistributionList
                         items={items}
                         selectedId={selectedId}
                         onSelectItem={setSelectedId}
                         isLoading={isLoading}
-                        // ✅ تمرير Props الخاصة بـ Infinite Scroll
                         hasNextPage={hasNextPage}
                         isFetchingNextPage={isFetchingNextPage}
                         fetchNextPage={fetchNextPage}
@@ -598,11 +467,11 @@ function CorrespondencesContent() {
 
             <div className="flex-1 overflow-hidden">
                 {selectedItem ? (
-                    <CorrespondenceEmailDetail
+                    <DistributionDetail
                         item={selectedItem}
                         onClose={() => {
                             setSelectedId(null);
-                            router.push('/correspondences');
+                            router.push("/distribution/all");
                         }}
                         onPrevious={handlePrevious}
                         onNext={handleNext}
@@ -614,8 +483,8 @@ function CorrespondencesContent() {
                 ) : (
                     <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
                         <div className="text-center">
-                            <p className="text-lg">📬</p>
-                            <p>اختر مراسلة من القائمة</p>
+                            <p className="text-lg">📋</p>
+                            <p>اختر توزيعاً من القائمة</p>
                         </div>
                     </div>
                 )}
@@ -636,22 +505,28 @@ function CorrespondencesContent() {
                 senderEntityId={tempParams.senderEntityId}
                 onSenderEntityChange={setSenderEntity}
                 senderEntities={senderEntities}
+                distributionStatus={tempParams.distributionStatus}
+                onDistributionStatusChange={setDistributionStatus}
                 correspondenceStatus={tempParams.correspondenceStatus}
                 onCorrespondenceStatusChange={setCorrespondenceStatus}
-                sortField={tempParams.sortField}
-                sortDirection={tempParams.sortDirection}
+                sortField={tempParams.sortField || "distributedDate"}
+                sortDirection={tempParams.sortDirection || "desc"}
                 onSortChange={setSort}
                 activeFiltersCount={activeFiltersCount}
                 number={tempParams.number}
                 onNumberChange={setNumber}
-                setTempParams={setTempParams}
                 tempParams={tempParams}
+                setTempParams={setTempParams}
             />
         </div>
     );
 }
 
-export default function CorrespondencesPage() {
+// ============================================================
+// ===== Export =====
+// ============================================================
+
+export default function DistributionsAllPage() {
     return (
         <Suspense
             fallback={
@@ -660,7 +535,7 @@ export default function CorrespondencesPage() {
                 </div>
             }
         >
-            <CorrespondencesContent />
+            <DistributionsAllContent />
         </Suspense>
     );
 }

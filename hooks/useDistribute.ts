@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/useDistribution.ts
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
   getDistributionEditorData,
@@ -19,12 +19,15 @@ import {
   getDistributionById,
   getDistributions,
   markAsRead,
+  getAllDistributions,
 } from "@/services/distribution.service";
 import {
   CreateDistributionPayload,
   DistributionFilterDto,
+  DistributionResponseByIdDto,
 } from "@/types/api/distribution.types";
-
+import PagedResult from "@/types/api/PagedResponse";
+import { format } from "date-fns";
 // ============================================================
 // ===== Distribution Editor =====
 // ============================================================
@@ -295,5 +298,100 @@ export const useMarkAsRead = (onSuccess?: () => void) => {
     onError: (error: any) => {
       toast.error(error?.message || "فشل تحديد البريد كمقروء", { duration: 3000 });
     },
+  });
+};
+
+// hooks/useDistribution.ts
+
+// ============================================================
+// ===== Infinite Query =====
+// ============================================================
+interface UseAllDistributionsInfiniteOptions extends Partial<DistributionFilterDto> {
+  pageSize?: number;
+}
+export const useAllDistributionsInfinite = (options: UseAllDistributionsInfiniteOptions = {}) => {
+  const {
+    search,
+    status,
+    correspondenceStatus, 
+    correspondenceNumber,
+    correspondenceMainType,
+    isProfessional,
+    documentTypeId,
+    senderEntityId,
+    readAtFrom,
+    readAtTo,
+    approvedAtFrom,
+    approvedAtTo,
+    rejectedAtFrom,
+    rejectedAtTo,
+    revokedAtFrom,
+    revokedAtTo,
+    sortBy = "DistributedDate",
+    sortDescending = true,
+    pageSize = 40,
+  } = options;
+
+  // ===== بناء queryKey مع جميع المعاملات =====
+  const queryKey = [
+    "distributions",
+    "all",
+    "infinite",
+    search,
+    status,
+    correspondenceStatus, 
+    correspondenceNumber,
+    correspondenceMainType,
+    isProfessional,
+    documentTypeId,
+    senderEntityId,
+    readAtFrom,
+    readAtTo,
+    approvedAtFrom,
+    approvedAtTo,
+    rejectedAtFrom,
+    rejectedAtTo,
+    revokedAtFrom,
+    revokedAtTo,
+    sortBy,
+    sortDescending,
+    pageSize,
+  ];
+
+  return useInfiniteQuery<PagedResult<DistributionResponseByIdDto>>({
+    queryKey,
+    queryFn: ({ pageParam = 1 }) =>
+      getAllDistributions({
+        page: pageParam as number,
+        pageSize,
+        search,
+        status: status !== undefined ? Number(status) : undefined,
+        correspondenceStatus: correspondenceStatus !== undefined ? Number(correspondenceStatus) : undefined,
+        correspondenceNumber,
+        correspondenceMainType: correspondenceMainType !== undefined ? Number(correspondenceMainType) : undefined,
+        isProfessional,
+        documentTypeId,
+        senderEntityId,
+        readAtFrom: readAtFrom ? format(new Date(readAtFrom), "yyyy-MM-dd") : undefined,
+        readAtTo: readAtTo ? format(new Date(readAtTo), "yyyy-MM-dd") : undefined,
+        approvedAtFrom: approvedAtFrom ? format(new Date(approvedAtFrom), "yyyy-MM-dd") : undefined,
+        approvedAtTo: approvedAtTo ? format(new Date(approvedAtTo), "yyyy-MM-dd") : undefined,
+        rejectedAtFrom: rejectedAtFrom ? format(new Date(rejectedAtFrom), "yyyy-MM-dd") : undefined,
+        rejectedAtTo: rejectedAtTo ? format(new Date(rejectedAtTo), "yyyy-MM-dd") : undefined,
+        revokedAtFrom: revokedAtFrom ? format(new Date(revokedAtFrom), "yyyy-MM-dd") : undefined,
+        revokedAtTo: revokedAtTo ? format(new Date(revokedAtTo), "yyyy-MM-dd") : undefined,
+        sortBy,
+        sortDescending,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.hasNextPage) {
+        return lastPage.pageNumber + 1;
+      }
+      return undefined;
+    },
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 };

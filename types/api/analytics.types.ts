@@ -565,3 +565,123 @@ export interface ReadingBehaviorReportDto {
   monthlyTrend: MonthlyReadingTrendDto;
   generatedAt: string;
 }
+
+
+// types/api/analytics.types.ts
+
+// ============================================================
+// ===== Correspondence Full Report =====
+// ============================================================
+
+export interface CorrespondenceTypeItemDto {
+  type: string;
+  count: number;
+  percentage: number;
+}
+
+export interface CorrespondenceTypeReportDto {
+  items: CorrespondenceTypeItemDto[];
+  total: number;
+  professional: number;
+  nonProfessional: number;
+}
+
+export interface CorrespondenceTrendPointDto {
+  date: string;
+  total: number;
+  incoming: number;
+  outgoing: number;
+  internal: number;
+  professional: number;
+  nonProfessional: number;
+}
+
+export interface CorrespondenceTrendReportDto {
+  items: CorrespondenceTrendPointDto[];
+  total: number;
+  averageDaily: number;
+  averageWeekly: number;
+  averageMonthly: number;
+  peakDayCount: number;
+  peakDay: string;
+  trendDirection: string;
+  professionalPercentage: number;
+}
+
+export interface CorrespondenceStatusSummaryItemDto {
+  status: string;
+  count: number;
+  percentage: number;
+}
+
+export interface CorrespondenceStatusSummaryReportDto {
+  items: CorrespondenceStatusSummaryItemDto[];
+  total: number;
+}
+
+export interface TopIgnoredCorrespondenceItemDto {
+  correspondenceId: number;
+  number: number;
+  title: string;
+  type: string;
+  totalDistributions: number;
+  ignoredCount: number;
+  ignorePercentage: number;
+  riskLevel: string;
+}
+
+export interface TopIgnoredCorrespondenceReportDto {
+  items: TopIgnoredCorrespondenceItemDto[];
+  total: number;
+  totalIgnored: number;
+  averageIgnorePercentage: number;
+}
+
+export interface CorrespondenceFullReportDto {
+  types: CorrespondenceTypeReportDto;
+  trend: CorrespondenceTrendReportDto;
+  statusSummary: CorrespondenceStatusSummaryReportDto;
+  topIgnored: TopIgnoredCorrespondenceReportDto;
+}
+
+export interface GetCorrespondenceFullQuery {
+  fromDate?: string | null;
+  toDate?: string | null;
+  mainType?: string | null;
+  documentTypeId?: number | null;
+  senderEntityId?: number | null;
+  groupBy?: string;
+  topIgnoredCount?: number;
+}
+
+// ============================================================
+// ===== Distribution Status =====
+// ============================================================
+
+export interface ReceiverStatusDto {
+  receiverId: number;
+  receiverName: string;
+  receiverEmail: string;
+  status: string;
+  distributedDate: string | null;
+  readAt: string | null;
+  revokedAt: string | null;
+  notes: string | null;
+  rejectionReason: string | null;
+  daysPending: number;
+}
+
+export interface DistributionStatusDto {
+  correspondenceId: number;
+  correspondenceNumber: number;
+  correspondenceTitle: string;
+  totalReceivers: number;
+  readCount: number;
+  pendingCount: number;
+  ignoredCount: number;
+  revokedCount: number;
+  pendingApprovalCount: number;
+  rejectedCount: number;
+  readPercentage: number;
+  receivers: ReceiverStatusDto[];
+}

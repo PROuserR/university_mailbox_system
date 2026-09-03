@@ -21,6 +21,9 @@ import {
   UsersIcon,
   MailCheckIcon,
   SendIcon,
+  Building2,
+  Calendar,
+  User,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -68,6 +71,15 @@ function getFileGradient(type: string) {
   if (type.includes("image")) return { start: "#a855f7", end: "#7e22ce" };
   if (type.includes("zip") || type.includes("archive")) return { start: "#f59e0b", end: "#b45309" };
   return { start: "#6b7280", end: "#4b5563" };
+}
+
+function formatDateDisplay(date: string | null | undefined): string {
+  if (!date) return "-";
+  try {
+    return format(new Date(date), "dd/MM/yyyy", { locale: ar });
+  } catch {
+    return "-";
+  }
 }
 
 export function InboxEmailDetail({
@@ -142,7 +154,6 @@ export function InboxEmailDetail({
       toast.success("تم تحميل الملف للمعاينة");
     } catch (error: any) {
       if (error.name !== "AbortError") {
-        console.error("View error:", error);
         toast.error(error.message || "فشل في تحميل الملف للمعاينة");
         closePreview();
       }
@@ -178,7 +189,6 @@ export function InboxEmailDetail({
 
       toast.success("تم تحميل المرفق بنجاح");
     } catch (error: any) {
-      console.error("Download error:", error);
 
       if (error.message?.includes("Network") ||
         error.message?.includes("CORS") ||
@@ -275,9 +285,7 @@ export function InboxEmailDetail({
     );
   };
 
-  const formatDateShort = (date: string) => {
-    return format(new Date(date), "dd/MM/yyyy");
-  };
+  const senderDisplay = item.senderEntity || item.distributorName || "جهة غير محددة";
 
   return (
     <div className="flex h-full flex-col bg-card">
@@ -388,19 +396,18 @@ export function InboxEmailDetail({
         </div>
       )}
 
-      {/* Sender Info */}
       <div className="shrink-0 border-b border-border p-4">
         <div className="flex flex-wrap justify-between gap-4">
           <div className="flex gap-3">
             <Avatar className="size-10">
               <AvatarFallback className="bg-primary/10 text-primary">
-                {item.distributorName?.charAt(0) || "م"}
+                {senderDisplay?.charAt(0) || "ج"}
               </AvatarFallback>
             </Avatar>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-semibold text-foreground">
-                  {item.distributorName || "مرسل غير محدد"}
+                  {senderDisplay}
                 </h2>
                 {getTypeBadge(item.mainType)}
                 {item.isProfessional && (
@@ -410,8 +417,14 @@ export function InboxEmailDetail({
                 )}
                 {getStatusBadge()}
               </div>
-              <p className="text-xs text-muted-foreground">
-                رقم المراسلة: {item.correspondenceNumber}
+              {item.distributorName && item.distributorName !== senderDisplay && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                  <User className="h-3 w-3" />
+                  <span>بواسطة: {item.distributorName}</span>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-0.5">
+                رقم المراسلة: {item.correspondenceNumber || "—"}
               </p>
             </div>
           </div>
@@ -434,12 +447,6 @@ export function InboxEmailDetail({
                 <span className="text-muted-foreground">{item.documentType}</span>
               </div>
             )}
-            {item.senderEntity && (
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground">الجهة المرسلة:</span>
-                <span className="text-muted-foreground">{item.senderEntity}</span>
-              </div>
-            )}
             {item.senderReference && (
               <div className="flex items-center gap-2">
                 <span className="font-medium text-foreground">مرجع المرسل:</span>
@@ -453,19 +460,19 @@ export function InboxEmailDetail({
             {item.issuedDate && (
               <div className="flex items-center gap-2">
                 <span className="font-medium text-foreground">📅 تاريخ الإصدار:</span>
-                <span>{formatDateShort(item.issuedDate)}</span>
+                <span>{formatDateDisplay(item.issuedDate)}</span>
               </div>
             )}
             {item.mainType === "Incoming" && item.receivedDate && (
               <div className="flex items-center gap-2">
                 <span className="font-medium text-foreground">📥 تاريخ الاستلام:</span>
-                <span>{formatDateShort(item.receivedDate)}</span>
+                <span>{formatDateDisplay(item.receivedDate)}</span>
               </div>
             )}
             {item.distributedDate && (
               <div className="flex items-center gap-2">
                 <span className="font-medium text-foreground">📤 تاريخ التوزيع:</span>
-                <span>{formatDateShort(item.distributedDate)}</span>
+                <span>{formatDateDisplay(item.distributedDate)}</span>
               </div>
             )}
           </div>

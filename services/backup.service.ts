@@ -210,7 +210,6 @@ export const listFilesBackups = async (
 
   const data = extractData(response);
   
-  // ✅ التحقق من وجود PagedResult
   if (data && 'items' in data && 'totalCount' in data) {
     return {
       items: data.items || [],
@@ -223,7 +222,6 @@ export const listFilesBackups = async (
     };
   }
 
-  // ✅ Fallback إذا لم يأتي بالصيغة المتوقعة
   const items = data || [];
   return {
     items,

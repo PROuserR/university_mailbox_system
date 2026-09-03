@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faPlus,
@@ -40,10 +40,11 @@ import {
     useActivateDepartment,
     useDeactivateDepartment,
 } from "@/hooks/useDepartments";
-import { useActiveUsers } from "@/hooks/useUsers"; // ✅ استخدم useActiveUsers بدلاً من useUsers
+import { useActiveUsers } from "@/hooks/useUsers";
 import { DepartmentDto, DepartmentMemberDto } from "@/types/api/department.types";
 import { UserResponse } from "@/types/api/user";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { Pagination } from "@/components/ui/Pagination";
 import toast from "react-hot-toast";
 
 // ============================================================
@@ -80,6 +81,10 @@ export default function DepartmentsPage() {
     // ===== Queries =====
     const { data: departments = [], isLoading: loadingDepartments, refetch: refetchDepartments } = useDepartments();
     const { data: users = [], isLoading: loadingUsers, refetch: refetchUsers } = useActiveUsers();
+
+    // ===== Pagination State =====
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
 
     // ===== States =====
     const [search, setSearch] = useState("");
@@ -177,35 +182,35 @@ export default function DepartmentsPage() {
     // ===== Mutations =====
     // ============================================================
 
-    const createMutation = useCreateDepartment(() => { closeModal(); refetchDepartments();  refetchUsers();});
+    const createMutation = useCreateDepartment(() => { closeModal(); refetchDepartments(); refetchUsers(); });
     const updateMutation = useUpdateDepartment(() => { closeModal(); refetchDepartments(); refetchUsers(); });
-    const deleteMutation = useDeleteDepartment(() => {refetchDepartments(); refetchUsers();});
-    const addMemberMutation = useAddDepartmentMember(() => { 
-        refetchDepartments(); 
+    const deleteMutation = useDeleteDepartment(() => { refetchDepartments(); refetchUsers(); });
+    const addMemberMutation = useAddDepartmentMember(() => {
+        refetchDepartments();
         refetchMembers();
         refetchUsers();
     });
-    const removeMemberMutation = useRemoveDepartmentMember(() => { 
-        refetchDepartments(); 
+    const removeMemberMutation = useRemoveDepartmentMember(() => {
+        refetchDepartments();
         refetchMembers();
         refetchUsers();
     });
-    const setHeadMutation = useSetDepartmentHead(() => { 
-        refetchDepartments(); 
+    const setHeadMutation = useSetDepartmentHead(() => {
+        refetchDepartments();
         refetchMembers();
         refetchUsers();
     });
-    const removeHeadMutation = useRemoveDepartmentHead(() => { 
-        refetchDepartments(); 
+    const removeHeadMutation = useRemoveDepartmentHead(() => {
+        refetchDepartments();
         refetchMembers();
         refetchUsers();
     });
-    const activateMutation = useActivateDepartment(() => {refetchDepartments(); refetchUsers();});
-    const deactivateMutation = useDeactivateDepartment(() => {refetchDepartments(); refetchUsers();});
+    const activateMutation = useActivateDepartment(() => { refetchDepartments(); refetchUsers(); });
+    const deactivateMutation = useDeactivateDepartment(() => { refetchDepartments(); refetchUsers(); });
 
-    const isProcessing = 
-        createMutation.isPending || 
-        updateMutation.isPending || 
+    const isProcessing =
+        createMutation.isPending ||
+        updateMutation.isPending ||
         deleteMutation.isPending ||
         addMemberMutation.isPending ||
         removeMemberMutation.isPending ||
@@ -249,7 +254,7 @@ export default function DepartmentsPage() {
     };
 
     // ============================================================
-    // ===== Handlers =====
+    // ===== SEARCH + FILTER + PAGINATION =====
     // ============================================================
 
     const filteredDepartments = useMemo(() => {
@@ -259,6 +264,21 @@ export default function DepartmentsPage() {
         );
     }, [departments, search]);
 
+    // ✅ Pagination - تقسيم الأقسام
+    const paginatedDepartments = useMemo(() => {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        return filteredDepartments.slice(startIndex, endIndex);
+    }, [filteredDepartments, currentPage, pageSize]);
+
+    const totalPages = Math.ceil(filteredDepartments.length / pageSize);
+
+    // ✅ إعادة تعيين الصفحة عند تغيير البحث
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        setCurrentPage(1);
+    };
+
     // ============================================================
     // ===== useMemo للفلترة =====
     // ============================================================
@@ -267,7 +287,7 @@ export default function DepartmentsPage() {
         return users.filter((user) => {
             if (user.roles?.includes('Admin')) return false;
             if (user.roles?.includes('Dean')) return false;
-            
+
             if (selectedDepartment) {
                 const userDepartment = departments.find(d => d.headUserId === user.id);
                 if (userDepartment && userDepartment.id !== selectedDepartment.id) {
@@ -278,7 +298,7 @@ export default function DepartmentsPage() {
                     return false;
                 }
             }
-            
+
             return true;
         });
     }, [users, departments, selectedDepartment]);
@@ -288,9 +308,9 @@ export default function DepartmentsPage() {
             if (user.roles?.includes('Admin')) return false;
             if (user.roles?.includes('Dean')) return false;
             if (user.roles?.includes('HeadOfDepartment')) return false;
-            
+
             if (members.some((m) => m.userId === user.id)) return false;
-            
+
             return true;
         });
     }, [users, members]);
@@ -308,11 +328,9 @@ export default function DepartmentsPage() {
 
         if (nameError) return;
 
-        // ✅ التحقق من المستخدم المختار كرئيس
         if (createForm.headUserId) {
             const user = users.find(u => u.id === createForm.headUserId);
             if (user) {
-                // ✅ المستخدمون من useActiveUsers نشطون بالفعل
                 if (!isUserEligibleForHead(user)) {
                     toast.error("لا يمكن تعيين Admin أو Dean كرئيس قسم");
                     return;
@@ -341,11 +359,9 @@ export default function DepartmentsPage() {
             return;
         }
 
-        // ✅ التحقق من المستخدم المختار كرئيس
         if (editForm.headUserId) {
             const user = users.find(u => u.id === editForm.headUserId);
             if (user) {
-                // ✅ المستخدمون من useActiveUsers نشطون بالفعل
                 if (!isUserEligibleForHead(user)) {
                     toast.error("لا يمكن تعيين Admin أو Dean كرئيس قسم");
                     return;
@@ -404,13 +420,13 @@ export default function DepartmentsPage() {
     // ===== Member Management =====
     const handleAddMember = () => {
         if (!selectedDepartment || !selectedUserId) return;
-        
+
         const user = users.find(u => u.id === selectedUserId);
         if (user && !isUserEligibleForDepartment(user)) {
             toast.error("لا يمكن إضافة Admin أو Dean أو رئيس قسم آخر إلى القسم");
             return;
         }
-        
+
         addMemberMutation.mutate({
             departmentId: selectedDepartment.id,
             userId: selectedUserId,
@@ -423,7 +439,7 @@ export default function DepartmentsPage() {
             toast.error("لا يمكن إزالة رئيس القسم من هنا. استخدم زر إزالة الرئيس المخصص.");
             return;
         }
-        
+
         setConfirmModal({
             isOpen: true,
             title: "إزالة العضو",
@@ -443,7 +459,7 @@ export default function DepartmentsPage() {
             toast.error("لا يمكن تعيين Admin أو Dean كرئيس قسم");
             return;
         }
-        
+
         setConfirmModal({
             isOpen: true,
             title: "تعيين رئيس القسم",
@@ -596,7 +612,7 @@ export default function DepartmentsPage() {
                     />
                     <input
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => handleSearchChange(e.target.value)}
                         placeholder="البحث باسم القسم أو الكود..."
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 sm:py-2 pr-8 sm:pr-10 pl-3 text-xs sm:text-sm outline-none focus:border-blue-400"
                     />
@@ -615,100 +631,119 @@ export default function DepartmentsPage() {
                         <p className="text-xs sm:text-sm">لا يوجد أقسام</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-right text-xs sm:text-sm">
-                            <thead>
-                                <tr className="bg-blue-50 text-slate-700">
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">القسم</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden sm:table-cell">الكود</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden md:table-cell">رئيس القسم</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الأعضاء</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الحالة</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredDepartments.map((dept) => (
-                                    <tr
-                                        key={dept.id}
-                                        className="border-t border-slate-100 hover:bg-slate-50 transition"
-                                    >
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            <div className="flex items-center gap-2">
-                                                <FontAwesomeIcon icon={faBuilding} className="text-blue-500 text-sm" />
-                                                <span className="font-semibold text-slate-800">{dept.name}</span>
-                                            </div>
-                                        </td>
-
-                                        <td className="p-2 sm:p-3 text-slate-600 text-xs hidden sm:table-cell">
-                                            {dept.code || "-"}
-                                        </td>
-
-                                        <td className="p-2 sm:p-3 hidden md:table-cell">
-                                            {dept.headUserName ? (
-                                                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px]">
-                                                    <FontAwesomeIcon icon={faUserCheck} className="text-[8px]" />
-                                                    {dept.headUserName}
-                                                </span>
-                                            ) : (
-                                                <span className="text-slate-400 text-xs">-</span>
-                                            )}
-                                        </td>
-
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            <button
-                                                onClick={() => openMembersModal(dept)}
-                                                className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition"
-                                            >
-                                                <FontAwesomeIcon icon={faUsers} className="text-sm" />
-                                                <span className="font-semibold">{dept.membersCount}</span>
-                                            </button>
-                                        </td>
-
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            <button
-                                                onClick={() => handleToggleActive(dept)}
-                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] transition ${
-                                                    dept.isActive
-                                                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                                        : "bg-red-100 text-red-700 hover:bg-red-200"
-                                                }`}
-                                            >
-                                                <FontAwesomeIcon icon={dept.isActive ? faCheckCircle : faTimes} className="text-[8px]" />
-                                                {dept.isActive ? "نشط" : "غير نشط"}
-                                            </button>
-                                        </td>
-
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() => handleViewDepartment(dept)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-green-100 text-green-600 hover:bg-green-200 transition flex items-center justify-center"
-                                                    title="عرض التفاصيل"
-                                                >
-                                                    <FontAwesomeIcon icon={faEye} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                                <button
-                                                    onClick={() => openEditModal(dept)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition flex items-center justify-center"
-                                                    title="تعديل"
-                                                >
-                                                    <FontAwesomeIcon icon={faEdit} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(dept.id)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center"
-                                                    title="حذف"
-                                                >
-                                                    <FontAwesomeIcon icon={faTrash} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                            </div>
-                                        </td>
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-right text-xs sm:text-sm">
+                                <thead>
+                                    <tr className="bg-blue-50 text-slate-700">
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">القسم</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden sm:table-cell">الكود</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden md:table-cell">رئيس القسم</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الأعضاء</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الحالة</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الإجراءات</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {paginatedDepartments.map((dept) => (
+                                        <tr
+                                            key={dept.id}
+                                            className="border-t border-slate-100 hover:bg-slate-50 transition"
+                                        >
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <FontAwesomeIcon icon={faBuilding} className="text-blue-500 text-sm" />
+                                                    <span className="font-semibold text-slate-800">{dept.name}</span>
+                                                </div>
+                                            </td>
+
+                                            <td className="p-2 sm:p-3 text-slate-600 text-xs hidden sm:table-cell">
+                                                {dept.code || "-"}
+                                            </td>
+
+                                            <td className="p-2 sm:p-3 hidden md:table-cell">
+                                                {dept.headUserName ? (
+                                                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px]">
+                                                        <FontAwesomeIcon icon={faUserCheck} className="text-[8px]" />
+                                                        {dept.headUserName}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-slate-400 text-xs">-</span>
+                                                )}
+                                            </td>
+
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                <button
+                                                    onClick={() => openMembersModal(dept)}
+                                                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition"
+                                                >
+                                                    <FontAwesomeIcon icon={faUsers} className="text-sm" />
+                                                    <span className="font-semibold">{dept.membersCount}</span>
+                                                </button>
+                                            </td>
+
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                <button
+                                                    onClick={() => handleToggleActive(dept)}
+                                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] transition ${dept.isActive
+                                                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                                            : "bg-red-100 text-red-700 hover:bg-red-200"
+                                                        }`}
+                                                >
+                                                    <FontAwesomeIcon icon={dept.isActive ? faCheckCircle : faTimes} className="text-[8px]" />
+                                                    {dept.isActive ? "نشط" : "غير نشط"}
+                                                </button>
+                                            </td>
+
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => handleViewDepartment(dept)}
+                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-green-100 text-green-600 hover:bg-green-200 transition flex items-center justify-center"
+                                                        title="عرض التفاصيل"
+                                                    >
+                                                        <FontAwesomeIcon icon={faEye} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openEditModal(dept)}
+                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition flex items-center justify-center"
+                                                        title="تعديل"
+                                                    >
+                                                        <FontAwesomeIcon icon={faEdit} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(dept.id)}
+                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center"
+                                                        title="حذف"
+                                                    >
+                                                        <FontAwesomeIcon icon={faTrash} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* ===== ✅ PAGINATION ===== */}
+                        {filteredDepartments.length > pageSize && (
+                            <div className="border-t border-slate-100 p-3">
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                    pageSize={pageSize}
+                                    totalCount={filteredDepartments.length}
+                                    showPageSize={true}
+                                    onPageSizeChange={(size) => {
+                                        setPageSize(size);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
@@ -735,11 +770,10 @@ export default function DepartmentsPage() {
                                         onChange={(e) => handleChange("name", e.target.value)}
                                         onBlur={() => handleBlur("name")}
                                         placeholder="اسم القسم *"
-                                        className={`w-full border rounded-xl p-2.5 sm:p-3 text-sm outline-none text-right transition ${
-                                            !isFieldValid("name") && touched.name
+                                        className={`w-full border rounded-xl p-2.5 sm:p-3 text-sm outline-none text-right transition ${!isFieldValid("name") && touched.name
                                                 ? "border-red-500 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-transparent"
                                                 : "border-slate-200 focus:border-blue-400"
-                                        }`}
+                                            }`}
                                     />
                                     {touched.name && errors.name && (
                                         <p className="text-red-500 text-xs mt-1">{errors.name}</p>
@@ -792,7 +826,7 @@ export default function DepartmentsPage() {
                                     placeholder="الكود (اختياري)"
                                     className="w-full border border-slate-200 rounded-xl p-2.5 sm:p-3 text-sm outline-none focus:border-blue-400 text-right"
                                 />
-                                
+
                                 <select
                                     value={editForm.headUserId || ""}
                                     onChange={(e) =>
@@ -813,16 +847,15 @@ export default function DepartmentsPage() {
                                 <p className="text-[10px] text-slate-400">
                                     * لا يمكن تعيين Admin أو Dean كرئيس قسم
                                 </p>
-                                
+
                                 <div className="flex items-center gap-2">
                                     <label className="text-sm text-slate-600">الحالة:</label>
                                     <button
                                         onClick={() => setEditForm({ ...editForm, isActive: !editForm.isActive })}
-                                        className={`px-4 py-1.5 rounded-xl text-sm font-medium transition ${
-                                            editForm.isActive
+                                        className={`px-4 py-1.5 rounded-xl text-sm font-medium transition ${editForm.isActive
                                                 ? "bg-emerald-100 text-emerald-700"
                                                 : "bg-red-100 text-red-700"
-                                        }`}
+                                            }`}
                                     >
                                         {editForm.isActive ? "نشط" : "غير نشط"}
                                     </button>
@@ -992,11 +1025,10 @@ export default function DepartmentsPage() {
                                 </div>
                                 <div>
                                     <p className="text-xs text-slate-500">الحالة</p>
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-                                        viewingDepartment.isActive
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${viewingDepartment.isActive
                                             ? "bg-emerald-100 text-emerald-700"
                                             : "bg-red-100 text-red-700"
-                                    }`}>
+                                        }`}>
                                         {viewingDepartment.isActive ? "نشط" : "غير نشط"}
                                     </span>
                                 </div>

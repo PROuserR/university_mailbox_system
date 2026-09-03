@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/(dashboard)/backup/page.tsx
 
@@ -30,6 +29,7 @@ import {
   faExclamationTriangle,
   faChevronRight,
   faChevronLeft,
+  faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -47,7 +47,6 @@ import {
   useCleanupOldBackups,
   usePreviewFilesBackup,
   useRestoreFilesBackup,
-  useRestoreFilesBackupToPath,
   useRetryFailedRestore,
   useCompareBackups,
 } from "@/hooks/useBackup";
@@ -123,17 +122,28 @@ export default function BackupManagementPage() {
     backupId: null,
     failedFiles: [],
   });
-
   // ===== Preview State =====
-  const [previewModal, setPreviewModal] = useState<{
-    isOpen: boolean;
-    type: BackupType | null;
-    backupId: string | null;
-  }>({
-    isOpen: false,
-    type: null,
-    backupId: null,
-  });
+interface PreviewModalState {
+  isOpen: boolean;
+  type: BackupType | null;
+  backupId: string | null;
+  selectMode: boolean;
+  selectedFiles: string[];
+  searchQuery: string;
+  page: number;
+  pageSize: number;
+}
+
+const [previewModal, setPreviewModal] = useState<PreviewModalState>({
+  isOpen: false,
+  type: null,
+  backupId: null,
+  selectMode: false,
+  selectedFiles: [],
+  searchQuery: "",
+  page: 1,
+  pageSize: 10,
+});
 
   // ===== Compare State =====
   const [compareModal, setCompareModal] = useState<{
@@ -152,20 +162,32 @@ export default function BackupManagementPage() {
 
   // ===== Restore State =====
   const [restoreModal, setRestoreModal] = useState<{
-    isOpen: boolean;
-    type: BackupType | null;
-    backupId: string | null;
-    targetPath: string;
-    overwrite: boolean;
-    dryRun: boolean;
-  }>({
-    isOpen: false,
-    type: null,
-    backupId: null,
-    targetPath: "",
-    overwrite: true,
-    dryRun: false,
-  });
+  isOpen: boolean;
+  type: BackupType | null;
+  backupId: string | null;
+  overwrite: boolean;
+  dryRun: boolean;
+  validateIntegrity: boolean;       
+  includePatterns: string[];        
+  excludePatterns: string[];        
+  specificFiles: string[];          
+  includePatternsInput: string;     
+  excludePatternsInput: string;     
+  specificFilesInput: string;       
+}>({
+  isOpen: false,
+  type: null,
+  backupId: null,
+  overwrite: true,
+  dryRun: false,
+  validateIntegrity: true,
+  includePatterns: [],
+  excludePatterns: [],
+  specificFiles: [],
+  includePatternsInput: "",
+  excludePatternsInput: "",
+  specificFilesInput: "",
+});
 
   // ===== Cleanup State =====
   const [cleanupModal, setCleanupModal] = useState<{
@@ -279,11 +301,11 @@ export default function BackupManagementPage() {
     setRestoreModal((prev) => ({ ...prev, isOpen: false }));
   });
 
-  const restoreToPath = useRestoreFilesBackupToPath((data) => {
-    setRestoreResult(data);
-    setRestoreResultModal(true);
-    setRestoreModal((prev) => ({ ...prev, isOpen: false }));
-  });
+  // const restoreToPath = useRestoreFilesBackupToPath((data) => {
+  //   setRestoreResult(data);
+  //   setRestoreResultModal(true);
+  //   setRestoreModal((prev) => ({ ...prev, isOpen: false }));
+  // });
 
   const retryRestore = useRetryFailedRestore((data) => {
     toast.success(`تم إعادة محاولة ${data.restoredFiles} ملف بنجاح`, { duration: 3000 });
@@ -310,7 +332,7 @@ export default function BackupManagementPage() {
     deleteFilesBackup.isPending ||
     cleanupOld.isPending ||
     restoreFiles.isPending ||
-    restoreToPath.isPending ||
+    // restoreToPath.isPending ||
     retryRestore.isPending ||
     compareBackups.isPending;
 
@@ -492,14 +514,94 @@ export default function BackupManagementPage() {
   };
 
   // ===== Preview =====
-  const handlePreview = (type: BackupType, backupId: string) => {
-    setPreviewModal({ isOpen: true, type, backupId });
-  };
+const handlePreview = (type: BackupType, backupId: string) => {
+  setPreviewModal({
+    isOpen: true,
+    type,
+    backupId,
+    selectMode: false,
+    selectedFiles: [],
+    searchQuery: "",    
+    page: 1,            
+    pageSize: 10,       
+  });
+};
+const handleClosePreview = () => {
+  setPreviewModal({
+    isOpen: false,
+    type: null,
+    backupId: null,
+    selectMode: false,
+    selectedFiles: [],
+    searchQuery: "",
+    page: 1,
+    pageSize: 10,
+  });
+};
+// ===== Preview Selection Handlers =====
+const toggleFileSelection = (filePath: string) => {
+  setPreviewModal((prev) => ({
+    ...prev,
+    selectedFiles: prev.selectedFiles.includes(filePath)
+      ? prev.selectedFiles.filter((f) => f !== filePath)
+      : [...prev.selectedFiles, filePath],
+  }));
+};
+const handleSelectFilesFromPreview = () => {
+  if (previewModal.selectedFiles.length === 0) {
+    toast.error("يرجى اختيار ملف واحد على الأقل");
+    return;
+  }
 
-  const handleClosePreview = () => {
-    setPreviewModal({ isOpen: false, type: null, backupId: null });
-  };
+  setRestoreModal((prev) => ({
+    ...prev,
+    specificFiles: [...prev.specificFiles, ...previewModal.selectedFiles],
+    isOpen: true,
+  }));
 
+  setPreviewModal((prev) => ({
+    ...prev,
+    isOpen: false,
+    selectMode: false,
+    selectedFiles: [],
+    searchQuery: "",
+    page: 1,
+  }));
+};
+// ===== Preview Pagination Handlers =====
+const getFilteredPreviewFiles = () => {
+  if (!previewData) return [];
+  
+  const files = previewData.files;
+  const searchQuery = previewModal.searchQuery.toLowerCase().trim();
+  
+  if (!searchQuery) return files;
+  
+  return files.filter((file) =>
+    file.fileName.toLowerCase().includes(searchQuery) ||
+    file.filePath.toLowerCase().includes(searchQuery) ||
+    file.extension.toLowerCase().includes(searchQuery)
+  );
+};
+
+const getPaginatedPreviewFiles = () => {
+  const filtered = getFilteredPreviewFiles();
+  const startIndex = (previewModal.page - 1) * previewModal.pageSize;
+  const endIndex = startIndex + previewModal.pageSize;
+  return filtered.slice(startIndex, endIndex);
+};
+
+const getPreviewTotalPages = () => {
+  const filtered = getFilteredPreviewFiles();
+  return Math.ceil(filtered.length / previewModal.pageSize);
+};
+
+const goToPreviewPage = (page: number) => {
+  const totalPages = getPreviewTotalPages();
+  if (page >= 1 && page <= totalPages) {
+    setPreviewModal((prev) => ({ ...prev, page }));
+  }
+};
   // ===== Compare =====
   const handleCompare = () => {
     if (!compareModal.backup1Id || !compareModal.backup2Id) {
@@ -512,43 +614,88 @@ export default function BackupManagementPage() {
     });
   };
 
-  // ===== Restore =====
   const handleOpenRestore = (type: BackupType, backupId: string) => {
-    setRestoreModal({
-      isOpen: true,
-      type,
-      backupId,
-      targetPath: "",
-      overwrite: true,
-      dryRun: false,
-    });
-  };
+  setRestoreModal({
+    isOpen: true,
+    type,
+    backupId,
+    overwrite: true,
+    dryRun: false,
+    validateIntegrity: true,
+    includePatterns: [],
+    excludePatterns: [],
+    specificFiles: [],
+    includePatternsInput: "",
+    excludePatternsInput: "",
+    specificFilesInput: "",
+  });
+};
+const handleRestore = () => {
+  if (!restoreModal.type || !restoreModal.backupId) return;
 
-  const handleRestore = () => {
-    if (!restoreModal.type || !restoreModal.backupId) return;
+  restoreFiles.mutate({
+    type: restoreModal.type,
+    backupId: restoreModal.backupId,
+    options: {
+      overwriteExisting: restoreModal.overwrite,
+      dryRun: restoreModal.dryRun,
+      validateIntegrity: restoreModal.validateIntegrity,
+      includePatterns: restoreModal.includePatterns.length > 0 ? restoreModal.includePatterns : undefined,
+      excludePatterns: restoreModal.excludePatterns.length > 0 ? restoreModal.excludePatterns : undefined,
+      specificFiles: restoreModal.specificFiles.length > 0 ? restoreModal.specificFiles : undefined,
+    },
+  });
+};
+const addIncludePattern = () => {
+  if (restoreModal.includePatternsInput.trim()) {
+    setRestoreModal((prev) => ({
+      ...prev,
+      includePatterns: [...prev.includePatterns, prev.includePatternsInput.trim()],
+      includePatternsInput: "",
+    }));
+  }
+};
 
-    if (restoreModal.targetPath) {
-      restoreToPath.mutate({
-        type: restoreModal.type,
-        backupId: restoreModal.backupId,
-        options: {
-          targetPath: restoreModal.targetPath,
-          overwriteExisting: restoreModal.overwrite,
-          dryRun: restoreModal.dryRun,
-        },
-      });
-    } else {
-      restoreFiles.mutate({
-        type: restoreModal.type,
-        backupId: restoreModal.backupId,
-        options: {
-          overwriteExisting: restoreModal.overwrite,
-          dryRun: restoreModal.dryRun,
-        },
-      });
-    }
-  };
+const removeIncludePattern = (index: number) => {
+  setRestoreModal((prev) => ({
+    ...prev,
+    includePatterns: prev.includePatterns.filter((_, i) => i !== index),
+  }));
+};
 
+const addExcludePattern = () => {
+  if (restoreModal.excludePatternsInput.trim()) {
+    setRestoreModal((prev) => ({
+      ...prev,
+      excludePatterns: [...prev.excludePatterns, prev.excludePatternsInput.trim()],
+      excludePatternsInput: "",
+    }));
+  }
+};
+
+const removeExcludePattern = (index: number) => {
+  setRestoreModal((prev) => ({
+    ...prev,
+    excludePatterns: prev.excludePatterns.filter((_, i) => i !== index),
+  }));
+};
+
+const addSpecificFile = () => {
+  if (restoreModal.specificFilesInput.trim()) {
+    setRestoreModal((prev) => ({
+      ...prev,
+      specificFiles: [...prev.specificFiles, prev.specificFilesInput.trim()],
+      specificFilesInput: "",
+    }));
+  }
+};
+
+const removeSpecificFile = (index: number) => {
+  setRestoreModal((prev) => ({
+    ...prev,
+    specificFiles: prev.specificFiles.filter((_, i) => i !== index),
+  }));
+};
   // ===== Cleanup =====
   const handleOpenCleanup = () => {
     setCleanupModal((prev) => ({ ...prev, isOpen: true }));
@@ -1140,81 +1287,220 @@ export default function BackupManagementPage() {
         </div>
       )}
 
-      {/* ============================================================ */}
-      {/* ===== Preview Modal ===== */}
-      {/* ============================================================ */}
-      {previewModal.isOpen && previewData && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-3 sm:mb-4">
-              <h2 className="text-base sm:text-lg font-bold text-slate-800">
-                معاينة النسخة الاحتياطية
-              </h2>
+    {previewModal.isOpen && previewData && (
+  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl w-full max-w-4xl p-4 sm:p-6 shadow-xl max-h-[90vh] flex flex-col">
+      {/* ===== Header ===== */}
+      <div className="flex justify-between items-center mb-3 sm:mb-4 sticky top-0 bg-white z-10 pb-2 border-b border-slate-100">
+        <h2 className="text-base sm:text-lg font-bold text-slate-800">
+          {previewModal.selectMode ? 'اختر الملفات للاستعادة' : 'معاينة النسخة الاحتياطية'}
+        </h2>
+        <div className="flex items-center gap-2">
+          {previewModal.selectMode && (
+            <>
               <button
-                onClick={handleClosePreview}
-                className="text-slate-400 hover:text-red-500 transition"
+                onClick={() => {
+                  const filtered = getFilteredPreviewFiles();
+                  setPreviewModal((prev) => ({
+                    ...prev,
+                    selectedFiles: filtered.map((f) => f.filePath),
+                  }));
+                }}
+                className="text-xs text-blue-500 hover:text-blue-700"
               >
-                <FontAwesomeIcon icon={faXmark} className="text-lg" />
+                اختيار الكل
               </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-              <div className="bg-slate-50 rounded-xl p-2 text-center">
-                <p className="text-[10px] text-slate-400">إجمالي الملفات</p>
-                <p className="text-sm font-bold text-slate-800">{previewData.totalFiles}</p>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-2 text-center">
-                <p className="text-[10px] text-slate-400">الحجم الإجمالي</p>
-                <p className="text-sm font-bold text-slate-800">{previewData.totalSizeFormatted}</p>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-2 text-center">
-                <p className="text-[10px] text-slate-400">التاريخ</p>
-                <p className="text-sm font-bold text-slate-800">{formatDate(previewData.createdAt)}</p>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-2 text-center">
-                <p className="text-[10px] text-slate-400">النوع</p>
-                <p className="text-sm font-bold text-slate-800">{previewData.backupType}</p>
-              </div>
-            </div>
-
-            {previewData.files.length > 0 ? (
-              <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                <table className="w-full text-right text-xs">
-                  <thead className="sticky top-0 bg-blue-50">
-                    <tr className="text-slate-700">
-                      <th className="p-2 font-semibold">الملف</th>
-                      <th className="p-2 font-semibold">المسار</th>
-                      <th className="p-2 font-semibold">الحجم</th>
-                      <th className="p-2 font-semibold">الامتداد</th>
-                      <th className="p-2 font-semibold">تاريخ التعديل</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewData.files.map((file, index) => (
-                      <tr key={index} className="border-t border-slate-100">
-                        <td className="p-2 text-slate-800">{file.fileName}</td>
-                        <td className="p-2 text-slate-500 text-[10px]">{file.filePath}</td>
-                        <td className="p-2 text-slate-600">{file.sizeFormatted}</td>
-                        <td className="p-2">
-                          <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
-                            {file.extension || "-"}
-                          </span>
-                        </td>
-                        <td className="p-2 text-slate-500 text-[10px]">
-                          {file.modifiedAt ? formatDate(file.modifiedAt) : "-"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-center text-slate-400 py-4">لا توجد ملفات</p>
-            )}
-          </div>
+              <button
+                onClick={() => {
+                  setPreviewModal((prev) => ({
+                    ...prev,
+                    selectedFiles: [],
+                  }));
+                }}
+                className="text-xs text-red-500 hover:text-red-700"
+              >
+                إلغاء الكل
+              </button>
+            </>
+          )}
+          <button
+            onClick={handleClosePreview}
+            className="text-slate-400 hover:text-red-500 transition"
+          >
+            <FontAwesomeIcon icon={faXmark} className="text-lg" />
+          </button>
         </div>
+      </div>
+
+      {/* ===== إحصائيات ===== */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+        <div className="bg-slate-50 rounded-xl p-2 text-center">
+          <p className="text-[10px] text-slate-400">إجمالي الملفات</p>
+          <p className="text-sm font-bold text-slate-800">{previewData.totalFiles}</p>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-2 text-center">
+          <p className="text-[10px] text-slate-400">الحجم الإجمالي</p>
+          <p className="text-sm font-bold text-slate-800">{previewData.totalSizeFormatted}</p>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-2 text-center">
+          <p className="text-[10px] text-slate-400">التاريخ</p>
+          <p className="text-sm font-bold text-slate-800">{formatDate(previewData.createdAt)}</p>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-2 text-center">
+          <p className="text-[10px] text-slate-400">النوع</p>
+          <p className="text-sm font-bold text-slate-800">{previewData.backupType}</p>
+        </div>
+      </div>
+
+      {/* ===== Search ===== */}
+      <div className="mb-3">
+        <div className="relative">
+          <FontAwesomeIcon
+            icon={faSearch}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"
+          />
+          <input
+            type="text"
+            value={previewModal.searchQuery}
+            onChange={(e) => {
+              setPreviewModal((prev) => ({
+                ...prev,
+                searchQuery: e.target.value,
+                page: 1,
+              }));
+            }}
+            placeholder="البحث في الملفات..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 pr-8 pl-3 text-sm outline-none focus:border-blue-400"
+          />
+        </div>
+        <div className="text-[10px] text-slate-400 mt-1">
+          تم العثور على {getFilteredPreviewFiles().length} ملف
+        </div>
+      </div>
+
+      {/* ===== Table ===== */}
+      {getFilteredPreviewFiles().length > 0 ? (
+        <>
+          <div className="overflow-x-auto flex-1 overflow-y-auto">
+            <table className="w-full text-right text-xs">
+              <thead className="sticky top-0 bg-blue-50">
+                <tr className="text-slate-700">
+                  {previewModal.selectMode && (
+                    <th className="p-2 font-semibold w-8">#</th>
+                  )}
+                  <th className="p-2 font-semibold">الملف</th>
+                  <th className="p-2 font-semibold">المسار</th>
+                  <th className="p-2 font-semibold">الحجم</th>
+                  <th className="p-2 font-semibold">الامتداد</th>
+                  <th className="p-2 font-semibold">تاريخ التعديل</th>
+                </tr>
+              </thead>
+              <tbody>
+                {getPaginatedPreviewFiles().map((file, index) => (
+                  <tr
+                    key={index}
+                    className={`border-t border-slate-100 hover:bg-slate-50 cursor-pointer ${
+                      previewModal.selectMode && previewModal.selectedFiles.includes(file.filePath)
+                        ? 'bg-blue-50'
+                        : ''
+                    }`}
+                    onClick={() => previewModal.selectMode && toggleFileSelection(file.filePath)}
+                  >
+                    {previewModal.selectMode && (
+                      <td className="p-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={previewModal.selectedFiles.includes(file.filePath)}
+                          onChange={() => toggleFileSelection(file.filePath)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded border-slate-300 text-blue-500 focus:ring-blue-500"
+                        />
+                      </td>
+                    )}
+                    <td className="p-2 text-slate-800">{file.fileName}</td>
+                    <td className="p-2 text-slate-500 text-[10px]">{file.filePath}</td>
+                    <td className="p-2 text-slate-600">{file.sizeFormatted}</td>
+                    <td className="p-2">
+                      <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
+                        {file.extension || "-"}
+                      </span>
+                    </td>
+                    <td className="p-2 text-slate-500 text-[10px]">
+                      {file.modifiedAt ? formatDate(file.modifiedAt) : "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ===== Pagination ===== */}
+          {getPreviewTotalPages() > 1 && (
+            <div className="border-t border-slate-100 pt-3 mt-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <span className="text-[10px] text-slate-500 order-2 sm:order-1">
+                عرض {((previewModal.page - 1) * previewModal.pageSize) + 1} - {Math.min(previewModal.page * previewModal.pageSize, getFilteredPreviewFiles().length)} من {getFilteredPreviewFiles().length}
+              </span>
+              <div className="flex items-center gap-1 order-1 sm:order-2">
+                <button
+                  onClick={() => goToPreviewPage(previewModal.page - 1)}
+                  disabled={previewModal.page === 1}
+                  className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed text-xs flex items-center gap-1"
+                >
+                  <FontAwesomeIcon icon={faChevronRight} className="text-[8px]" />
+                </button>
+                <span className="text-xs text-slate-600">
+                  {previewModal.page} / {getPreviewTotalPages()}
+                </span>
+                <button
+                  onClick={() => goToPreviewPage(previewModal.page + 1)}
+                  disabled={previewModal.page === getPreviewTotalPages()}
+                  className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed text-xs flex items-center gap-1"
+                >
+                  <FontAwesomeIcon icon={faChevronLeft} className="text-[8px]" />
+                </button>
+                <select
+                  value={previewModal.pageSize}
+                  onChange={(e) => {
+                    setPreviewModal((prev) => ({
+                      ...prev,
+                      pageSize: Number(e.target.value),
+                      page: 1,
+                    }));
+                  }}
+                  className="text-xs border border-slate-200 rounded px-1.5 py-0.5 outline-none"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-center text-slate-400 py-4">لا توجد ملفات تطابق البحث</p>
       )}
 
+      {/* ===== زر تأكيد الاختيار ===== */}
+      {previewModal.selectMode && (
+        <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3">
+          <span className="text-xs text-slate-500">
+            تم اختيار {previewModal.selectedFiles.length} ملف
+          </span>
+          <button
+            onClick={handleSelectFilesFromPreview}
+            disabled={previewModal.selectedFiles.length === 0}
+            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-1.5 rounded-xl text-sm font-medium transition disabled:opacity-50"
+          >
+            <FontAwesomeIcon icon={faCheckCircle} className="ml-2" />
+            تأكيد الاختيار
+          </button>
+        </div>
+      )}
+    </div>
+  </div>
+)}
       {/* ============================================================ */}
       {/* ===== Compare Modal ===== */}
       {/* ============================================================ */}
@@ -1678,77 +1964,254 @@ export default function BackupManagementPage() {
         </div>
       )}
 
-      {/* ============================================================ */}
-      {/* ===== Restore Modal ===== */}
-      {/* ============================================================ */}
-      {restoreModal.isOpen && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-3 sm:mb-4">
-              <h2 className="text-base sm:text-lg font-bold text-slate-800">استعادة النسخة الاحتياطية</h2>
-              <button
-                onClick={() => setRestoreModal((prev) => ({ ...prev, isOpen: false }))}
-                className="text-slate-400 hover:text-red-500 transition"
-              >
-                <FontAwesomeIcon icon={faXmark} className="text-lg" />
-              </button>
-            </div>
+     {/* ===== Restore Modal ===== */}
+{restoreModal.isOpen && (
+  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl w-full max-w-md p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div className="flex justify-between items-center mb-3 sm:mb-4">
+        <h2 className="text-base sm:text-lg font-bold text-slate-800">استعادة النسخة الاحتياطية</h2>
+        <button
+          onClick={() => setRestoreModal((prev) => ({ ...prev, isOpen: false }))}
+          className="text-slate-400 hover:text-red-500 transition"
+        >
+          <FontAwesomeIcon icon={faXmark} className="text-lg" />
+        </button>
+      </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">مسار الاستعادة (اختياري)</label>
-                <input
-                  type="text"
-                  value={restoreModal.targetPath}
-                  onChange={(e) => setRestoreModal((prev) => ({ ...prev, targetPath: e.target.value }))}
-                  placeholder="اترك فارغاً للاستعادة للمسار الافتراضي"
-                  className="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:border-blue-400"
-                />
-              </div>
+      <div className="space-y-3">
+        {/* ===== الخيارات الأساسية ===== */}
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={restoreModal.overwrite}
+              onChange={(e) => setRestoreModal((prev) => ({ ...prev, overwrite: e.target.checked }))}
+              className="rounded border-slate-300"
+            />
+            استبدال الملفات الموجودة
+          </label>
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={restoreModal.dryRun}
+              onChange={(e) => setRestoreModal((prev) => ({ ...prev, dryRun: e.target.checked }))}
+              className="rounded border-slate-300"
+            />
+            تجربة بدون تنفيذ
+          </label>
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={restoreModal.validateIntegrity}
+              onChange={(e) => setRestoreModal((prev) => ({ ...prev, validateIntegrity: e.target.checked }))}
+              className="rounded border-slate-300"
+            />
+            التحقق من التكامل
+          </label>
+        </div>
 
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={restoreModal.overwrite}
-                    onChange={(e) => setRestoreModal((prev) => ({ ...prev, overwrite: e.target.checked }))}
-                    className="rounded border-slate-300"
-                  />
-                  استبدال الملفات الموجودة
-                </label>
-                <label className="flex items-center gap-2 text-xs text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={restoreModal.dryRun}
-                    onChange={(e) => setRestoreModal((prev) => ({ ...prev, dryRun: e.target.checked }))}
-                    className="rounded border-slate-300"
-                  />
-                  تجربة بدون تنفيذ (Dry Run)
-                </label>
-              </div>
-            </div>
+        <hr className="border-slate-200" />
 
+        {/* ===== Include Patterns ===== */}
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">
+            تضمين الملفات (Include Patterns)
+            <span className="text-slate-400 text-[10px] mr-1">(اختياري)</span>
+          </label>
+          <div className="flex gap-1">
+            <input
+              type="text"
+              value={restoreModal.includePatternsInput}
+              onChange={(e) => setRestoreModal((prev) => ({ ...prev, includePatternsInput: e.target.value }))}
+              placeholder="مثل: *.pdf, *.docx"
+              className="flex-1 border border-slate-200 rounded-xl p-2 text-sm outline-none focus:border-blue-400"
+              onKeyDown={(e) => e.key === 'Enter' && addIncludePattern()}
+            />
             <button
-              onClick={handleRestore}
-              disabled={isProcessing}
-              className={`w-full py-2 sm:py-2.5 rounded-xl font-semibold transition text-sm mt-4 flex items-center justify-center gap-2 ${
-                isProcessing
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600 text-white"
-              }`}
+              onClick={addIncludePattern}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 rounded-xl text-xs font-medium transition"
             >
-              {isProcessing ? (
-                <>
-                  <FontAwesomeIcon icon={faSpinner} spin />
-                  جاري الاستعادة...
-                </>
-              ) : (
-                "استعادة"
-              )}
+              +
             </button>
           </div>
+          {restoreModal.includePatterns.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {restoreModal.includePatterns.map((pattern, index) => (
+                <span key={index} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
+                  {pattern}
+                  <button
+                    onClick={() => removeIncludePattern(index)}
+                    className="text-blue-400 hover:text-red-500"
+                  >
+                    <FontAwesomeIcon icon={faXmark} className="text-[8px]" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* ===== Exclude Patterns ===== */}
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">
+            استبعاد الملفات (Exclude Patterns)
+            <span className="text-slate-400 text-[10px] mr-1">(اختياري)</span>
+          </label>
+          <div className="flex gap-1">
+            <input
+              type="text"
+              value={restoreModal.excludePatternsInput}
+              onChange={(e) => setRestoreModal((prev) => ({ ...prev, excludePatternsInput: e.target.value }))}
+              placeholder="مثل: *.tmp, *.log"
+              className="flex-1 border border-slate-200 rounded-xl p-2 text-sm outline-none focus:border-blue-400"
+              onKeyDown={(e) => e.key === 'Enter' && addExcludePattern()}
+            />
+            <button
+              onClick={addExcludePattern}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 rounded-xl text-xs font-medium transition"
+            >
+              +
+            </button>
+          </div>
+          {restoreModal.excludePatterns.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {restoreModal.excludePatterns.map((pattern, index) => (
+                <span key={index} className="bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
+                  {pattern}
+                  <button
+                    onClick={() => removeExcludePattern(index)}
+                    className="text-yellow-400 hover:text-red-500"
+                  >
+                    <FontAwesomeIcon icon={faXmark} className="text-[8px]" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+       {/* ===== Specific Files ===== */}
+<div>
+  <label className="block text-xs font-medium text-slate-600 mb-1">
+    ملفات محددة (Specific Files)
+    <span className="text-slate-400 text-[10px] mr-1">(اختياري)</span>
+  </label>
+  
+  {/* ✅ حقل البحث عن الملفات المضافة */}
+  <div className="relative mb-1">
+    <FontAwesomeIcon
+      icon={faSearch}
+      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"
+    />
+    <input
+      type="text"
+      value={restoreModal.specificFilesInput}
+      onChange={(e) => setRestoreModal((prev) => ({ ...prev, specificFilesInput: e.target.value }))}
+      placeholder="ابحث عن ملف محدد أو اكتب مساره..."
+      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 pr-7 pl-3 text-sm outline-none focus:border-blue-400"
+      onKeyDown={(e) => e.key === 'Enter' && addSpecificFile()}
+    />
+  </div>
+  
+  <div className="flex gap-1">
+    <input
+      type="text"
+      value={restoreModal.specificFilesInput}
+      onChange={(e) => setRestoreModal((prev) => ({ ...prev, specificFilesInput: e.target.value }))}
+      placeholder="مسار ملف محدد"
+      className="flex-1 border border-slate-200 rounded-xl p-2 text-sm outline-none focus:border-blue-400"
+      onKeyDown={(e) => e.key === 'Enter' && addSpecificFile()}
+    />
+    <button
+      onClick={addSpecificFile}
+      className="bg-purple-500 hover:bg-purple-600 text-white px-3 rounded-xl text-xs font-medium transition"
+    >
+      +
+    </button>
+  </div>
+  
+  {/* ✅ زر اختيار من المعاينة */}
+  <button
+    onClick={() => {
+      if (!restoreModal.type || !restoreModal.backupId) {
+        toast.error("لا توجد نسخة احتياطية محددة");
+        return;
+      }
+      setRestoreModal((prev) => ({ ...prev, isOpen: false }));
+      setPreviewModal({
+        isOpen: true,
+        type: restoreModal.type,
+        backupId: restoreModal.backupId,
+        selectMode: true,
+        selectedFiles: [],
+        searchQuery: "",
+        page: 1,
+        pageSize: 10,
+      });
+    }}
+    className="text-[10px] text-blue-500 hover:text-blue-700 transition mt-1"
+  >
+    <FontAwesomeIcon icon={faEye} className="ml-1" />
+    اختر من الملفات المعروضة في المعاينة
+  </button>
+  
+  {/* ===== عرض الملفات المضافة مع فلتر بحث ===== */}
+  {restoreModal.specificFiles.length > 0 && (
+    <div className="mt-2">
+      {/* ✅ حقل بحث داخل الملفات المضافة */}
+      <div className="relative mb-1">
+        <FontAwesomeIcon
+          icon={faSearch}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"
+        />
+        <input
+          type="text"
+          placeholder="فلترة الملفات المضافة..."
+          className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1 pr-7 pl-2 text-xs outline-none focus:border-blue-400"
+          onChange={(e) => {
+            // يمكنك إضافة state للبحث داخل specificFiles إذا أردت
+          }}
+        />
+      </div>
+      <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+        {restoreModal.specificFiles.map((file, index) => (
+          <span key={index} className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
+            {file}
+            <button
+              onClick={() => removeSpecificFile(index)}
+              className="text-purple-400 hover:text-red-500"
+            >
+              <FontAwesomeIcon icon={faXmark} className="text-[8px]" />
+            </button>
+          </span>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+      </div>
+
+      <button
+        onClick={handleRestore}
+        disabled={isProcessing}
+        className={`w-full py-2 sm:py-2.5 rounded-xl font-semibold transition text-sm mt-4 flex items-center justify-center gap-2 ${
+          isProcessing
+            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+            : "bg-blue-500 hover:bg-blue-600 text-white"
+        }`}
+      >
+        {isProcessing ? (
+          <>
+            <FontAwesomeIcon icon={faSpinner} spin />
+            جاري الاستعادة...
+          </>
+        ) : (
+          "استعادة"
+        )}
+      </button>
+    </div>
+  </div>
+)}
 
       {/* ============================================================ */}
       {/* ===== Cleanup Modal ===== */}

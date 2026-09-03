@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CorrespondenceResponse } from "@/types/api/correspondence.types";
-import { forwardRef, useState } from "react";
+import { forwardRef, useState, useEffect, useRef } from "react";
 import { ChevronDown, ChevronUp, Reply, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCorrespondenceWithReplies } from "@/hooks/useCorrespondence";
@@ -19,6 +19,10 @@ interface CorrespondenceEmailListProps {
     selectedId: number | null;
     onSelectItem: (id: number) => void;
     isLoading?: boolean;
+    // ✅ إضافة دعم Infinite Scroll
+    hasNextPage?: boolean;
+    isFetchingNextPage?: boolean;
+    fetchNextPage?: () => void;
 }
 
 // ============================================================
@@ -175,7 +179,6 @@ function CorrespondenceItemWithReplies({
                             {item.title}
                         </p>
 
-                        {/* ✅ معلومات إضافية مع عدد المرفقات بجانبها */}
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             {item.createdBy && (
                                 <span>👤 {item.createdBy}</span>
@@ -258,8 +261,41 @@ function CorrespondenceItemWithReplies({
 // ============================================================
 
 export const CorrespondenceEmailList = forwardRef<HTMLDivElement, CorrespondenceEmailListProps>(
-    ({ items, selectedId, onSelectItem, isLoading = false }, ref) => {
-        if (isLoading) {
+    ({ 
+        items, 
+        selectedId, 
+        onSelectItem, 
+        isLoading = false,
+        hasNextPage = false,
+        isFetchingNextPage = false,
+        fetchNextPage,
+    }, ref) => {
+        const observerRef = useRef<HTMLDivElement>(null);
+        const containerRef = useRef<HTMLDivElement>(null);
+
+        // ===== Intersection Observer for Infinite Scroll =====
+        useEffect(() => {
+            if (!observerRef.current || !fetchNextPage || !hasNextPage || isFetchingNextPage) return;
+
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    if (entries[0].isIntersecting) {
+                        fetchNextPage();
+                    }
+                },
+                { threshold: 0.1, root: containerRef.current }
+            );
+
+            observer.observe(observerRef.current);
+
+            return () => {
+                if (observerRef.current) {
+                    observer.unobserve(observerRef.current);
+                }
+            };
+        }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+        if (isLoading && items.length === 0) {
             return (
                 <div ref={ref} className="flex h-full items-center justify-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-3">
@@ -282,7 +318,7 @@ export const CorrespondenceEmailList = forwardRef<HTMLDivElement, Correspondence
         }
 
         return (
-            <div ref={ref} className="flex flex-col">
+            <div ref={containerRef} className="flex flex-col h-full overflow-y-auto hide-scrollbar">
                 {items.map((item) => (
                     <CorrespondenceItemWithReplies
                         key={item.id}
@@ -292,6 +328,20 @@ export const CorrespondenceEmailList = forwardRef<HTMLDivElement, Correspondence
                         depth={0}
                     />
                 ))}
+
+                {/* ===== Observer for Infinite Scroll ===== */}
+                {hasNextPage && (
+                    <div ref={observerRef} className="flex items-center justify-center py-4">
+                        {isFetchingNextPage ? (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="text-sm">جاري تحميل المزيد...</span>
+                            </div>
+                        ) : (
+                            <div className="h-4" />
+                        )}
+                    </div>
+                )}
             </div>
         );
     }

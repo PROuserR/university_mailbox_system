@@ -40,6 +40,7 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import useUserInfoStore from "@/store/userInfoStore";
 import { useUsers, useCreateUser, useUpdateUser, useResetUserPassword, useToggleActive, useTogglePermanentReceiver } from "@/hooks/useUsers";
 import { CreateUserRole, UpdateUserRole, UserResponse } from "@/types/api/user";
+import { Pagination } from "@/components/ui/Pagination";
 
 // ==============================
 // VALIDATION FUNCTIONS
@@ -94,6 +95,10 @@ export default function UsersPage() {
     });
 
     const { id: currentUserId, roles: currentUserRoles } = useUserInfoStore();
+
+    // ===== Pagination State =====
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5); // ✅ 5 مستخدمين في كل صفحة
 
     const { data: users = [], isLoading: loadingUsers, refetch: refetchUsers } = useUsers();
     const createUserMutation = useCreateUser(() => { closeModal(); refetchUsers(); });
@@ -185,28 +190,45 @@ export default function UsersPage() {
         return true;
     };
 
-    // ==============================
-    // SEARCH + FILTER
-    // ==============================
     const filteredUsers = useMemo(() => {
-        return users.filter((user) => {
-            const searchMatch =
-                user.fullName.toLowerCase().includes(search.toLowerCase()) ||
-                user.email.toLowerCase().includes(search.toLowerCase()) ||
-                user.userName.toLowerCase().includes(search.toLowerCase());
+    return users.filter((user) => {
+        const searchMatch =
+            user.fullName.toLowerCase().includes(search.toLowerCase()) ||
+            user.email.toLowerCase().includes(search.toLowerCase()) ||
+            user.userName.toLowerCase().includes(search.toLowerCase());
 
-            const filterMatch =
-                filter === "all"
-                    ? true
-                    : filter === "active"
-                        ? user.isActive
-                        : filter === "inactive"
-                            ? !user.isActive
-                            : user.isPermanentReceiver;
+        const filterMatch =
+            filter === "all"
+                ? true
+                : filter === "active"
+                    ? user.isActive
+                    : filter === "inactive"
+                        ? !user.isActive
+                        : user.isPermanentReceiver;
 
-            return searchMatch && filterMatch;
-        });
-    }, [users, search, filter]);
+        return searchMatch && filterMatch;
+    });
+}, [users, search, filter]);
+
+// ===== PAGINATION =====
+const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredUsers.slice(startIndex, endIndex);
+}, [filteredUsers, currentPage, pageSize]);
+
+const totalPages = Math.ceil(filteredUsers.length / pageSize);
+
+const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1);
+};
+
+const handleFilterChange = (value: typeof filter) => {
+    setFilter(value);
+    setCurrentPage(1);
+};
+
 
     // ==============================
     // STATS
@@ -521,44 +543,44 @@ export default function UsersPage() {
                 </div>
             </div>
 
-            {/* ===== FILTERS ===== */}
-            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-3 sm:p-4 mb-3 sm:mb-4">
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-between">
-                    <div className="relative flex-1">
-                        <FontAwesomeIcon
-                            icon={faSearch}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px] sm:text-sm"
-                        />
-                        <input
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="البحث بالاسم أو البريد أو اسم المستخدم..."
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 sm:py-2 pr-8 sm:pr-10 pl-3 text-xs sm:text-sm outline-none focus:border-blue-400"
-                        />
-                    </div>
+           {/* ===== FILTERS ===== */}
+<div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-3 sm:p-4 mb-3 sm:mb-4">
+    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-between">
+        <div className="relative flex-1">
+            <FontAwesomeIcon
+                icon={faSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px] sm:text-sm"
+            />
+            <input
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)} // ✅ استخدام الدالة الجديدة
+                placeholder="البحث بالاسم أو البريد أو اسم المستخدم..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 sm:py-2 pr-8 sm:pr-10 pl-3 text-xs sm:text-sm outline-none focus:border-blue-400"
+            />
+        </div>
 
-                    <div className="flex gap-1.5 flex-wrap">
-                        {[
-                            { key: "all", label: "الكل" },
-                            { key: "active", label: "نشط" },
-                            { key: "inactive", label: "غير نشط" },
-                            { key: "receiver", label: "مستلم دائم" },
-                        ].map((item) => (
-                            <button
-                                key={item.key}
-                                onClick={() => setFilter(item.key as any)}
-                                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-medium transition ${
-                                    filter === item.key
-                                        ? "bg-blue-500 text-white"
-                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                }`}
-                            >
-                                {item.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+        <div className="flex gap-1.5 flex-wrap">
+            {[
+                { key: "all", label: "الكل" },
+                { key: "active", label: "نشط" },
+                { key: "inactive", label: "غير نشط" },
+                { key: "receiver", label: "مستلم دائم" },
+            ].map((item) => (
+                <button
+                    key={item.key}
+                    onClick={() => handleFilterChange(item.key as any)} // ✅ استخدام الدالة الجديدة
+                    className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-medium transition ${
+                        filter === item.key
+                            ? "bg-blue-500 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                >
+                    {item.label}
+                </button>
+            ))}
+        </div>
+    </div>
+</div>
 
             {/* ===== USERS TABLE ===== */}
             <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
@@ -572,176 +594,196 @@ export default function UsersPage() {
                         <p className="text-xs sm:text-sm">لا يوجد مستخدمين</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-right text-xs sm:text-sm">
-                            <thead>
-                                <tr className="bg-blue-50 text-slate-700">
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">المستخدم</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden sm:table-cell">البريد</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden md:table-cell">الدور</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الحالة</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden lg:table-cell">الاستقبال</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredUsers.map((user) => (
-                                    <tr
-                                        key={user.id}
-                                        className="border-t border-slate-100 hover:bg-slate-50 transition"
-                                    >
-                                        {/* USER */}
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            <div className="flex items-center gap-2 sm:gap-3">
-                                                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0">
-                                                    {user.firstName?.charAt(0)}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <div className="font-semibold text-slate-800 text-xs sm:text-sm truncate max-w-[80px] sm:max-w-[120px]" title={user.fullName}>
-                                                        {user.fullName}
-                                                        {user.id === currentUserId && (
-                                                            <span className="mr-1 text-[8px] text-blue-500">(أنت)</span>
-                                                        )}
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-right text-xs sm:text-sm">
+                                <thead>
+                                    <tr className="bg-blue-50 text-slate-700">
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">المستخدم</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden sm:table-cell">البريد</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden md:table-cell">الدور</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الحالة</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden lg:table-cell">الاستقبال</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {paginatedUsers.map((user) => (
+                                        <tr
+                                            key={user.id}
+                                            className="border-t border-slate-100 hover:bg-slate-50 transition"
+                                        >
+                                            {/* USER */}
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                <div className="flex items-center gap-2 sm:gap-3">
+                                                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0">
+                                                        {user.firstName?.charAt(0)}
                                                     </div>
-                                                    <div className="text-[10px] sm:text-xs text-slate-400 truncate max-w-[60px] sm:max-w-[100px]">
-                                                        @{user.userName}
+                                                    <div className="min-w-0">
+                                                        <div className="font-semibold text-slate-800 text-xs sm:text-sm truncate max-w-[80px] sm:max-w-[120px]" title={user.fullName}>
+                                                            {user.fullName}
+                                                            {user.id === currentUserId && (
+                                                                <span className="mr-1 text-[8px] text-blue-500">(أنت)</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[10px] sm:text-xs text-slate-400 truncate max-w-[60px] sm:max-w-[100px]">
+                                                            @{user.userName}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
+                                            </td>
 
-                                        {/* EMAIL */}
-                                        <td className="p-2 sm:p-3 text-slate-600 text-[10px] sm:text-xs truncate max-w-[120px] sm:max-w-[180px] hidden sm:table-cell" title={user.email}>
-                                            <div className="flex items-center gap-1.5">
-                                                <FontAwesomeIcon icon={faEnvelope} className="text-blue-400 text-[8px] sm:text-[10px]" />
-                                                {user.email}
-                                            </div>
-                                        </td>
+                                            {/* EMAIL */}
+                                            <td className="p-2 sm:p-3 text-slate-600 text-[10px] sm:text-xs truncate max-w-[120px] sm:max-w-[180px] hidden sm:table-cell" title={user.email}>
+                                                <div className="flex items-center gap-1.5">
+                                                    <FontAwesomeIcon icon={faEnvelope} className="text-blue-400 text-[8px] sm:text-[10px]" />
+                                                    {user.email}
+                                                </div>
+                                            </td>
 
-                                        {/* ROLES */}
-                                        <td className="p-2 sm:p-3 hidden md:table-cell">
-                                            <div className="flex gap-1 flex-wrap">
-                                                {user.roles.map((role) => {
-                                                    let icon = faUser;
-                                                    let color = "bg-purple-100 text-purple-700";
-                                                    if (role === 'Admin') {
-                                                        icon = faUserShield;
-                                                        color = "bg-red-100 text-red-700";
-                                                    } else if (role === 'Dean') {
-                                                        icon = faUserGraduate;
-                                                        color = "bg-blue-100 text-blue-700";
-                                                    } else if (role === 'HeadOfDepartment') {
-                                                        icon = faUserTie;
-                                                        color = "bg-green-100 text-green-700";
-                                                    } else if (role === 'Employee') {
-                                                        icon = faUserCog;
-                                                        color = "bg-orange-100 text-orange-700";
-                                                    }
-                                                    return (
-                                                        <span
-                                                            key={role}
-                                                            className={`${color} px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] whitespace-nowrap flex items-center gap-0.5`}
-                                                        >
-                                                            <FontAwesomeIcon icon={icon} className="text-[6px] sm:text-[7px]" />
-                                                            {role}
+                                            {/* ROLES */}
+                                            <td className="p-2 sm:p-3 hidden md:table-cell">
+                                                <div className="flex gap-1 flex-wrap">
+                                                    {user.roles.map((role) => {
+                                                        let icon = faUser;
+                                                        let color = "bg-purple-100 text-purple-700";
+                                                        if (role === 'Admin') {
+                                                            icon = faUserShield;
+                                                            color = "bg-red-100 text-red-700";
+                                                        } else if (role === 'Dean') {
+                                                            icon = faUserGraduate;
+                                                            color = "bg-blue-100 text-blue-700";
+                                                        } else if (role === 'HeadOfDepartment') {
+                                                            icon = faUserTie;
+                                                            color = "bg-green-100 text-green-700";
+                                                        } else if (role === 'Employee') {
+                                                            icon = faUserCog;
+                                                            color = "bg-orange-100 text-orange-700";
+                                                        }
+                                                        return (
+                                                            <span
+                                                                key={role}
+                                                                className={`${color} px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] whitespace-nowrap flex items-center gap-0.5`}
+                                                            >
+                                                                <FontAwesomeIcon icon={icon} className="text-[6px] sm:text-[7px]" />
+                                                                {role}
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </td>
+
+                                            {/* STATUS */}
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                <div className="flex flex-col gap-0.5">
+                                                    {user.isActive ? (
+                                                        <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
+                                                            <FontAwesomeIcon icon={faCheckCircle} className="text-[7px] sm:text-[8px]" />
+                                                            نشط
                                                         </span>
-                                                    );
-                                                })}
-                                            </div>
-                                        </td>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
+                                                            <FontAwesomeIcon icon={faTimes} className="text-[7px] sm:text-[8px]" />
+                                                            غير نشط
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
 
-                                        {/* STATUS */}
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            <div className="flex flex-col gap-0.5">
-                                                {user.isActive ? (
-                                                    <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
-                                                        <FontAwesomeIcon icon={faCheckCircle} className="text-[7px] sm:text-[8px]" />
-                                                        نشط
+                                            {/* PERMANENT RECEIVER */}
+                                            <td className="p-2 sm:p-3 hidden lg:table-cell whitespace-nowrap">
+                                                {user.isPermanentReceiver ? (
+                                                    <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
+                                                        <FontAwesomeIcon icon={faUserCheck} className="text-[7px] sm:text-[8px]" />
+                                                        دائم
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
-                                                        <FontAwesomeIcon icon={faTimes} className="text-[7px] sm:text-[8px]" />
-                                                        غير نشط
+                                                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-400 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
+                                                        <FontAwesomeIcon icon={faUserMinus} className="text-[7px] sm:text-[8px]" />
+                                                        غير دائم
                                                     </span>
                                                 )}
-                                            </div>
-                                        </td>
+                                            </td>
 
-                                        {/* PERMANENT RECEIVER */}
-                                        <td className="p-2 sm:p-3 hidden lg:table-cell whitespace-nowrap">
-                                            {user.isPermanentReceiver ? (
-                                                <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
-                                                    <FontAwesomeIcon icon={faUserCheck} className="text-[7px] sm:text-[8px]" />
-                                                    دائم
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-400 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] whitespace-nowrap">
-                                                    <FontAwesomeIcon icon={faUserMinus} className="text-[7px] sm:text-[8px]" />
-                                                    غير دائم
-                                                </span>
-                                            )}
-                                        </td>
-
-                                        {/* ACTIONS */}
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() => openEditModal(user)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition flex items-center justify-center"
-                                                    title="تعديل"
-                                                >
-                                                    <FontAwesomeIcon icon={faEdit} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleToggleActive(user)}
-                                                    disabled={!canDeactivate(user) || toggleActiveMutation.isPending}
-                                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl transition flex items-center justify-center ${
-                                                        !canDeactivate(user) || toggleActiveMutation.isPending
-                                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                                            : user.isActive
-                                                                ? "bg-red-100 text-red-600 hover:bg-red-200"
-                                                                : "bg-emerald-100 text-emerald-600 hover:bg-emerald-200"
-                                                    }`}
-                                                    title={
-                                                        user.id === currentUserId
-                                                            ? "لا يمكن تعطيل حسابك الخاص"
-                                                            : user.roles.includes('Admin')
-                                                                ? "لا يمكن تعطيل حساب المدير"
+                                            {/* ACTIONS */}
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => openEditModal(user)}
+                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition flex items-center justify-center"
+                                                        title="تعديل"
+                                                    >
+                                                        <FontAwesomeIcon icon={faEdit} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleToggleActive(user)}
+                                                        disabled={!canDeactivate(user) || toggleActiveMutation.isPending}
+                                                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl transition flex items-center justify-center ${
+                                                            !canDeactivate(user) || toggleActiveMutation.isPending
+                                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                                                 : user.isActive
-                                                                    ? "تعطيل"
-                                                                    : "تفعيل"
-                                                    }
-                                                >
-                                                    <FontAwesomeIcon icon={user.isActive ? faUserSlash : faUserCheck} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleToggleReceiver(user)}
-                                                    disabled={toggleReceiverMutation.isPending}
-                                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl transition flex items-center justify-center ${
-                                                        toggleReceiverMutation.isPending
-                                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                                            : user.isPermanentReceiver
-                                                                ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-                                                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                                                    }`}
-                                                    title={user.isPermanentReceiver ? "إزالة من الدائمين" : "إضافة للدائمين"}
-                                                >
-                                                    <FontAwesomeIcon icon={user.isPermanentReceiver ? faUserCheck : faUserPlus} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                                <button
-                                                    onClick={() => openResetPasswordModal(user)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-purple-100 text-purple-600 hover:bg-purple-200 transition flex items-center justify-center"
-                                                    title="إعادة تعيين كلمة المرور"
-                                                >
-                                                    <FontAwesomeIcon icon={faKey} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                                                    ? "bg-red-100 text-red-600 hover:bg-red-200"
+                                                                    : "bg-emerald-100 text-emerald-600 hover:bg-emerald-200"
+                                                        }`}
+                                                        title={
+                                                            user.id === currentUserId
+                                                                ? "لا يمكن تعطيل حسابك الخاص"
+                                                                : user.roles.includes('Admin')
+                                                                    ? "لا يمكن تعطيل حساب المدير"
+                                                                    : user.isActive
+                                                                        ? "تعطيل"
+                                                                        : "تفعيل"
+                                                        }
+                                                    >
+                                                        <FontAwesomeIcon icon={user.isActive ? faUserSlash : faUserCheck} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleToggleReceiver(user)}
+                                                        disabled={toggleReceiverMutation.isPending}
+                                                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl transition flex items-center justify-center ${
+                                                            toggleReceiverMutation.isPending
+                                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                                : user.isPermanentReceiver
+                                                                    ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                                                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                                        }`}
+                                                        title={user.isPermanentReceiver ? "إزالة من الدائمين" : "إضافة للدائمين"}
+                                                    >
+                                                        <FontAwesomeIcon icon={user.isPermanentReceiver ? faUserCheck : faUserPlus} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openResetPasswordModal(user)}
+                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-purple-100 text-purple-600 hover:bg-purple-200 transition flex items-center justify-center"
+                                                        title="إعادة تعيين كلمة المرور"
+                                                    >
+                                                        <FontAwesomeIcon icon={faKey} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* ===== ✅ PAGINATION ===== */}
+                        {filteredUsers.length > pageSize && (
+                            <div className="border-t border-slate-100 p-3">
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                    pageSize={pageSize}
+                                    totalCount={filteredUsers.length}
+                                    showPageSize={true}
+                                    onPageSizeChange={(size) => {
+                                        setPageSize(size);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

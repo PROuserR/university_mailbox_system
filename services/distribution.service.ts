@@ -296,3 +296,49 @@ export const markAsRead = async (correspondenceId: number, notes?: string): Prom
     throw error;
   }
 };
+
+export const getAllDistributions = async (
+  filter: Partial<DistributionFilterDto> = {}
+): Promise<PagedResult<DistributionResponseByIdDto>> => {
+  // ===== Default values =====
+  const defaultFilter: DistributionFilterDto = {
+    page: 1,
+    pageSize: 20,
+    sortBy: "DistributedDate",
+    sortDescending: true,
+  };
+
+  const mergedFilter = { ...defaultFilter, ...filter };
+
+  // ===== Clean undefined values =====
+  const params: Record<string, any> = {};
+  Object.entries(mergedFilter).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params[key] = value;
+    }
+  });
+
+  // ===== تأكد من أن status رقمي =====
+  if (params.status !== undefined && typeof params.status === "string") {
+    params.status = Number(params.status);
+  }
+
+  const response = await apiWrapper.get<ApiResult<PagedResult<DistributionResponseByIdDto>>>(
+    `${BASE_URL}/all`,
+    params
+  );
+
+  if (!response.success || !response.data) {
+    const error = new Error(response?.message || "فشل تحميل قائمة التوزيعات");
+    (error as any).statusCode = response?.status || 500;
+    throw error;
+  }
+
+  if (!response.data.isSuccess) {
+    const error = new Error(response.data.message || "فشل تحميل قائمة التوزيعات");
+    (error as any).statusCode = response.data.statusCode || response.status;
+    throw error;
+  }
+
+  return response.data.data!;
+};

@@ -36,7 +36,6 @@ export function useUserRole() {
                 const user = await authService.getCurrentUser();
                 setUser(user);
             } catch (error) {
-                console.error("Failed to fetch user", error);
                 clearUser();
             } finally {
                 setLoading(false);

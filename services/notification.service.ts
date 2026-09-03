@@ -3,6 +3,7 @@ import myAPI from "@/utils/myAPI";
 import type { ApiResult } from "@/types/api/ApiResult";
 import type {
   Notification,
+  NotificationPageData,
   NotificationPageResponse,
 } from "@/types/api/notification";
 
@@ -14,8 +15,8 @@ export const notificationService = {
   async getNotifications(
     page: number = 1,
     pageSize: number = 20
-  ): Promise<NotificationPageResponse> {
-    const response = await myAPI.get<ApiResult<NotificationPageResponse>>(
+  ): Promise<NotificationPageData> {
+    const response = await myAPI.get<ApiResult<NotificationPageData>>(
       "/Notifications",
       {
         params: { page, pageSize },

@@ -9,34 +9,23 @@ import {
   PermissionDto,
   DelegationStatisticsDto,
   DelegationUsageDto,
-  UserResponseDto,
 } from '@/types/api/Delegation';
 import { ApiResult } from '@/types/api/ApiResult';
+import { UserResponse } from '@/types/api/user';
+import PagedResult from '@/types/api/PagedResponse';
 
 class DelegationService {
   // ============================================================
   // ===== Users =====
   // ============================================================
 
-  async getEmployees(): Promise<UserResponseDto[]> {
-    const response = await apiWrapper.get<ApiResult<UserResponseDto[]>>(
-      '/Users/role/Employee'
+  async getActiveUsers(): Promise<UserResponse[]> {
+    const response = await apiWrapper.get<ApiResult<UserResponse[]>>(
+      '/Users/active'
     );
 
     if (!isApiSuccess(response)) {
-      throw new Error(response.message || 'فشل تحميل الموظفين');
-    }
-
-    return extractData(response) || [];
-  }
-
-  async getDeans(): Promise<UserResponseDto[]> {
-    const response = await apiWrapper.get<ApiResult<UserResponseDto[]>>(
-      '/Users/role/Dean'
-    );
-
-    if (!isApiSuccess(response)) {
-      throw new Error(response.message || 'فشل تحميل العمداء');
+      throw new Error(response.message || 'فشل تحميل المستخدمين');
     }
 
     return extractData(response) || [];
@@ -212,19 +201,32 @@ class DelegationService {
 
     return extractData(response)!;
   }
-
-  async getDelegationUsage(delegationId: number): Promise<DelegationUsageDto[]> {
-    const response = await apiWrapper.get<ApiResult<DelegationUsageDto[]>>(
-      `/Delegations/${delegationId}/usage`
+   async getDelegationUsage(
+    delegationId: number, 
+    page: number = 1, 
+    pageSize: number = 10
+  ): Promise<PagedResult<DelegationUsageDto>> {
+    const response = await apiWrapper.get<ApiResult<PagedResult<DelegationUsageDto>>>(
+      `/Delegations/${delegationId}/usage`,
+      { page, pageSize }
     );
 
     if (!isApiSuccess(response)) {
       throw new Error(response.message || 'فشل تحميل سجل الاستخدام');
     }
 
-    return extractData(response) || [];
+    const data = extractData(response);
+    
+    return data || {
+      items: [],
+      totalCount: 0,
+      totalPages: 0,
+      pageNumber: page,
+      pageSize: pageSize,
+      hasPreviousPage: false,
+      hasNextPage: false,
+    };
   }
-
   // ============================================================
   // ===== Management =====
   // ============================================================

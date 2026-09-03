@@ -1,10 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/(dashboard)/document-types/page.tsx
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { apiWrapper } from "@/utils/apiClient";
+import { useMemo, useState } from "react";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { Pagination } from "@/components/ui/Pagination";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { PERMISSIONS } from "@/lib/permissions";
+import { useDocumentTypes } from "@/hooks/useDocumentTypes";
 
 import {
     faPlus,
@@ -14,7 +18,6 @@ import {
     faSearch,
     faFileLines,
     faXmark,
-    faCheck,
     faBan,
     faCheckCircle,
 } from "@fortawesome/free-solid-svg-icons";
@@ -22,150 +25,191 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import toast from "react-hot-toast";
 
-interface DocumentType {
-    id: number;
-    name: string;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string | null;
-}
-
-interface ApiResponse<T> {
-    isSuccess: boolean;
-    data: T;
-    message: string;
-    errors: string[] | null;
-    statusCode: number;
-}
-
 export default function DocumentTypesPage() {
-    
-    const [documents, setDocuments] = useState<DocumentType[]>([]);
-    const [loading, setLoading] = useState(true);
+    // ===== Auth Guard =====
+    const { isLoading: isAuthLoading, isAuthorized } = useAuthGuard({
+        requiredPermissions: [PERMISSIONS.MANAGE_DOCUMENT_TYPES],
+        redirectTo: '/auth/login',
+        unauthorizedPath: '/unauthorized'
+    });
+
+    // ===== Hook =====
+    const {
+        documents,
+        loading,
+        createDocument,
+        updateDocument,
+        deleteDocument,
+        toggleStatus,
+    } = useDocumentTypes();
+
+    // ===== Local State =====
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
     const [modalOpen, setModalOpen] = useState(false);
-    const [editing, setEditing] = useState<DocumentType | null>(null);
+    const [editing, setEditing] = useState<any | null>(null);
     const [name, setName] = useState("");
     const [processing, setProcessing] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
-     
-    async function loadDocuments() {
-        try {
-            setLoading(true);
-            const response = await apiWrapper.get<ApiResponse<DocumentType[]>>(
-                "/DocumentTypes"
-            );
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
-            if (response.success && response.data) {
-                setDocuments(response.data.data);
-            }
-        } catch (error) {
-            console.error("Failed to load document types:", error);
-        } finally {
-            setLoading(false);
-        }
-    }
+    // ===== Pagination State =====
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
 
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        loadDocuments();
-    }, []);
+    // ===== Reset page when search/filter changes =====
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        setCurrentPage(1);
+    };
 
+    const handleFilterChange = (value: typeof filter) => {
+        setFilter(value);
+        setCurrentPage(1);
+    };
+
+    // ===== Search & Filter =====
     const filteredDocuments = useMemo(() => {
+        if (!documents || !Array.isArray(documents)) {
+            return [];
+        }
+        
         return documents.filter((item) => {
+            if (!item) return false;
+            
             const matchesSearch = item.name
-                .toLowerCase()
-                .includes(search.toLowerCase());
+                ?.toLowerCase()
+                .includes(search.toLowerCase()) ?? false;
 
             const matchesFilter =
                 filter === "all"
                     ? true
                     : filter === "active"
-                        ? item.isActive
-                        : !item.isActive;
+                        ? item.isActive === true
+                        : item.isActive === false;
 
             return matchesSearch && matchesFilter;
         });
     }, [documents, search, filter]);
 
-    const totalCount = documents.length;
-    const activeCount = documents.filter((x) => x.isActive).length;
-    const inactiveCount = documents.filter((x) => !x.isActive).length;
+    // ===== Pagination =====
+    const paginatedDocuments = useMemo(() => {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        return filteredDocuments.slice(startIndex, endIndex);
+    }, [filteredDocuments, currentPage, pageSize]);
 
-    async function saveDocument() {
-        if (!name.trim()) return;
+    const totalPages = Math.ceil(filteredDocuments.length / pageSize);
 
+    // ===== Stats =====
+    const totalCount = documents?.length || 0;
+    const activeCount = documents?.filter((x) => x?.isActive === true).length || 0;
+    const inactiveCount = documents?.filter((x) => x?.isActive === false).length || 0;
+
+    // ===== CRUD Handlers =====
+    const handleSave = async () => {
+        if (!name.trim()) {
+            toast.error("يرجى إدخال اسم الوثيقة");
+            return;
+        }
+
+        setProcessing(true);
         try {
-            setProcessing(true);
-
             if (editing) {
-                await apiWrapper.put(`/DocumentTypes/${editing.id}`, { name });
+                await updateDocument(editing.id, name);
             } else {
-                await apiWrapper.post("/DocumentTypes", { name });
+                await createDocument(name);
             }
-
             setModalOpen(false);
             setName("");
             setEditing(null);
-            await loadDocuments();
-            toast.success(editing ? "تم التعديل بنجاح" : "تم الإضافة بنجاح");
-        } catch (error) {
-            console.error(error);
-            toast.error("فشل الحفظ");
+        } catch (error: any) {
+            // ❌ لا نغلق المودال عند الخطأ، ونعرض رسالة الخطأ
+            // الـ Hook يعرض toast.error بالفعل، لكننا نضمن عدم حدوث أخطاء إضافية
         } finally {
             setProcessing(false);
         }
-    }
-
-    async function toggleStatus(item: DocumentType) {
-        try {
-            const endpoint = item.isActive
-                ? `/DocumentTypes/${item.id}/deactivate`
-                : `/DocumentTypes/${item.id}/activate`;
-
-            await apiWrapper.post(endpoint);
-            toast.success(item.isActive ? "تم التعطيل" : "تم التفعيل");
-            loadDocuments();
-        } catch (error) {
-            console.error(error);
-            toast.error("فشل تغيير الحالة");
-        }
-    }
-
-    function openCreate() {
-        setEditing(null);
-        setName("");
-        setModalOpen(true);
-    }
-
-    function openEdit(item: DocumentType) {
-        setEditing(item);
-        setName(item.name);
-        setModalOpen(true);
-    }
-
-    function formatDate(date: string) {
-        return new Date(date).toLocaleDateString();
-    }
+    };
 
     const handleDeleteClick = (id: number) => {
         setDeleteTargetId(id);
+        setDeleteError(null);
         setDeleteModalOpen(true);
     };
 
     const confirmDelete = async () => {
         if (!deleteTargetId) return;
+
+        setProcessing(true);
         try {
-            await apiWrapper.delete(`/DocumentTypes/${deleteTargetId}`);
-            toast.success("تم الحذف بنجاح");
-            loadDocuments();
-        } catch (error) {
-            toast.error("فشل الحذف");
+            await deleteDocument(deleteTargetId);
+            setDeleteModalOpen(false);
+            setDeleteTargetId(null);
+            setDeleteError(null);
+        } catch (err: any) {
+            // الـ Hook يعرض toast.error بالفعل
+            setDeleteError(err?.message || "فشل الحذف");
+        } finally {
+            setProcessing(false);
         }
-        setDeleteTargetId(null);
     };
+
+    const handleCloseModal = () => {
+        setDeleteModalOpen(false);
+        setDeleteTargetId(null);
+        setDeleteError(null);
+    };
+
+    const handleToggleStatus = async (item: any) => {
+        if (!item) return;
+        try {
+            await toggleStatus(item.id, item.isActive);
+        } catch (error: any) {
+            // الـ Hook يعرض toast.error بالفعل
+        }
+    };
+
+    // ===== Modal Handlers =====
+    const openCreate = () => {
+        setEditing(null);
+        setName("");
+        setModalOpen(true);
+    };
+
+    const openEdit = (item: any) => {
+        if (!item) return;
+        setEditing(item);
+        setName(item.name);
+        setModalOpen(true);
+    };
+
+    const formatDate = (date: string) => {
+        if (!date) return "-";
+        return new Date(date).toLocaleDateString();
+    };
+
+    // ============================================================
+    // ===== Render =====
+    // ============================================================
+
+    if (isAuthLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+        );
+    }
+
+    if (!isAuthorized) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+                <div className="text-6xl">🔒</div>
+                <h2 className="text-xl font-bold text-slate-700">غير مصرح بالوصول</h2>
+                <p className="text-sm text-slate-500">ليس لديك الصلاحية لعرض هذه الصفحة</p>
+            </div>
+        );
+    }
 
     return (
         <div dir="rtl" className="min-h-screen bg-slate-50 p-3 sm:p-4">
@@ -224,7 +268,7 @@ export default function DocumentTypesPage() {
                         />
                         <input
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => handleSearchChange(e.target.value)}
                             placeholder="البحث عن نوع وثيقة..."
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 sm:py-2 pr-8 sm:pr-10 pl-3 text-xs sm:text-sm outline-none focus:border-blue-400"
                         />
@@ -238,8 +282,7 @@ export default function DocumentTypesPage() {
                         ].map((item) => (
                             <button
                                 key={item.key}
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                onClick={() => setFilter(item.key as any)}
+                                onClick={() => handleFilterChange(item.key as typeof filter)}
                                 className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-medium transition ${
                                     filter === item.key
                                         ? "bg-blue-500 text-white"
@@ -265,85 +308,114 @@ export default function DocumentTypesPage() {
                         <p className="text-xs sm:text-sm">لا توجد أنواع وثائق</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-right text-xs sm:text-sm">
-                            <thead>
-                                <tr className="bg-blue-50 text-slate-700">
-                                    <th className="p-2 sm:p-3 font-semibold">الاسم</th>
-                                    <th className="p-2 sm:p-3 font-semibold">الحالة</th>
-                                    <th className="p-2 sm:p-3 font-semibold hidden md:table-cell">تاريخ الإنشاء</th>
-                                    <th className="p-2 sm:p-3 font-semibold hidden lg:table-cell">آخر تحديث</th>
-                                    <th className="p-2 sm:p-3 font-semibold">الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredDocuments.map((item) => (
-                                    <tr
-                                        key={item.id}
-                                        className="border-t border-slate-100 hover:bg-slate-50 transition"
-                                    >
-                                       <td className="p-2 sm:p-3 font-medium text-slate-800 text-xs sm:text-sm max-w-[120px] sm:max-w-[200px] truncate" title={item.name}>
-    {item.name}
-</td>
-                                        <td className="p-2 sm:p-3">
-                                            {item.isActive ? (
-                                                <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs">
-                                                    <FontAwesomeIcon icon={faCheckCircle} className="text-[8px] sm:text-[10px]" />
-                                                    نشط
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs">
-                                                    <FontAwesomeIcon icon={faBan} className="text-[8px] sm:text-[10px]" />
-                                                    غير نشط
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="p-2 sm:p-3 text-slate-500 text-[10px] sm:text-xs hidden md:table-cell">
-                                            {formatDate(item.createdAt)}
-                                        </td>
-                                        <td className="p-2 sm:p-3 text-slate-500 text-[10px] sm:text-xs hidden lg:table-cell">
-                                            {item.updatedAt ? formatDate(item.updatedAt) : "-"}
-                                        </td>
-                                        <td className="p-2 sm:p-3">
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() => openEdit(item)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition flex items-center justify-center"
-                                                >
-                                                    <FontAwesomeIcon icon={faEdit} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                                <button
-                                                    onClick={() => toggleStatus(item)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition flex items-center justify-center"
-                                                >
-                                                    <FontAwesomeIcon icon={faPowerOff} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(item.id)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center"
-                                                >
-                                                    <FontAwesomeIcon icon={faTrash} className="text-[10px] sm:text-sm" />
-                                                </button>
-                                                
-                                            </div>
-                                        </td>
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-right text-xs sm:text-sm">
+                                <thead>
+                                    <tr className="bg-blue-50 text-slate-700">
+                                        <th className="p-2 sm:p-3 font-semibold">الاسم</th>
+                                        <th className="p-2 sm:p-3 font-semibold">الحالة</th>
+                                        <th className="p-2 sm:p-3 font-semibold hidden md:table-cell">تاريخ الإنشاء</th>
+                                        <th className="p-2 sm:p-3 font-semibold hidden lg:table-cell">آخر تحديث</th>
+                                        <th className="p-2 sm:p-3 font-semibold">الإجراءات</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {paginatedDocuments.map((item) => (
+                                        <tr
+                                            key={item.id}
+                                            className="border-t border-slate-100 hover:bg-slate-50 transition"
+                                        >
+                                            <td
+                                                className="p-2 sm:p-3 font-medium text-slate-800 text-xs sm:text-sm max-w-[120px] sm:max-w-[200px] truncate"
+                                                title={item.name}
+                                            >
+                                                {item.name}
+                                            </td>
+                                            <td className="p-2 sm:p-3">
+                                                {item.isActive ? (
+                                                    <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs">
+                                                        <FontAwesomeIcon icon={faCheckCircle} className="text-[8px] sm:text-[10px]" />
+                                                        نشط
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs">
+                                                        <FontAwesomeIcon icon={faBan} className="text-[8px] sm:text-[10px]" />
+                                                        غير نشط
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-2 sm:p-3 text-slate-500 text-[10px] sm:text-xs hidden md:table-cell">
+                                                {formatDate(item.createdAt)}
+                                            </td>
+                                            <td className="p-2 sm:p-3 text-slate-500 text-[10px] sm:text-xs hidden lg:table-cell">
+                                                {item.updatedAt ? formatDate(item.updatedAt) : "-"}
+                                            </td>
+                                            <td className="p-2 sm:p-3">
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => openEdit(item)}
+                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition flex items-center justify-center"
+                                                    >
+                                                        <FontAwesomeIcon icon={faEdit} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleToggleStatus(item)}
+                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition flex items-center justify-center"
+                                                    >
+                                                        <FontAwesomeIcon icon={faPowerOff} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteClick(item.id)}
+                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center"
+                                                    >
+                                                        <FontAwesomeIcon icon={faTrash} className="text-[10px] sm:text-sm" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* ===== ✅ PAGINATION ===== */}
+                        {filteredDocuments.length > pageSize && (
+                            <div className="border-t border-slate-100 p-3">
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                    pageSize={pageSize}
+                                    totalCount={filteredDocuments.length}
+                                    showPageSize={true}
+                                    onPageSizeChange={(size) => {
+                                        setPageSize(size);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
-<ConfirmationModal
-    isOpen={deleteModalOpen}
-    onClose={() => setDeleteModalOpen(false)}
-    onConfirm={confirmDelete}
-    title="تأكيد الحذف"
-    message="هل أنت متأكد من حذف هذا العنصر؟"
-    confirmText="نعم، احذف"
-    cancelText="إلغاء"
-    variant="danger"
-/>
+
+            {/* ===== CONFIRMATION MODAL ===== */}
+            <ConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={handleCloseModal}
+                onConfirm={confirmDelete}
+                title={deleteError ? "فشل الحذف" : "تأكيد الحذف"}
+                message={
+                    deleteError 
+                        ? `⚠️ ${deleteError}`
+                        : "هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء."
+                }
+                confirmText={deleteError ? "إعادة المحاولة" : "نعم، احذف"}
+                cancelText="إلغاء"
+                variant={deleteError ? "warning" : "danger"}
+            />
+
             {/* ===== MODAL ===== */}
             {modalOpen && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -369,7 +441,7 @@ export default function DocumentTypesPage() {
 
                         <button
                             disabled={processing}
-                            onClick={saveDocument}
+                            onClick={handleSave}
                             className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 sm:py-2.5 rounded-xl font-semibold transition disabled:opacity-50 text-sm"
                         >
                             {processing ? "جاري الحفظ..." : "حفظ"}

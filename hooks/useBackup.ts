@@ -257,23 +257,23 @@ export const useRestoreFilesBackup = (onSuccess?: (data: RestoreResultDto) => vo
   });
 };
 
-export const useRestoreFilesBackupToPath = (onSuccess?: (data: RestoreResultDto) => void) => {
-  const queryClient = useQueryClient();
+// export const useRestoreFilesBackupToPath = (onSuccess?: (data: RestoreResultDto) => void) => {
+//   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({ type, backupId, options }: { type: BackupType; backupId: string; options: RestoreToPathOptions }) =>
-      restoreFilesBackupToPath(type, backupId, options),
-    onSuccess: (data) => {
-      toast.success("تم استعادة النسخة الاحتياطية إلى المسار المحدد بنجاح", { duration: 3000 });
-      queryClient.invalidateQueries({ queryKey: ["backup"] });
-      if (onSuccess) onSuccess(data);
-    },
-    onError: (error: any) => {
-      const message = error?.message || "فشل استعادة النسخة الاحتياطية إلى المسار المحدد";
-      toast.error(message, { duration: 4000 });
-    },
-  });
-};
+//   return useMutation({
+//     mutationFn: ({ type, backupId, options }: { type: BackupType; backupId: string; options: RestoreToPathOptions }) =>
+//       restoreFilesBackupToPath(type, backupId, options),
+//     onSuccess: (data) => {
+//       toast.success("تم استعادة النسخة الاحتياطية إلى المسار المحدد بنجاح", { duration: 3000 });
+//       queryClient.invalidateQueries({ queryKey: ["backup"] });
+//       if (onSuccess) onSuccess(data);
+//     },
+//     onError: (error: any) => {
+//       const message = error?.message || "فشل استعادة النسخة الاحتياطية إلى المسار المحدد";
+//       toast.error(message, { duration: 4000 });
+//     },
+//   });
+// };
 
 export const useRetryFailedRestore = (onSuccess?: (data: RestoreResultDto) => void) => {
   const queryClient = useQueryClient();

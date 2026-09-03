@@ -11,8 +11,103 @@
     }
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
+        width: 0 !important;
+        height: 0 !important;
     }
 }
+
+@layer utilities {
+    .hide-scrollbar {
+        scrollbar-width: none; 
+        -ms-overflow-style: none; 
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent !important;
+    }
+}
+
+* {
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+html,
+body {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+*[style*="overflow: auto"],
+*[style*="overflow-y: auto"],
+*[style*="overflow-x: auto"],
+*[style*="overflow: scroll"],
+*[style*="overflow-y: scroll"],
+*[style*="overflow-x: scroll"] {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+*[style*="overflow: auto"]::-webkit-scrollbar,
+*[style*="overflow-y: auto"]::-webkit-scrollbar,
+*[style*="overflow-x: auto"]::-webkit-scrollbar,
+*[style*="overflow: scroll"]::-webkit-scrollbar,
+*[style*="overflow-y: scroll"]::-webkit-scrollbar,
+*[style*="overflow-x: scroll"]::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+html {
+    overflow: -moz-scrollbars-none; 
+    scrollbar-gutter: stable; 
+}
+@media (hover: hover) {
+    *:hover {
+        scrollbar-width: none !important;
+    }
+    *:hover::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+}
+
 @layer base {
   :root {
     --background: 248 250 252;
@@ -89,12 +184,4 @@
   .border-border {
     border-color: rgb(var(--border));
   }
-.hide-scrollbar {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-.hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-}
 }

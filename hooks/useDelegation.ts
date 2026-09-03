@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// hooks/useDelegation.ts
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { delegationService } from '@/services/delegation.service';
 import {
   DelegationDto,
@@ -12,498 +12,332 @@ import {
   UpdateDelegationDto,
   DelegationStatisticsDto,
   DelegationUsageDto,
-  UserResponseDto,
 } from '@/types/api/Delegation';
 import useUserInfoStore from '@/store/userInfoStore';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth.service';
+import PagedResult from '@/types/api/PagedResponse';
 
 export function useDelegation() {
+  const queryClient = useQueryClient();
   const { role } = useUserInfoStore();
-  const [isLoading, setIsLoading] = useState(false);
-  const [availablePermissions, setAvailablePermissions] = useState<AvailablePermissionDto[]>([]);
-  const [myPermissions, setMyPermissions] = useState<PermissionDto[]>([]);
-  const [allDelegations, setAllDelegations] = useState<DelegationDto[]>([]);
-  const [myDelegations, setMyDelegations] = useState<DelegationDto[]>([]);
-  const [statistics, setStatistics] = useState<DelegationStatisticsDto | null>(null);
-  const [selectedDelegation, setSelectedDelegation] = useState<DelegationDto | null>(null);
-  const [usageLogs, setUsageLogs] = useState<DelegationUsageDto[]>([]);
-  const [employees, setEmployees] = useState<UserResponseDto[]>([]);
-  const [deans, setDeans] = useState<UserResponseDto[]>([]);
-  const [allUsers, setAllUsers] = useState<UserResponseDto[]>([]);
 
-  const isMounted = useRef(true);
-
-  // ✅ جلب الصلاحيات من الـ Store مباشرة
   const isAdmin = role === 'Admin';
   const isDean = role === 'Dean';
   const canManageDelegations = isAdmin || isDean;
 
   // ============================================================
-  // ===== Load Users based on Role =====
+  // ===== QUERIES (تحميل البيانات مع caching) =====
   // ============================================================
 
-  const loadUsers = useCallback(async () => {
-    try {
-      const employeesData = await delegationService.getEmployees();
-      if (isMounted.current) {
-        const activeEmployees = employeesData.filter(u => u.isActive && !u.isBanned);
-        setEmployees(activeEmployees);
-      }
+  // 1. المستخدمين النشطين
+  const usersQuery = useQuery({
+    queryKey: ['delegation', 'users'],
+    queryFn: () => delegationService.getActiveUsers(),
+    staleTime: 5 * 60 * 1000, // 5 دقائق
+    gcTime: 10 * 60 * 1000, // 10 دقائق (كان cacheTime)
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+  });
 
-      if (isAdmin) {
-        const deansData = await delegationService.getDeans();
-        if (isMounted.current) {
-          const activeDeans = deansData.filter(u => u.isActive && !u.isBanned);
-          setDeans(activeDeans);
-          setAllUsers([
-            ...employeesData.filter(u => u.isActive && !u.isBanned),
-            ...deansData.filter(u => u.isActive && !u.isBanned)
-          ]);
-        }
-      } else {
-        if (isMounted.current) {
-          setAllUsers(employeesData.filter(u => u.isActive && !u.isBanned));
-        }
-      }
-    } catch (error: any) {
-      // Silent error
-    }
-  }, [isAdmin]);
+  // 2. جميع التفويضات (لـ Admin و Dean فقط)
+  const allDelegationsQuery = useQuery({
+    queryKey: ['delegation', 'all'],
+    queryFn: () => delegationService.getAllDelegations(),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    enabled: canManageDelegations,
+    refetchOnWindowFocus: false,
+  });
 
-  // ============================================================
-  // ===== Load Available Permissions =====
-  // ============================================================
+  // 3. تفويضاتي الخاصة
+  const myDelegationsQuery = useQuery({
+    queryKey: ['delegation', 'my'],
+    queryFn: () => delegationService.getMyDelegations(),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
-  const loadAvailablePermissions = useCallback(async () => {
-    if (!canManageDelegations) return;
-    
-    try {
-      const data = await delegationService.getAvailablePermissions();
-      if (isMounted.current) {
-        setAvailablePermissions(data);
-      }
-    } catch (error: any) {
-      // Silent error
-    }
-  }, [canManageDelegations]);
+  // 4. الصلاحيات المتاحة للتفويض
+  const availablePermissionsQuery = useQuery({
+    queryKey: ['delegation', 'available-permissions'],
+    queryFn: () => delegationService.getAvailablePermissions(),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    enabled: canManageDelegations,
+    refetchOnWindowFocus: false,
+  });
 
-  // ============================================================
-  // ===== Load My Permissions =====
-  // ============================================================
-
-  const loadMyPermissions = useCallback(async () => {
-    try {
+  // 5. صلاحياتي الحالية
+  const myPermissionsQuery = useQuery({
+    queryKey: ['delegation', 'my-permissions'],
+    queryFn: async () => {
       const data = await delegationService.getMyPermissions();
-      if (isMounted.current) {
-        setMyPermissions(data);
-        
-        const permissionNames = data
-          .filter(p => p.isGranted)
-          .map(p => p.name);
-        await authService.setDelegatedPermissions(permissionNames);
-      }
-    } catch (error: any) {
-      // Silent error
-    }
-  }, []);
+      // تحديث الصلاحيات في الـ auth service
+      const permissionNames = data.filter(p => p.isGranted).map(p => p.name);
+      await authService.setDelegatedPermissions(permissionNames);
+      return data;
+    },
+    staleTime: 3 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // 6. الإحصائيات
+  const statisticsQuery = useQuery({
+    queryKey: ['delegation', 'statistics'],
+    queryFn: () => delegationService.getDelegationStatistics(),
+    staleTime: 3 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    enabled: canManageDelegations,
+    refetchOnWindowFocus: false,
+  });
+
+  // 7. تفويض محدد (يتم استخدامه عند عرض التفاصيل)
+  const useDelegationById = (id: number | null) => {
+    return useQuery({
+      queryKey: ['delegation', 'detail', id],
+      queryFn: () => id ? delegationService.getDelegationById(id) : null,
+      staleTime: 2 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+      enabled: !!id,
+      refetchOnWindowFocus: false,
+    });
+  };
+
+    const useDelegationUsage = (delegationId: number | null, page: number = 1, pageSize: number = 10) => {
+    return useQuery({
+      queryKey: ['delegation', 'usage', delegationId, page, pageSize],
+      queryFn: async () => {
+        if (!delegationId) {
+          return {
+            items: [],
+            totalCount: 0,
+            totalPages: 0,
+            pageNumber: page,
+            pageSize: pageSize,
+            hasPreviousPage: false,
+            hasNextPage: false,
+          } as PagedResult<DelegationUsageDto>;
+        }
+        return await delegationService.getDelegationUsage(delegationId, page, pageSize);
+      },
+      staleTime: 1 * 60 * 1000,
+      gcTime: 3 * 60 * 1000,
+      enabled: !!delegationId && canManageDelegations,
+      refetchOnWindowFocus: false,
+    });
+  };
 
   // ============================================================
-  // ===== Load All Delegations =====
+  // ===== MUTATIONS (العمليات التي تعدل البيانات) =====
   // ============================================================
 
-  const loadAllDelegations = useCallback(async () => {
-    if (!canManageDelegations) {
-      return;
-    }
-    
-    try {
-      const data = await delegationService.getAllDelegations();
-      if (isMounted.current) {
-        setAllDelegations(data);
-      }
-    } catch (error: any) {
-      // Silent error
-    }
-  }, [canManageDelegations]);
+  // إنشاء تفويض جديد
+  const createMutation = useMutation({
+    mutationFn: (dto: CreateDelegationDto) => 
+      delegationService.createDelegation(dto),
+    onSuccess: () => {
+      // تحديث جميع الـ queries المرتبطة بالتفويضات
+      queryClient.invalidateQueries({ queryKey: ['delegation'] });
+      toast.success('تم إنشاء التفويض بنجاح');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'فشل إنشاء التفويض');
+    },
+  });
+
+  // تحديث تفويض
+  const updateMutation = useMutation({
+    mutationFn: ({ id, dto }: { id: number; dto: UpdateDelegationDto }) =>
+      delegationService.updateDelegation(id, dto),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['delegation'] });
+      // تحديث التفويض المحدد في cache
+      queryClient.invalidateQueries({ 
+        queryKey: ['delegation', 'detail', variables.id] 
+      });
+      toast.success('تم تحديث التفويض بنجاح');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'فشل تحديث التفويض');
+    },
+  });
+
+  // إضافة صلاحيات لتفويض
+  const addPermissionsMutation = useMutation({
+    mutationFn: ({ id, permissionIds }: { id: number; permissionIds: number[] }) =>
+      delegationService.addPermissionsToDelegation(id, permissionIds),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['delegation'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['delegation', 'detail', variables.id] 
+      });
+      toast.success('تم إضافة الصلاحيات بنجاح');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'فشل إضافة الصلاحيات');
+    },
+  });
+
+  // إلغاء تفويض
+  const revokeMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
+      delegationService.revokeDelegation(id, reason),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['delegation'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['delegation', 'detail', variables.id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['delegation', 'usage', variables.id] 
+      });
+      toast.success('تم إلغاء التفويض بنجاح');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'فشل إلغاء التفويض');
+    },
+  });
+
+  // إلغاء التفويضات المنتهية
+  const revokeExpiredMutation = useMutation({
+    mutationFn: () => delegationService.revokeExpiredDelegations(),
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['delegation'] });
+      toast.success(`تم إلغاء ${count} تفويض منتهي`);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'فشل إلغاء التفويضات المنتهية');
+    },
+  });
+
+  // إضافة التفويضات الافتراضية
+  const addDefaultMutation = useMutation({
+    mutationFn: () => delegationService.addDefaultDelegations(),
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['delegation'] });
+      toast.success(`تم إضافة ${count} تفويض افتراضي`);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'فشل إضافة التفويضات الافتراضية');
+    },
+  });
+
+  // إعادة تعيين التفويضات الافتراضية
+  const resetDefaultMutation = useMutation({
+    mutationFn: () => delegationService.resetDefaultDelegations(),
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['delegation'] });
+      toast.success(`تم إعادة تعيين ${count} تفويض افتراضي`);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'فشل إعادة تعيين التفويضات الافتراضية');
+    },
+  });
 
   // ============================================================
-  // ===== Load My Delegations =====
+  // ===== COMPUTED DATA (بيانات محسوبة) =====
   // ============================================================
 
-  const loadMyDelegations = useCallback(async () => {
-    try {
-      const data = await delegationService.getMyDelegations();
-      if (isMounted.current) {
-        setMyDelegations(data);
-      }
-    } catch (error: any) {
-      // Silent error
-    }
-  }, []);
+  const usersData = usersQuery.data || [];
+  const allDelegations = allDelegationsQuery.data || [];
+  const myDelegations = myDelegationsQuery.data || [];
+  const availablePermissions = availablePermissionsQuery.data || [];
+  const myPermissions = myPermissionsQuery.data || [];
+  const statistics = statisticsQuery.data || null;
 
-  // ============================================================
-  // ===== Load Statistics =====
-  // ============================================================
+  const employees = useMemo(
+    () => usersData.filter(u => u.isActive && u.roles?.includes('Employee')),
+    [usersData]
+  );
+  
+  const deans = useMemo(
+    () => usersData.filter(u => u.isActive && u.roles?.includes('Dean')),
+    [usersData]
+  );
+  
+  const headOfDepartments = useMemo(
+    () => usersData.filter(u => u.isActive && u.roles?.includes('HeadOfDepartment')),
+    [usersData]
+  );
 
-  const loadStatistics = useCallback(async () => {
-    if (!canManageDelegations) return;
-    
-    try {
-      const data = await delegationService.getDelegationStatistics();
-      if (isMounted.current) {
-        setStatistics(data);
-      }
-    } catch (error: any) {
-      // Silent error
-    }
-  }, [canManageDelegations]);
+  const isLoading = 
+    usersQuery.isLoading || 
+    myDelegationsQuery.isLoading || 
+    myPermissionsQuery.isLoading;
 
-  // ============================================================
-  // ===== Load Delegation Usage =====
-  // ============================================================
 
-  const loadDelegationUsage = useCallback(async (delegationId: number) => {
-    if (!canManageDelegations) return;
-    
-    try {
-      const data = await delegationService.getDelegationUsage(delegationId);
-      if (isMounted.current) {
-        setUsageLogs(data);
-      }
-    } catch (error: any) {
-      // Silent error
-    }
-  }, [canManageDelegations]);
+  const loadAllData = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['delegation'] });
+    queryClient.invalidateQueries({ queryKey: ['delegation', 'users'] });
+  }, [queryClient]);
 
-  // ============================================================
-  // ===== Load Delegation By ID =====
-  // ============================================================
+  const loadAvailablePermissions = useCallback(() => {
+    queryClient.invalidateQueries({ 
+      queryKey: ['delegation', 'available-permissions'] 
+    });
+  }, [queryClient]);
 
   const loadDelegationById = useCallback(async (id: number) => {
-    try {
-      const data = await delegationService.getDelegationById(id);
-      if (isMounted.current) {
-        setSelectedDelegation(data);
-        await loadDelegationUsage(id);
-      }
-      return data;
-    } catch (error: any) {
-      return null;
-    }
-  }, [loadDelegationUsage]);
+    const result = await queryClient.fetchQuery({
+      queryKey: ['delegation', 'detail', id],
+      queryFn: () => delegationService.getDelegationById(id),
+    });
+    return result;
+  }, [queryClient]);
+
+  const loadDelegationUsage = useCallback(async (delegationId: number) => {
+    const result = await queryClient.fetchQuery({
+      queryKey: ['delegation', 'usage', delegationId],
+      queryFn: () => delegationService.getDelegationUsage(delegationId),
+    });
+    return result;
+  }, [queryClient]);
 
   // ============================================================
-  // ===== Action Functions =====
-  // ============================================================
-
-  const createDelegation = useCallback(async (dto: CreateDelegationDto) => {
-    if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لإنشاء تفويض', {
-        duration: 3000,
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const result = await delegationService.createDelegation(dto);
-      toast.success('تم إنشاء التفويض بنجاح', {
-        duration: 3000,
-      });
-      await Promise.all([
-        loadAllDelegations(),
-        loadMyDelegations(),
-        loadStatistics()
-      ]);
-      return result;
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل إنشاء التفويض', {
-        duration: 3000,
-      });
-      throw error;
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [canManageDelegations, loadAllDelegations, loadMyDelegations, loadStatistics]);
-
-  const updateDelegation = useCallback(async (id: number, dto: UpdateDelegationDto) => {
-    if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لتحديث التفويض', {
-        duration: 3000,
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const result = await delegationService.updateDelegation(id, dto);
-      toast.success('تم تحديث التفويض بنجاح', {
-        duration: 3000,
-      });
-      await Promise.all([
-        loadAllDelegations(),
-        loadMyDelegations(),
-        loadStatistics(),
-        loadDelegationById(id)
-      ]);
-      return result;
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل تحديث التفويض', {
-        duration: 3000,
-      });
-      throw error;
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [canManageDelegations, loadAllDelegations, loadMyDelegations, loadStatistics, loadDelegationById]);
-
-  const addPermissions = useCallback(async (id: number, permissionIds: number[]) => {
-    if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لإضافة صلاحيات', {
-        duration: 3000,
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const result = await delegationService.addPermissionsToDelegation(id, permissionIds);
-      toast.success('تم إضافة الصلاحيات بنجاح', {
-        duration: 3000,
-      });
-      await Promise.all([
-        loadAllDelegations(),
-        loadDelegationById(id)
-      ]);
-      return result;
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل إضافة الصلاحيات', {
-        duration: 3000,
-      });
-      throw error;
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [canManageDelegations, loadAllDelegations, loadDelegationById]);
-
-  const revokeDelegation = useCallback(async (id: number, reason?: string) => {
-    if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لإلغاء التفويض', {
-        duration: 3000,
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      await delegationService.revokeDelegation(id, reason);
-      toast.success('تم إلغاء التفويض بنجاح', {
-        duration: 3000,
-      });
-      await Promise.all([
-        loadAllDelegations(),
-        loadMyDelegations(),
-        loadStatistics()
-      ]);
-      if (isMounted.current) {
-        setSelectedDelegation(null);
-        setUsageLogs([]);
-      }
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل إلغاء التفويض', {
-        duration: 3000,
-      });
-      throw error;
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [canManageDelegations, loadAllDelegations, loadMyDelegations, loadStatistics]);
-
-  const revokeExpiredDelegations = useCallback(async () => {
-    if (!isAdmin) {
-      toast.error('ليس لديك صلاحية لإلغاء التفويضات المنتهية', {
-        duration: 3000,
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const count = await delegationService.revokeExpiredDelegations();
-      toast.success(`تم إلغاء ${count} تفويض منتهي`, {
-        duration: 3000,
-      });
-      await loadStatistics();
-      return count;
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل إلغاء التفويضات المنتهية', {
-        duration: 3000,
-      });
-      throw error;
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [isAdmin, loadStatistics]);
-
-  const addDefaultDelegations = useCallback(async () => {
-    if (!canManageDelegations) {
-      toast.error('ليس لديك صلاحية لإضافة التفويضات الافتراضية', {
-        duration: 3000,
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const count = await delegationService.addDefaultDelegations();
-      toast.success(`تم إضافة ${count} تفويض افتراضي`, {
-        duration: 3000,
-      });
-      await Promise.all([
-        loadAllDelegations(),
-        loadMyDelegations(),
-        loadStatistics()
-      ]);
-      return count;
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل إضافة التفويضات الافتراضية', {
-        duration: 3000,
-      });
-      throw error;
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [canManageDelegations, loadAllDelegations, loadMyDelegations, loadStatistics]);
-
-  const resetDefaultDelegations = useCallback(async () => {
-    if (!isAdmin) {
-      toast.error('ليس لديك صلاحية لإعادة تعيين التفويضات الافتراضية', {
-        duration: 3000,
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const count = await delegationService.resetDefaultDelegations();
-      toast.success(`تم إعادة تعيين ${count} تفويض افتراضي`, {
-        duration: 3000,
-      });
-      await Promise.all([
-        loadAllDelegations(),
-        loadMyDelegations(),
-        loadStatistics()
-      ]);
-      return count;
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل إعادة تعيين التفويضات الافتراضية', {
-        duration: 3000,
-      });
-      throw error;
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [isAdmin, loadAllDelegations, loadMyDelegations, loadStatistics]);
-  
-  // ============================================================
-  // ===== Load All Data =====
-  // ============================================================
-
-  const loadAllData = useCallback(async () => {
-    isMounted.current = true;
-    
-    const promises: Promise<any>[] = [
-      loadMyPermissions(),
-      loadMyDelegations(),
-      loadUsers(),
-    ];
-
-    if (canManageDelegations) {
-      promises.push(
-        loadAvailablePermissions(),
-        loadAllDelegations(),
-        loadStatistics()
-      );
-    }
-
-    await Promise.allSettled(promises);
-  }, [
-    loadMyPermissions,
-    loadMyDelegations,
-    loadUsers,
-    loadAvailablePermissions,
-    loadAllDelegations,
-    loadStatistics,
-    canManageDelegations
-  ]);
-
-  // ============================================================
-  // ===== Initialize =====
-  // ============================================================
-
-  useEffect(() => {
-    isMounted.current = true;
-    
-    (async () => {
-      await loadAllData();
-    })();
-
-    return () => {
-      isMounted.current = false;
-    };
-  }, [loadAllData]);
-
-  // ============================================================
-  // ===== Return =====
+  // ===== RETURN =====
   // ============================================================
 
   return {
-    isLoading,
-    availablePermissions,
-    myPermissions,
     allDelegations,
     myDelegations,
+    availablePermissions,
+    myPermissions,
     statistics,
-    selectedDelegation,
-    usageLogs,
     employees,
     deans,
-    allUsers,
+    headOfDepartments,
+    allUsers: usersData,
+    
+    isLoading,
+    isAuthLoading: false, 
     canManageDelegations,
     isAdmin,
     isDean,
-
-    loadAvailablePermissions,
-    loadMyPermissions,
-    loadAllDelegations,
-    loadMyDelegations,
-    loadStatistics,
-    loadDelegationUsage,
-    loadDelegationById,
+    
     loadAllData,
-    loadUsers,
-
-    createDelegation,
-    updateDelegation,
-    addPermissions,
-    revokeDelegation,
-    revokeExpiredDelegations,
-    addDefaultDelegations,
-    resetDefaultDelegations,
+    loadAvailablePermissions,
+    loadDelegationById,
+    loadDelegationUsage,
+    
+    useDelegationById,
+    useDelegationUsage,
+    
+    createDelegation: createMutation.mutateAsync,
+    updateDelegation: (id: number, dto: UpdateDelegationDto) =>
+      updateMutation.mutateAsync({ id, dto }),
+    addPermissions: (id: number, permissionIds: number[]) =>
+      addPermissionsMutation.mutateAsync({ id, permissionIds }),
+    revokeDelegation: (id: number, reason?: string) =>
+      revokeMutation.mutateAsync({ id, reason }),
+    revokeExpiredDelegations: revokeExpiredMutation.mutateAsync,
+    addDefaultDelegations: addDefaultMutation.mutateAsync,
+    resetDefaultDelegations: resetDefaultMutation.mutateAsync,
+    
+    // حالات الـ Mutations (للتحكم في الـ UI)
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isRevoking: revokeMutation.isPending,
   };
 }

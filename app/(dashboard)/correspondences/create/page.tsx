@@ -30,6 +30,7 @@ import toast from "react-hot-toast";
 import { useCreateCorrespondence } from "@/hooks/useCorrespondence";
 import { useDocumentTypes, useSenderEntities } from "@/hooks/useCorrespondence";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useAuth } from "@/hooks/useAuth";
 import { CorrespondenceMainType, CorrespondenceParentSelectorDto } from "@/types/api/correspondence.types";
 import { ParentSelectorModal } from "@/components/ui/ParentSelectorModal";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,9 @@ export default function CreateCorrespondencePage() {
         unauthorizedPath: '/unauthorized'
     });
 
+    // ✅ استخدام useAuth للتحقق من الصلاحيات
+    const { hasPermission } = useAuth();
+
     // =========================
     // STATE
     // =========================
@@ -104,9 +108,8 @@ export default function CreateCorrespondencePage() {
     // HOOKS - جلب البيانات
     // =========================
 
-    const createMutation = useCreateCorrespondence(() => {
-        router.push("/");
-    });
+    // ✅ استخدام useCreateCorrespondence بدون معاملات
+    const createMutation = useCreateCorrespondence();
 
     // ✅ استخدام Hooks لجلب البيانات
     const { data: documentTypes = [], isLoading: isLoadingDocumentTypes } = useDocumentTypes();
@@ -243,55 +246,54 @@ export default function CreateCorrespondencePage() {
                 }
                 return undefined;
 
-            
-case 'issuedDate':
-    if (!value) {
-        return "تاريخ الإصدار مطلوب";
-    }
-    const today = getTodayUTC();
-    const selectedDate = toUTCDate(value);
-    if (selectedDate > today) {
-        return "تاريخ الإصدار لا يمكن أن يكون في المستقبل";
-    }
-    return undefined;
+            case 'issuedDate':
+                if (!value) {
+                    return "تاريخ الإصدار مطلوب";
+                }
+                const today = getTodayUTC();
+                const selectedDate = toUTCDate(value);
+                if (selectedDate > today) {
+                    return "تاريخ الإصدار لا يمكن أن يكون في المستقبل";
+                }
+                return undefined;
 
-case 'receivedDate':
-    if (mainType === CorrespondenceMainType.Incoming) {
-        if (!value) {
-            return "تاريخ الاستلام مطلوب للمراسلات الواردة";
-        }
-        const todayRec = getTodayUTC();
-        const selectedRec = toUTCDate(value);
-        if (selectedRec > todayRec) {
-            return "تاريخ الاستلام لا يمكن أن يكون في المستقبل";
-        }
-        if (issuedDate) {
-            const issued = toUTCDate(issuedDate);
-            if (selectedRec < issued) {
-                return "تاريخ الاستلام لا يمكن أن يكون قبل تاريخ الإصدار";
-            }
-        }
-    }
-    return undefined;
+            case 'receivedDate':
+                if (mainType === CorrespondenceMainType.Incoming) {
+                    if (!value) {
+                        return "تاريخ الاستلام مطلوب للمراسلات الواردة";
+                    }
+                    const todayRec = getTodayUTC();
+                    const selectedRec = toUTCDate(value);
+                    if (selectedRec > todayRec) {
+                        return "تاريخ الاستلام لا يمكن أن يكون في المستقبل";
+                    }
+                    if (issuedDate) {
+                        const issued = toUTCDate(issuedDate);
+                        if (selectedRec < issued) {
+                            return "تاريخ الاستلام لا يمكن أن يكون قبل تاريخ الإصدار";
+                        }
+                    }
+                }
+                return undefined;
 
-case 'sentDate':
-    if (mainType === CorrespondenceMainType.Outgoing) {
-        if (!value) {
-            return "تاريخ الإرسال مطلوب للمراسلات الصادرة";
-        }
-        const todaySent = getTodayUTC();
-        const selectedSent = toUTCDate(value);
-        if (selectedSent > todaySent) {
-            return "تاريخ الإرسال لا يمكن أن يكون في المستقبل";
-        }
-        if (issuedDate) {
-            const issued = toUTCDate(issuedDate);
-            if (selectedSent < issued) {
-                return "تاريخ الإرسال لا يمكن أن يكون قبل تاريخ الإصدار";
-            }
-        }
-    }
-    return undefined;
+            case 'sentDate':
+                if (mainType === CorrespondenceMainType.Outgoing) {
+                    if (!value) {
+                        return "تاريخ الإرسال مطلوب للمراسلات الصادرة";
+                    }
+                    const todaySent = getTodayUTC();
+                    const selectedSent = toUTCDate(value);
+                    if (selectedSent > todaySent) {
+                        return "تاريخ الإرسال لا يمكن أن يكون في المستقبل";
+                    }
+                    if (issuedDate) {
+                        const issued = toUTCDate(issuedDate);
+                        if (selectedSent < issued) {
+                            return "تاريخ الإرسال لا يمكن أن يكون قبل تاريخ الإصدار";
+                        }
+                    }
+                }
+                return undefined;
 
             case 'parentCorrespondenceId':
                 if (value !== null && value <= 0) {
@@ -447,7 +449,24 @@ case 'sentDate':
             formData.append("AdditionalFiles", file);
         });
 
-        createMutation.mutate(formData);
+        // ✅ استخدام mutate مع onSuccess مخصص
+        createMutation.mutate(formData, {
+            onSuccess: (data) => {
+                // ✅ هنا يمكن الوصول إلى data
+                if (data?.id) {
+                    if (hasPermission('ViewCorrespondence')) {
+                        router.push(`/correspondences?id=${data.id}`);
+                    } else {
+                        router.push("/");
+                    }
+                } else {
+                    router.push("/");
+                }
+            },
+            onError: (error: any) => {
+                toast.error(error?.message || "فشل إنشاء المراسلة");
+            }
+        });
     };
 
     // =========================
@@ -567,24 +586,24 @@ case 'sentDate':
                                     step={1}
                                 />
                             </div>
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-yellow-100">
-    <span className="font-bold text-yellow-900 text-xs">مهني</span>
-    <button
-        type="button"
-        onClick={() => setIsProfessional((prev) => !prev)}
-        className={`relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0 ${
-            isProfessional 
-                ? "bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-md shadow-yellow-200" 
-                : "bg-gray-300"
-        }`}
-    >
-        <motion.div
-            animate={{ x: isProfessional ? 0 : -22 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md"
-        />
-    </button>
-</div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-yellow-100">
+                                <span className="font-bold text-yellow-900 text-xs">مهني</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsProfessional((prev) => !prev)}
+                                    className={`relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0 ${
+                                        isProfessional 
+                                            ? "bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-md shadow-yellow-200" 
+                                            : "bg-gray-300"
+                                    }`}
+                                >
+                                    <motion.div
+                                        animate={{ x: isProfessional ? 0 : -22 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md"
+                                    />
+                                </button>
+                            </div>
                         </div>
 
                         {/* 3. الجهة المرسلة */}
@@ -670,48 +689,48 @@ case 'sentDate':
                             touched={touched.senderReference}
                             maxLength={255}
                         />
-                       {/* 7. التواريخ */}
-<div className="grid grid-cols-1 gap-1.5">
-    <FormInput
-        id="issuedDate"
-        label="تاريخ الإصدار"
-        type="date"
-        value={issuedDate}
-        onChange={(val) => handleFieldChange('issuedDate', val)}
-        onBlur={() => handleBlur('issuedDate')}
-        error={errors.issuedDate}
-        touched={touched.issuedDate}
-        required
-    />
+                        {/* 7. التواريخ */}
+                        <div className="grid grid-cols-1 gap-1.5">
+                            <FormInput
+                                id="issuedDate"
+                                label="تاريخ الإصدار"
+                                type="date"
+                                value={issuedDate}
+                                onChange={(val) => handleFieldChange('issuedDate', val)}
+                                onBlur={() => handleBlur('issuedDate')}
+                                error={errors.issuedDate}
+                                touched={touched.issuedDate}
+                                required
+                            />
 
-    {mainType === CorrespondenceMainType.Incoming && (
-        <FormInput
-            id="receivedDate"
-            label="تاريخ الاستلام"
-            type="date"
-            value={receivedDate}
-            onChange={(val) => handleFieldChange('receivedDate', val)}
-            onBlur={() => handleBlur('receivedDate')}
-            error={errors.receivedDate}
-            touched={touched.receivedDate}
-            required
-        />
-    )}
+                            {mainType === CorrespondenceMainType.Incoming && (
+                                <FormInput
+                                    id="receivedDate"
+                                    label="تاريخ الاستلام"
+                                    type="date"
+                                    value={receivedDate}
+                                    onChange={(val) => handleFieldChange('receivedDate', val)}
+                                    onBlur={() => handleBlur('receivedDate')}
+                                    error={errors.receivedDate}
+                                    touched={touched.receivedDate}
+                                    required
+                                />
+                            )}
 
-    {mainType === CorrespondenceMainType.Outgoing && (
-        <FormInput
-            id="sentDate"
-            label="تاريخ الإرسال"
-            type="date"
-            value={sentDate}
-            onChange={(val) => handleFieldChange('sentDate', val)}
-            onBlur={() => handleBlur('sentDate')}
-            error={errors.sentDate}
-            touched={touched.sentDate}
-            required
-        />
-    )}
-</div>
+                            {mainType === CorrespondenceMainType.Outgoing && (
+                                <FormInput
+                                    id="sentDate"
+                                    label="تاريخ الإرسال"
+                                    type="date"
+                                    value={sentDate}
+                                    onChange={(val) => handleFieldChange('sentDate', val)}
+                                    onBlur={() => handleBlur('sentDate')}
+                                    error={errors.sentDate}
+                                    touched={touched.sentDate}
+                                    required
+                                />
+                            )}
+                        </div>
                     </div>
 
                     {/* RIGHT PANEL - CONTENT & ATTACHMENTS (3 columns) */}
@@ -761,142 +780,142 @@ case 'sentDate':
                             rows={2}
                         />
 
-                      {/* ATTACHMENTS */}
-<div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-blue-100/30 flex flex-col gap-3 flex-1">
-    {/* Header - ثابت */}
-    <div className="flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
-                <FontAwesomeIcon icon={faPaperclip} className="text-white text-xs" />
-            </div>
-            <h2 className="text-sm font-bold text-blue-900">المرفقات</h2>
-            <span className="text-xs font-semibold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
-                {attachments.length + (primaryFile ? 1 : 0)}
-            </span>
-        </div>
-        <div className="flex gap-1.5 flex-shrink-0">
-            <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white cursor-pointer transition-all font-bold shadow-md hover:shadow-lg text-xs">
-                <FontAwesomeIcon icon={faUpload} />
-                <span>أساسي</span>
-                <input
-                    type="file"
-                    hidden
-                    onChange={(e) =>
-                        handlePrimaryFile(e.target.files?.[0] || null)
-                    }
-                />
-            </label>
-            <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white cursor-pointer transition-all font-bold shadow-md hover:shadow-lg text-xs">
-                <FontAwesomeIcon icon={faUpload} />
-                <span>إضافي</span>
-                <input
-                    type="file"
-                    multiple
-                    hidden
-                    onChange={(e) => handleAdditionalFiles(e.target.files)}
-                />
-            </label>
-        </div>
-    </div>
+                        {/* ATTACHMENTS */}
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-blue-100/30 flex flex-col gap-3 flex-1">
+                            {/* Header - ثابت */}
+                            <div className="flex items-center justify-between flex-shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faPaperclip} className="text-white text-xs" />
+                                    </div>
+                                    <h2 className="text-sm font-bold text-blue-900">المرفقات</h2>
+                                    <span className="text-xs font-semibold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                                        {attachments.length + (primaryFile ? 1 : 0)}
+                                    </span>
+                                </div>
+                                <div className="flex gap-1.5 flex-shrink-0">
+                                    <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white cursor-pointer transition-all font-bold shadow-md hover:shadow-lg text-xs">
+                                        <FontAwesomeIcon icon={faUpload} />
+                                        <span>أساسي</span>
+                                        <input
+                                            type="file"
+                                            hidden
+                                            onChange={(e) =>
+                                                handlePrimaryFile(e.target.files?.[0] || null)
+                                            }
+                                        />
+                                    </label>
+                                    <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white cursor-pointer transition-all font-bold shadow-md hover:shadow-lg text-xs">
+                                        <FontAwesomeIcon icon={faUpload} />
+                                        <span>إضافي</span>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            hidden
+                                            onChange={(e) => handleAdditionalFiles(e.target.files)}
+                                        />
+                                    </label>
+                                </div>
+                            </div>
 
-    {/* ===== منطقة المرفقات - تأخذ المساحة المتبقية ===== */}
-    <div className="flex-1">
-        {/* Primary File Preview */}
-        {primaryFile && (
-            <div className="flex items-center justify-between p-2 rounded-xl border-2 border-blue-300 bg-blue-50/80 mb-2">
-                <div className="flex items-center gap-2 overflow-hidden">
-                    <div className="w-7 h-7 bg-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FontAwesomeIcon icon={getFileIcon(primaryFile.type)} className="text-blue-600 text-xs" />
-                    </div>
-                    <div className="overflow-hidden">
-                        <p className="font-semibold text-blue-900 truncate text-xs">
-                            {primaryFile.name}{" "}
-                            <span className="text-[10px] text-blue-500">(أساسي)</span>
-                        </p>
-                        <p className="text-[10px] text-blue-500">
-                            {(primaryFile.size / 1024).toFixed(1)} كيلوبايت
-                        </p>
-                    </div>
-                </div>
-                <button
-                    type="button"
-                    onClick={removePrimaryFile}
-                    className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
-                >
-                    <FontAwesomeIcon icon={faXmark} className="text-xs" />
-                </button>
-            </div>
-        )}
+                            {/* ===== منطقة المرفقات - تأخذ المساحة المتبقية ===== */}
+                            <div className="flex-1">
+                                {/* Primary File Preview */}
+                                {primaryFile && (
+                                    <div className="flex items-center justify-between p-2 rounded-xl border-2 border-blue-300 bg-blue-50/80 mb-2">
+                                        <div className="flex items-center gap-2 overflow-hidden">
+                                            <div className="w-7 h-7 bg-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                <FontAwesomeIcon icon={getFileIcon(primaryFile.type)} className="text-blue-600 text-xs" />
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <p className="font-semibold text-blue-900 truncate text-xs">
+                                                    {primaryFile.name}{" "}
+                                                    <span className="text-[10px] text-blue-500">(أساسي)</span>
+                                                </p>
+                                                <p className="text-[10px] text-blue-500">
+                                                    {(primaryFile.size / 1024).toFixed(1)} كيلوبايت
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={removePrimaryFile}
+                                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                                        >
+                                            <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                                        </button>
+                                    </div>
+                                )}
 
-        {/* Additional Files */}
-        <div className="flex flex-wrap gap-2">
-            {attachments.map((file, index) => (
-                <motion.div
-                    key={`${file.name}-${index}`}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-1.5 p-1.5 rounded-xl border border-yellow-200 bg-yellow-50/60 hover:bg-yellow-100/60 transition-all"
-                >
-                    <div className="w-6 h-6 bg-yellow-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FontAwesomeIcon
-                            icon={getFileIcon(file.type)}
-                            className="text-yellow-600 text-[10px]"
-                        />
-                    </div>
-                    <div className="overflow-hidden max-w-[120px]">
-                        <p className="font-semibold text-yellow-900 truncate text-[11px]">
-                            {file.name}
-                        </p>
-                        <p className="text-[9px] text-yellow-600">
-                            {(file.size / 1024).toFixed(1)} كيلوبايت
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => removeAdditionalFile(index)}
-                        className="p-1 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
-                    >
-                        <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
-                    </button>
-                </motion.div>
-            ))}
-        </div>
-    </div>
+                                {/* Additional Files */}
+                                <div className="flex flex-wrap gap-2">
+                                    {attachments.map((file, index) => (
+                                        <motion.div
+                                            key={`${file.name}-${index}`}
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="flex items-center gap-1.5 p-1.5 rounded-xl border border-yellow-200 bg-yellow-50/60 hover:bg-yellow-100/60 transition-all"
+                                        >
+                                            <div className="w-6 h-6 bg-yellow-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                <FontAwesomeIcon
+                                                    icon={getFileIcon(file.type)}
+                                                    className="text-yellow-600 text-[10px]"
+                                                />
+                                            </div>
+                                            <div className="overflow-hidden max-w-[120px]">
+                                                <p className="font-semibold text-yellow-900 truncate text-[11px]">
+                                                    {file.name}
+                                                </p>
+                                                <p className="text-[9px] text-yellow-600">
+                                                    {(file.size / 1024).toFixed(1)} كيلوبايت
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeAdditionalFile(index)}
+                                                className="p-1 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+                                            >
+                                                <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
+                                            </button>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
 
-    {/* ===== أزرار الإجراءات - ثابتة في الأسفل ===== */}
-    <div className="flex gap-3 pt-3 border-t border-blue-100 flex-shrink-0 mt-auto">
-        <button
-            onClick={handleSend}
-            disabled={createMutation.isPending}
-            className={`flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all duration-200 font-bold shadow-lg shadow-blue-200 text-sm ${
-                createMutation.isPending
-                    ? "opacity-70 cursor-not-allowed"
-                    : "active:scale-95 hover:shadow-xl"
-            }`}
-        >
-            {createMutation.isPending ? (
-                <>
-                    <FontAwesomeIcon icon={faSpinner} spin />
-                    <span>جاري الإرسال...</span>
-                </>
-            ) : (
-                <>
-                    <FontAwesomeIcon icon={faPaperPlane} />
-                    <span>إرسال المراسلة</span>
-                </>
-            )}
-        </button>
+                            {/* ===== أزرار الإجراءات - ثابتة في الأسفل ===== */}
+                            <div className="flex gap-3 pt-3 border-t border-blue-100 flex-shrink-0 mt-auto">
+                                <button
+                                    onClick={handleSend}
+                                    disabled={createMutation.isPending}
+                                    className={`flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all duration-200 font-bold shadow-lg shadow-blue-200 text-sm ${
+                                        createMutation.isPending
+                                            ? "opacity-70 cursor-not-allowed"
+                                            : "active:scale-95 hover:shadow-xl"
+                                    }`}
+                                >
+                                    {createMutation.isPending ? (
+                                        <>
+                                            <FontAwesomeIcon icon={faSpinner} spin />
+                                            <span>جاري الإرسال...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FontAwesomeIcon icon={faPaperPlane} />
+                                            <span>إرسال المراسلة</span>
+                                        </>
+                                    )}
+                                </button>
 
-        <button
-            type="button"
-            onClick={resetForm}
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-semibold text-sm"
-        >
-            <FontAwesomeIcon icon={faXmark} />
-            <span>إلغاء</span>
-        </button>
-    </div>
-</div>
+                                <button
+                                    type="button"
+                                    onClick={resetForm}
+                                    className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-semibold text-sm"
+                                >
+                                    <FontAwesomeIcon icon={faXmark} />
+                                    <span>إلغاء</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

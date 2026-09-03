@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DistributionOutboxDto } from "@/types/api/distribution.types";
-import { Loader2 } from "lucide-react";
+import { Loader2, Building, Paperclip, Eye, EyeOff } from "lucide-react";
 
 interface OutboxEmailListProps {
   items: DistributionOutboxDto[];
@@ -32,27 +32,31 @@ export const OutboxEmailList = forwardRef<HTMLDivElement, OutboxEmailListProps>(
     const getTypeBadge = (mainType: string) => {
       switch (mainType) {
         case "Incoming":
-          return <Badge variant="outline" className="border-blue-200 text-blue-600 dark:border-blue-800 dark:text-blue-400">وارد</Badge>;
+          return <Badge variant="outline" className="text-[8px] px-1.5 py-0.5 border-blue-200 text-blue-600">وارد</Badge>;
         case "Outgoing":
-          return <Badge variant="outline" className="border-green-200 text-green-600 dark:border-green-800 dark:text-green-400">صادر</Badge>;
+          return <Badge variant="outline" className="text-[8px] px-1.5 py-0.5 border-green-200 text-green-600">صادر</Badge>;
         case "Internal":
-          return <Badge variant="outline" className="border-purple-200 text-purple-600 dark:border-purple-800 dark:text-purple-400">داخلي</Badge>;
+          return <Badge variant="outline" className="text-[8px] px-1.5 py-0.5 border-purple-200 text-purple-600">داخلي</Badge>;
         default:
           return null;
       }
     };
 
-    const getStatusBadge = (isRead: boolean) => {
-      if (isRead) {
-        return <Badge variant="outline" className="text-green-600 border-green-300">مقروءة</Badge>;
+    // ✅ استخراج الجهة المرسلة
+    const getSenderDisplay = (item: DistributionOutboxDto) => {
+      if (item.senderEntity) {
+        return item.senderEntity;
       }
-      return <Badge variant="outline" className="text-amber-600 border-amber-300">غير مقروءة</Badge>;
+      return item.receiverName || "جهة غير محددة";
     };
 
     if (items.length === 0) {
       return (
         <div ref={ref} className="flex h-full items-center justify-center text-muted-foreground">
-          لا توجد مراسلات في الصادر
+          <div className="flex flex-col items-center gap-2">
+            <div className="text-4xl">📤</div>
+            <p>لا توجد مراسلات في الصادر</p>
+          </div>
         </div>
       );
     }
@@ -61,6 +65,8 @@ export const OutboxEmailList = forwardRef<HTMLDivElement, OutboxEmailListProps>(
       <div ref={ref} className="flex flex-col">
         {items.map((item) => {
           const isSelected = selectedId === item.id;
+          const senderDisplay = getSenderDisplay(item);
+          
           return (
             <div key={item.id}>
               <button
@@ -73,23 +79,23 @@ export const OutboxEmailList = forwardRef<HTMLDivElement, OutboxEmailListProps>(
                 <div className="flex gap-3">
                   <Avatar className="h-9 w-9">
                     <AvatarFallback className="bg-primary/10 text-primary">
-                      {item.receiverName?.charAt(0) || "م"}
+                      {senderDisplay?.charAt(0) || "ج"}
                     </AvatarFallback>
                   </Avatar>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {/* ✅ اسم المرسل (الجهة) في الأعلى */}
                         <span className="text-sm font-semibold text-foreground">
-                          {item.receiverName || "مستلم غير محدد"}
+                          {senderDisplay}
                         </span>
                         {getTypeBadge(item.mainType)}
                         {item.isProfessional && (
-                          <Badge variant="outline" className="border-amber-200 text-amber-600 dark:border-amber-800 dark:text-amber-400">
+                          <Badge variant="outline" className="text-[8px] px-1.5 py-0.5 border-amber-200 text-amber-600">
                             مهني
                           </Badge>
                         )}
-                        {getStatusBadge(item.isRead)}
                       </div>
                       <span className="text-xs text-muted-foreground">
                         {formatDate(item.distributedDate)}
@@ -100,21 +106,43 @@ export const OutboxEmailList = forwardRef<HTMLDivElement, OutboxEmailListProps>(
                       {item.correspondenceTitle}
                     </p>
                     
-                    {/* <p className="mt-0.5 text-sm text-muted-foreground line-clamp-2">
-                      {item.correspondenceContent?.replace(/<[^>]*>/g, "") || "لا يوجد محتوى"}
-                    </p> */}
-                    
-                    {item.attachments && item.attachments.length > 0 && (
-                      <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                        📎 {item.attachments.length} مرفق
-                      </div>
-                    )}
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      {/* ✅ المستلم (في الأسفل) */}
+                      {item.receiverName && (
+                        <span className="flex items-center gap-1">
+                          👤 {item.receiverName}
+                        </span>
+                      )}
+
+                      {/* ✅ حالة القراءة */}
+                      {item.isRead ? (
+                        <span className="flex items-center gap-1 text-emerald-600">
+                          <Eye className="h-3 w-3" />
+                          مقروء
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-gray-400">
+                          <EyeOff className="h-3 w-3" />
+                          غير مقروء
+                        </span>
+                      )}
+
+                      {/* ✅ المرفقات */}
+                      {item.attachments && item.attachments.length > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Paperclip className="h-3 w-3" />
+                          {item.attachments.length}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </button>
             </div>
           );
         })}
+        
+        {/* ===== Infinite Scroll ===== */}
         {isLoadingMore && (
           <div className="flex justify-center py-4">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

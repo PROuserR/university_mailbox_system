@@ -12,6 +12,8 @@ import {
   getDeanDashboard,
   getReceiverDashboard,
   getReadingBehavior,
+  getDistributionStatus,
+  getCorrespondenceFull,
 } from "@/services/analytics.service";
 import {
   IgnoredUserReportDto,
@@ -24,6 +26,9 @@ import {
   DeanDashboardDto,
   ReceiverDashboardFullDto,
   ReadingBehaviorReportDto,
+  CorrespondenceFullReportDto,
+  DistributionStatusDto,
+  GetCorrespondenceFullQuery,
 } from "@/types/api/analytics.types";
 import PagedResult from "@/types/api/PagedResponse";
 
@@ -191,6 +196,63 @@ export const useReadingBehavior = () => {
   return useQuery<ReadingBehaviorReportDto>({
     queryKey: ["analytics", "reading-behavior"],
     queryFn: getReadingBehavior,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+};
+// ============================================================
+// ===== Correspondence Full Report Queries =====
+// ============================================================
+
+export const useCorrespondenceFull = (query: GetCorrespondenceFullQuery = {}) => {
+  const {
+    fromDate = null,
+    toDate = null,
+    mainType = null,
+    documentTypeId = null,
+    senderEntityId = null,
+    groupBy = "day",
+    topIgnoredCount = 10,
+  } = query;
+
+  return useQuery<CorrespondenceFullReportDto>({
+    queryKey: [
+      "analytics",
+      "correspondence-full",
+      fromDate,
+      toDate,
+      mainType,
+      documentTypeId,
+      senderEntityId,
+      groupBy,
+      topIgnoredCount,
+    ],
+    queryFn: () =>
+      getCorrespondenceFull({
+        fromDate,
+        toDate,
+        mainType,
+        documentTypeId,
+        senderEntityId,
+        groupBy,
+        topIgnoredCount,
+      }),
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+};
+
+// ============================================================
+// ===== Distribution Status Queries =====
+// ============================================================
+
+export const useDistributionStatus = (correspondenceId: number | null) => {
+  return useQuery<DistributionStatusDto>({
+    queryKey: ["analytics", "distribution-status", correspondenceId],
+    queryFn: () => getDistributionStatus(correspondenceId!),
+    enabled: !!correspondenceId,
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,

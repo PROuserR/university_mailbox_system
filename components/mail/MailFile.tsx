@@ -51,7 +51,6 @@ export default function MailFile({
                     setUrl(objectUrl);
                 }
             } catch (error) {
-                console.error(error);
             }
         };
 
@@ -115,10 +114,6 @@ export default function MailFile({
                 }
 
             } catch (error) {
-                console.error(
-                    "Download failed:",
-                    error
-                );
             } finally {
                 setIsDownloading(false);
             }
