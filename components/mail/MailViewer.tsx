@@ -6,27 +6,14 @@ import useShowMailDetailsStore from "@/store/showMailDetails";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faArrowRight,
-    faPaperclip,
     faHashtag,
-    faUser,
-    faEnvelope,
-    faFile,
     faDownload,
     faEye,
     faShare,
     faPen,
     faXmark,
-    faCalendarDay,
-    faClock,
-    faTag,
-    faUserTag,
-    faInfoCircle,
-    faUsers,
     faChartPie,
 } from "@fortawesome/free-solid-svg-icons";
-
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
 
 import { useEffect, useState } from "react";
 import formatDate from "@/utils/formatDate";
@@ -68,18 +55,7 @@ export default function MailViewer({
     } | null>(null);
     const [isLoadingFile, setIsLoadingFile] = useState(false);
 
-    const editor = useEditor({
-        extensions: [StarterKit],
-        content: "",
-        editable: false,
-        immediatelyRender: false,
-    });
 
-    useEffect(() => {
-        if (editor && data?.content) {
-            editor.commands.setContent(data.content);
-        }
-    }, [editor, data]);
 
     const attachments = data.attachments ?? [];
 
@@ -450,12 +426,7 @@ const handleDownload = async (attachment: any) => {
                         </div>
                     </div>
 
-                    {/* ===== المحتوى ===== */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="p-4 md:p-6 prose max-w-none text-right">
-                            <EditorContent editor={editor} />
-                        </div>
-                    </div>
+
 
                     {/* ===== الملاحظات (إذا وجدت) ===== */}
                     {data.notes && (

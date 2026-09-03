@@ -52,15 +52,15 @@ export default function SidebarItem({
     >
       <FontAwesomeIcon
         icon={icon}
+        size="lg"
         className={cn(
-          "w-5 transition-colors duration-200 shrink-0",
+          "transition-colors duration-200 shrink-0",
           // ✅ الحالة العادية
           !active && "text-gray-400 group-hover:text-blue-500",
           // ✅ الحالة النشطة
           active && "text-blue-600"
         )}
       />
-
       {!isCollapsed && (
         <span className="flex-1 text-right truncate">{label}</span>
       )}

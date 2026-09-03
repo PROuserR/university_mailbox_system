@@ -1,7 +1,6 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -50,7 +49,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <QueryClientProvider client={queryClient}>
             <NavigationFix />
             {children}
-            <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>
     )
 }

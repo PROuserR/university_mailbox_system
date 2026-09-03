@@ -7,30 +7,20 @@
 import { usePathname, useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faHome,
     faUsers,
-    faCheckCircle,
     faChartBar,
-    faBuilding,
-    faUser,
-    faBan,
-    faGear,
     faInbox,
     faPaperPlane,
-    faFolder,
     faPlus,
     faXmark,
     faFile,
-    faUserCog,
     faEnvelope,
     faArrowRight,
     faArrowLeft,
     faFileAlt,
-    faSitemap,
     faHistory,
     faDatabase,
     faChartPie,
-    faClock,
     faEye,
     faChevronDown,
     faChevronLeft,
@@ -39,14 +29,12 @@ import {
     faLayerGroup,
     faListCheck,
     faCog,
-    faUserShield,
     faUniversity,
     faBuildingColumns,
     faFileLines,
     faHandshake,
     faBriefcase,        // ✅ أيقونة الوظائف
     faTrashCan,         // ✅ أيقونة الملفات المؤقتة
-    faServer,           // ✅ أيقونة إدارة النظام
     faUsersGear,        // ✅ أيقونة إدارة المستخدمين
 } from "@fortawesome/free-solid-svg-icons";
 import useMailFilterStore from "@/store/mailFilterStore";
@@ -562,7 +550,7 @@ function SidebarContentWrapper() {
                         </div>
                     )}
 
-                    <div className="space-y-1">
+                    <div className="space-y-3">
                         {filteredNavItems.map((item) => {
                             if (item.path.includes("/distribution?tab=")) {
                                 const tab = item.path.split("?tab=")[1];
@@ -619,7 +607,8 @@ function SidebarContentWrapper() {
                                         >
                                             <FontAwesomeIcon
                                                 icon={faCog}
-                                                className={`w-5 shrink-0 ${isAdminOpen ? "text-blue-600" : "text-gray-400"}`}
+                                                size="lg"
+                                                className={`shrink-0 ${isAdminOpen ? "text-blue-600" : "text-gray-400"}`}
                                             />
                                             {isSidebarToggleShown && (
                                                 <span className="flex-1 text-right truncate">الإدارة</span>
@@ -627,6 +616,7 @@ function SidebarContentWrapper() {
                                             {isSidebarToggleShown && (
                                                 <FontAwesomeIcon
                                                     icon={isAdminOpen ? faChevronDown : faChevronLeft}
+                                                    size="lg"
                                                     className="text-xs text-gray-400 shrink-0"
                                                 />
                                             )}
@@ -701,6 +691,7 @@ function SidebarContentWrapper() {
                   `}
                                 >
                                     <FontAwesomeIcon
+                                        size="lg"
                                         icon={faChartPie}
                                         className={`w-5 shrink-0 ${isReportsOpen ? "text-blue-600" : "text-gray-400"}`}
                                     />
@@ -709,6 +700,7 @@ function SidebarContentWrapper() {
                                     )}
                                     {isSidebarToggleShown && (
                                         <FontAwesomeIcon
+                                            size="lg"
                                             icon={isReportsOpen ? faChevronDown : faChevronLeft}
                                             className="text-xs text-gray-400 shrink-0"
                                         />
@@ -768,22 +760,6 @@ function SidebarContentWrapper() {
                     </div>
                 </div>
 
-                {isSidebarToggleShown && (
-                    <div className="sticky bottom-0 bg-gradient-to-t from-blue-50 to-transparent pt-2">
-                        <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-100/50">
-                            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                                <span>التخزين</span>
-                                <span>2.4GB / 10GB</span>
-                            </div>
-                            <div className="w-full bg-blue-200/50 h-1.5 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600"
-                                    style={{ width: "24%" }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                )}
             </motion.aside>
 
             {/* ===== Mobile Sidebar ===== */}
@@ -1021,20 +997,6 @@ function SidebarContentWrapper() {
                                 </div>
                             </div>
 
-                            <div className="w-full">
-                                <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100/50">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                                        <span>التخزين</span>
-                                        <span>2.4GB / 10GB</span>
-                                    </div>
-                                    <div className="w-full bg-blue-200/50 h-1.5 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600"
-                                            style={{ width: "24%" }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
                         </motion.aside>
                     </>
                 )}

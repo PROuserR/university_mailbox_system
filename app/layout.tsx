@@ -40,21 +40,6 @@ export default function RootLayout({
       dir="rtl"
       data-scroll-behavior="smooth"
     >
-      <head>
-        <style>{`
-          [class*="fa-"],
-          [class*="lucide"] {
-            font-size: inherit !important;
-          }
-          body {
-            opacity: 0;
-            animation: fadeIn 0.1s ease forwards;
-          }
-          @keyframes fadeIn {
-            to { opacity: 1; }
-          }
-        `}</style>
-      </head>
       <body className="min-h-screen bg-white">
         <Providers>
           {children}
