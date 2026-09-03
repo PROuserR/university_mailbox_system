@@ -110,7 +110,6 @@ export function OutboxEmailDetail({
             toast.success("تم تحميل الملف للمعاينة");
         } catch (error: any) {
             if (error.name !== "AbortError") {
-                console.error("View error:", error);
                 
                 // ✅ عرض رسالة خطأ مناسبة
                 if (error.message?.includes("403")) {
@@ -139,7 +138,6 @@ export function OutboxEmailDetail({
         setDownloading(attachmentId);
 
         try {
-            // ✅ استخدام downloadAttachment (بدون signal)
             const blob = await downloadAttachment(attachmentId);
 
             if (!blob || blob.size === 0) {
@@ -160,9 +158,7 @@ export function OutboxEmailDetail({
 
             toast.success("تم تحميل المرفق بنجاح");
         } catch (error: any) {
-            console.error("Download error:", error);
 
-            // ✅ عرض رسائل خطأ مناسبة
             if (error.message?.includes("Network") ||
                 error.message?.includes("CORS") ||
                 error.message?.includes("Failed to fetch")) {

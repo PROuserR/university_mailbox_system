@@ -11,6 +11,7 @@ import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
 import CorrespondenceEditPage from "@/components/correspondence/CorrespondenceEditPage";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function EditCorrespondencePage() {
     const params = useParams();
@@ -22,6 +23,9 @@ export default function EditCorrespondencePage() {
         redirectTo: '/auth/login',
         unauthorizedPath: '/unauthorized'
     });
+
+    // ✅ استخدام useAuth للتحقق من الصلاحيات
+    const { hasPermission } = useAuth();
 
     const [correspondenceData, setCorrespondenceData] = useState<CorrespondenceResponse | null>(null);
     const [loading, setLoading] = useState(true);
@@ -52,6 +56,26 @@ export default function EditCorrespondencePage() {
 
         loadCorrespondence();
     }, [id]);
+
+    // ✅ معالج العودة إلى صفحة التفاصيل
+    const handleBack = () => {
+        // ✅ التحقق من صلاحية الوصول للمراسلة
+        if (hasPermission('ViewCorrespondence')) {
+            router.push(`/correspondences?id=${id}`);
+        } else {
+            router.push('/correspondences');
+        }
+    };
+
+    // ✅ معالج النجاح بعد التعديل
+    const handleSuccess = () => {
+        // ✅ التحقق من صلاحية الوصول للمراسلة
+        if (hasPermission('ViewCorrespondence')) {
+            router.push(`/correspondences?id=${id}`);
+        } else {
+            router.push('/correspondences');
+        }
+    };
 
     if (isAuthLoading || loading) {
         return (
@@ -93,8 +117,8 @@ export default function EditCorrespondencePage() {
     return (
         <CorrespondenceEditPage
             correspondence={correspondenceData}
-            onBack={() => router.push(`/correspondences?id=${id}`)}
-            onSuccess={() => router.push(`/correspondences?id=${id}`)}
+            onBack={handleBack}
+            onSuccess={handleSuccess}
         />
     );
 }

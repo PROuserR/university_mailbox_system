@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 // components/correspondence/CorrespondenceEditPage.tsx
 
@@ -36,8 +37,9 @@ import { useUpdateCorrespondence } from "@/hooks/useCorrespondence";
 import { CorrespondenceMainType, CorrespondenceParentSelectorDto, CorrespondenceResponse } from "@/types/api/correspondence.types";
 import { Attachment } from "@/types/api/Attachment";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useAuth } from "@/hooks/useAuth"; // ✅ إضافة useAuth
 import { ParentSelectorModal } from "@/components/ui/ParentSelectorModal";
-import { FormTextarea  } from "@/components/forms/FormTextarea";
+import { FormTextarea } from "@/components/forms/FormTextarea";
 import { FormSelect } from "@/components/forms/FormSelect";
 import { FormInput } from "@/components/forms/FormInput";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -110,6 +112,9 @@ export default function CorrespondenceEditPage({
     const queryClient = useQueryClient();
     const { isDean } = useUserRole();
 
+    // ✅ استخدام useAuth للتحقق من الصلاحيات
+    const { hasPermission } = useAuth();
+
     // =========================
     // Auth Guard
     // =========================
@@ -177,54 +182,44 @@ export default function CorrespondenceEditPage({
     // HOOKS
     // =========================
 
-    const updateMutation = useUpdateCorrespondence(() => {
-        queryClient.invalidateQueries({ queryKey: ["correspondences"] });
-        queryClient.invalidateQueries({ queryKey: ["correspondence", correspondence.id] });
-
-        toast.success("تم تحديث المراسلة بنجاح");
-        if (onSuccess) onSuccess();
-        router.push(`/correspondences?id=${correspondence.id}`);
-    });
+    // ✅ استخدام useUpdateCorrespondence مع onSuccess مخصص
+    const updateMutation = useUpdateCorrespondence();
 
     // =========================
-    // تهيئة البيانات من المراسلة (بدون تحذيرات)
+    // تهيئة البيانات من المراسلة
     // =========================
-// =========================
-// تهيئة البيانات من المراسلة
-// =========================
-useEffect(() => {
-    if (!correspondence) return;
+    useEffect(() => {
+        if (!correspondence) return;
 
-    setTitle(correspondence.title ?? "");
-    setContent(correspondence.content ?? "");
-    
-    const numberValue = correspondence.number;
-    setNumber(numberValue !== undefined && numberValue !== null ? Number(numberValue) : "");
-    
-    const mainTypeValue = getMainTypeFromString(correspondence.mainType);
-    setMainType(mainTypeValue);
-    setIsProfessional(correspondence.isProfessional ?? false);
-    setDocumentTypeId(correspondence.documentTypeId);
-    setSenderEntityId(correspondence.senderEntityId);
-    setSenderReference(correspondence.senderReference ?? "");
-    
-    setIssuedDate(utcToLocalDate(correspondence.issuedDate));
-    setReceivedDate(utcToLocalDate(correspondence.receivedDate));
-    setSentDate(utcToLocalDate(correspondence.sentDate));
-    
-    setNotes(correspondence.notes ?? "");
-    setParentCorrespondenceId(correspondence.parentCorrespondenceId ?? null);
-    if (correspondence.parentCorrespondenceId) {
-        setParentCorrespondenceDisplay(`#${correspondence.parentCorrespondenceId}`);
-    }
-    setAttachments(correspondence.attachments?.map(att => ({ ...att, isMarkedForDeletion: false })) ?? []);
-}, [correspondence]);
+        setTitle(correspondence.title ?? "");
+        setContent(correspondence.content ?? "");
+        
+        const numberValue = correspondence.number;
+        setNumber(numberValue !== undefined && numberValue !== null ? Number(numberValue) : "");
+        
+        const mainTypeValue = getMainTypeFromString(correspondence.mainType);
+        setMainType(mainTypeValue);
+        setIsProfessional(correspondence.isProfessional ?? false);
+        setDocumentTypeId(correspondence.documentTypeId);
+        setSenderEntityId(correspondence.senderEntityId);
+        setSenderReference(correspondence.senderReference ?? "");
+        
+        setIssuedDate(utcToLocalDate(correspondence.issuedDate));
+        setReceivedDate(utcToLocalDate(correspondence.receivedDate));
+        setSentDate(utcToLocalDate(correspondence.sentDate));
+        
+        setNotes(correspondence.notes ?? "");
+        setParentCorrespondenceId(correspondence.parentCorrespondenceId ?? null);
+        if (correspondence.parentCorrespondenceId) {
+            setParentCorrespondenceDisplay(`#${correspondence.parentCorrespondenceId}`);
+        }
+        setAttachments(correspondence.attachments?.map(att => ({ ...att, isMarkedForDeletion: false })) ?? []);
+    }, [correspondence]);
 
     // =========================
     // دوال المرفقات
     // =========================
 
-    // ✅ حذف مؤقت لمرفق موجود
     const markAttachmentForDeletion = useCallback((attachmentId: number): void => {
         setAttachments(prev => 
             prev.map(att => 
@@ -236,7 +231,6 @@ useEffect(() => {
         setDeletedAttachmentIds(prev => prev.filter(id => id !== attachmentId));
     }, []);
 
-    // ✅ استرجاع مرفق من الحذف المؤقت
     const undoDeleteAttachment = useCallback((attachmentId: number): void => {
         setAttachments(prev => 
             prev.map(att => 
@@ -247,14 +241,12 @@ useEffect(() => {
         );
     }, []);
 
-    // ✅ إضافة ملفات جديدة
     const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
         const files = e.target.files;
         if (!files) return;
         setNewFiles((prev) => [...prev, ...Array.from(files)]);
     }, []);
 
-    // ✅ إضافة ملف أساسي جديد
     const handlePrimaryFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -274,7 +266,6 @@ useEffect(() => {
         setIsNewPrimaryActive(true);
     }, [attachments]);
 
-    // ✅ استرجاع الملف الأساسي القديم وإلغاء الملف الجديد
     const undoPrimaryReplacement = useCallback((): void => {
         setAttachments(prev => 
             prev.map(att => 
@@ -287,7 +278,6 @@ useEffect(() => {
         setIsNewPrimaryActive(false);
     }, []);
 
-    // ✅ إزالة ملف أساسي جديد
     const removeNewPrimaryFile = useCallback((): void => {
         const oldPrimary = attachments.find(att => att.isPrimary && att.isMarkedForDeletion);
         if (oldPrimary) {
@@ -303,27 +293,25 @@ useEffect(() => {
         setIsNewPrimaryActive(false);
     }, [attachments]);
 
-    // ✅ حذف ملف جديد تم إضافته
     const removeNewFile = useCallback((fileName: string): void => {
         setNewFiles((prev) => prev.filter((file) => file.name !== fileName));
     }, []);
 
-    
-useEffect(() => {
-    if (!primaryFile && isNewPrimaryActive) {
-        setIsNewPrimaryActive(false);
-    }
-}, [primaryFile, isNewPrimaryActive]);
+    useEffect(() => {
+        if (!primaryFile && isNewPrimaryActive) {
+            setIsNewPrimaryActive(false);
+        }
+    }, [primaryFile, isNewPrimaryActive]);
 
-useEffect(() => {
-    const hasOldPrimaryRestored = attachments.some(att => att.isPrimary && !att.isMarkedForDeletion);
-    const hasNewPrimary = primaryFile !== null && isNewPrimaryActive;
-    
-    if (hasOldPrimaryRestored && hasNewPrimary) {
-        setPrimaryFile(null);
-        setIsNewPrimaryActive(false);
-    }
-}, [attachments, primaryFile, isNewPrimaryActive]);
+    useEffect(() => {
+        const hasOldPrimaryRestored = attachments.some(att => att.isPrimary && !att.isMarkedForDeletion);
+        const hasNewPrimary = primaryFile !== null && isNewPrimaryActive;
+        
+        if (hasOldPrimaryRestored && hasNewPrimary) {
+            setPrimaryFile(null);
+            setIsNewPrimaryActive(false);
+        }
+    }, [attachments, primaryFile, isNewPrimaryActive]);
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType.includes("image")) return faFileImage;
@@ -629,10 +617,33 @@ useEffect(() => {
             });
         }
 
-        updateMutation.mutate({
-            id: correspondence.id,
-            payload: formData,
-        });
+        // ✅ استخدام mutate مع onSuccess مخصص
+        updateMutation.mutate(
+            {
+                id: correspondence.id,
+                payload: formData,
+            },
+            {
+                onSuccess: (data) => {
+                    queryClient.invalidateQueries({ queryKey: ["correspondences"] });
+                    queryClient.invalidateQueries({ queryKey: ["correspondence", correspondence.id] });
+
+                    toast.success("تم تحديث المراسلة بنجاح");
+                    
+                    // ✅ التحقق من صلاحية الوصول للمراسلة
+                    if (hasPermission('ViewCorrespondence')) {
+                        router.push(`/correspondences?id=${correspondence.id}`);
+                    } else {
+                        router.push('/correspondences');
+                    }
+                    
+                    if (onSuccess) onSuccess();
+                },
+                onError: (error: any) => {
+                    toast.error(error?.message || "فشل تحديث المراسلة");
+                }
+            }
+        );
     };
 
     // =========================
@@ -715,30 +726,29 @@ useEffect(() => {
                         <span>رجوع</span>
                     </button>
                     <div className="flex items-center justify-between p-3 rounded-xl bg-red-50/60 border border-red-100">
-    <span className="font-bold text-red-600 text-sm">إلغاء التوزيعات والعودة إلى مسودة</span>
-    <button
-        type="button"
-        onClick={() => setRevokeDistributionsAndRevertToDraft((prev) => !prev)}
-        className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
-            revokeDistributionsAndRevertToDraft
-                ? "bg-gradient-to-r from-red-400 to-red-500 shadow-lg shadow-red-200"
-                : "bg-blue-100"
-        }`}
-    >
-        <motion.div
-            animate={{ x: revokeDistributionsAndRevertToDraft ? 0 : -24 }}
-            transition={{ type: "spring", stiffness: 500, damping: 35 }}
-            className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md"
-        />
-    </button>
-</div>
+                        <span className="font-bold text-red-600 text-sm">إلغاء التوزيعات والعودة إلى مسودة</span>
+                        <button
+                            type="button"
+                            onClick={() => setRevokeDistributionsAndRevertToDraft((prev) => !prev)}
+                            className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
+                                revokeDistributionsAndRevertToDraft
+                                    ? "bg-gradient-to-r from-red-400 to-red-500 shadow-lg shadow-red-200"
+                                    : "bg-blue-100"
+                            }`}
+                        >
+                            <motion.div
+                                animate={{ x: revokeDistributionsAndRevertToDraft ? 0 : -24 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md"
+                            />
+                        </button>
+                    </div>
                 </div>
 
                 {/* MAIN FORM - Two Column Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     {/* LEFT PANEL - METADATA (2 columns) */}
                     <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-blue-100/30 flex flex-col gap-4">
-                        {/* ... باقي الكود ... */}
                         <h2 className="font-bold text-blue-900 flex items-center gap-2 text-base">
                             <div className="w-7 h-7 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center">
                                 <span className="text-white text-xs">📋</span>
@@ -900,8 +910,6 @@ useEffect(() => {
                             touched={touched.senderReference}
                             maxLength={255}
                         />
-
-                       
 
                         {/* 8. التواريخ */}
                         <div className="grid grid-cols-1 gap-1.5">

@@ -17,7 +17,6 @@ export interface DelegationDto {
   revokedAt: string | null;
   revokedBy: number | null;
   permissions: PermissionDto[];
-  recentUsages?: DelegationUsageDto[];
 }
 
 export interface CreateDelegationDto {
@@ -77,7 +76,6 @@ export interface DelegationStatisticsDto {
   activeDelegations: number;
   expiredDelegations: number;
   revokedDelegations: number;
-  totalUsages: number;
   usagesByPermission: Record<string, number>;
   lastUpdated: string;
 }
@@ -114,22 +112,4 @@ export interface UpdatePermissionOverrideDto {
   isAllowed?: boolean;
   reason?: string;
   expiryDate?: string;
-}
-
-export interface UserResponseDto {
-  id: number;
-  firstName: string;
-  lastName: string;
-  userName: string;
-  fullName: string;
-  email: string;
-  phone: string | null;
-  isActive: boolean;
-  isBanned: boolean;
-  isPermanentReceiver: boolean;
-  lastLoginAt: string | null;
-  createdAt: string;
-  updatedAt: string | null;
-  profileImageUrl: string | null;
-  roles: string[];
 }

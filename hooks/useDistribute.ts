@@ -329,7 +329,7 @@ export const useAllDistributionsInfinite = (options: UseAllDistributionsInfinite
     revokedAtTo,
     sortBy = "DistributedDate",
     sortDescending = true,
-    pageSize = 20,
+    pageSize = 40,
   } = options;
 
   // ===== بناء queryKey مع جميع المعاملات =====

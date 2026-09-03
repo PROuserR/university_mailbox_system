@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RefreshCw, Filter } from "lucide-react"; // ✅ استخدام Lucide بدلاً من FontAwesome
+import { RefreshCw, Filter } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { PERMISSIONS } from "@/lib/permissions";
 import { useAdvancedSearch } from "@/hooks/useAdvancedSearch";
@@ -25,6 +25,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { useAllDistributionsInfinite } from "@/hooks/useDistribute";
 import { format } from "date-fns";
+import { DistributionResponseByIdDto } from "@/types/api/distribution.types";
 
 const PAGE_HEIGHT = "calc(100vh - 64px)";
 
@@ -183,9 +184,25 @@ function DistributionsAllContent() {
         refetch();
     }, [refetch]);
 
-    // ===== Flatten items =====
+    // ============================================================
+    // ✅ منع تكرار الـ keys باستخدام Set
+    // ============================================================
     const items = useMemo(() => {
-        return data?.pages?.flatMap((page) => page.items) || [];
+        if (!data?.pages) return [];
+        
+        const seen = new Set<number>();
+        const result: DistributionResponseByIdDto[] = [];
+        
+        data.pages.forEach((page) => {
+            page.items.forEach((item) => {
+                if (!seen.has(item.id)) {
+                    seen.add(item.id);
+                    result.push(item);
+                }
+            });
+        });
+        
+        return result;
     }, [data]);
 
     const totalCount = data?.pages?.[0]?.totalCount || 0;
@@ -281,7 +298,6 @@ function DistributionsAllContent() {
                                 {items.length > 0 && ` · عرض ${items.length}`}
                             </p>
                         </div>
-                        {/* ✅ نفس شكل الأزرار في صفحة المراسلات */}
                         <div className="flex gap-2">
                             <Button
                                 variant="outline"
@@ -408,7 +424,6 @@ function DistributionsAllContent() {
                                 {items.length > 0 && ` · عرض ${items.length}`}
                             </p>
                         </div>
-                        {/* ✅ نفس شكل الأزرار في صفحة المراسلات (Desktop) */}
                         <div className="flex gap-1">
                             <Button
                                 variant="ghost"

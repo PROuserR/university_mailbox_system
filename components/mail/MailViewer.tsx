@@ -178,7 +178,6 @@ const handleViewFile = async (attachment: any) => {
 
         toast.success('تم عرض الملف بنجاح');
     } catch (error) {
-        console.error('View error:', error);
         toast.error(error instanceof Error ? error.message : 'فشل تحميل الملف للعرض');
     } finally {
         setIsLoadingFile(false);
@@ -231,7 +230,6 @@ const handleDownload = async (attachment: any) => {
 
         toast.success('تم تحميل الملف بنجاح');
     } catch (error) {
-        console.error('Download error:', error);
         toast.error(error instanceof Error ? error.message : 'فشل تحميل الملف');
     }
 };

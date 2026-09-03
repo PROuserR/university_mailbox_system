@@ -66,10 +66,7 @@ export interface SystemSettingsDto {
   autoDeleteTempFiles: boolean;
 
   // Files Backup
-  isDailyBackupJobEnabled: boolean;
-  isMonthlyBackupJobEnabled: boolean;
-  isAnnualBackupJobEnabled: boolean;
-  isCleanupJobEnabled: boolean;
+  isCleanupBackupJobEnabled: boolean;
   dailyBackupCron: string | null;
   monthlyBackupCron: string | null;
   annualBackupCron: string | null;
@@ -173,10 +170,7 @@ export interface UpdateTempCleanupSettingsDto {
 }
 
 export interface UpdateFilesBackupSettingsDto {
-  isDailyBackupJobEnabled?: boolean;
-  isMonthlyBackupJobEnabled?: boolean;
-  isAnnualBackupJobEnabled?: boolean;
-  isCleanupJobEnabled?: boolean;
+  isCleanupBackupJobEnabled?: boolean;
   dailyBackupCron?: string;
   monthlyBackupCron?: string;
   annualBackupCron?: string;

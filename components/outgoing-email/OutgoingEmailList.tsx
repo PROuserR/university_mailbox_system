@@ -3,7 +3,7 @@
 
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { OutgoingEmailHistoryDto, EmailStatus } from "@/types/api/outgoing-email";
 import { format } from "date-fns";
@@ -22,7 +22,6 @@ const formatDateDisplay = (date?: string | null): string => {
     }
 };
 
-// ✅ مطابق لـ OutgoingEmailDetail
 const statusColors: Record<EmailStatus, string> = {
     [EmailStatus.Pending]: "bg-yellow-100 text-yellow-700",
     [EmailStatus.Sent]: "bg-green-100 text-green-700",
@@ -30,7 +29,6 @@ const statusColors: Record<EmailStatus, string> = {
     [EmailStatus.RetryPending]: "bg-orange-100 text-orange-700",
 };
 
-// ✅ مطابق لـ OutgoingEmailDetail
 const statusLabels: Record<EmailStatus, string> = {
     [EmailStatus.Pending]: "قيد الانتظار",
     [EmailStatus.Sent]: "مرسل",
@@ -49,7 +47,20 @@ interface OutgoingEmailListProps {
 
 export const OutgoingEmailList = forwardRef<HTMLDivElement, OutgoingEmailListProps>(
     ({ items, selectedId, onSelectItem, isLoading = false, bottomRef, isFetchingNextPage = false }, ref) => {
-        if (isLoading && items.length === 0) {
+        // ✅ استخدام Set لمنع تكرار الـ keys
+        const uniqueItems = useMemo(() => {
+            const seen = new Set<number>();
+            const result: OutgoingEmailHistoryDto[] = [];
+            items.forEach((item) => {
+                if (!seen.has(item.id)) {
+                    seen.add(item.id);
+                    result.push(item);
+                }
+            });
+            return result;
+        }, [items]);
+
+        if (isLoading && uniqueItems.length === 0) {
             return (
                 <div ref={ref} className="flex h-full items-center justify-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-3">
@@ -60,7 +71,7 @@ export const OutgoingEmailList = forwardRef<HTMLDivElement, OutgoingEmailListPro
             );
         }
 
-        if (items.length === 0) {
+        if (uniqueItems.length === 0) {
             return (
                 <div ref={ref} className="flex h-full items-center justify-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
@@ -74,9 +85,8 @@ export const OutgoingEmailList = forwardRef<HTMLDivElement, OutgoingEmailListPro
         return (
             <div ref={ref} className="flex flex-col h-full">
                 <div className="flex-1 overflow-y-auto">
-                    {items.map((item) => {
+                    {uniqueItems.map((item) => {
                         const isSelected = selectedId === item.id;
-                        // ✅ استخدام نفس الدالة المستخدمة في OutgoingEmailDetail
                         const statusEnum = getStatusEnum(item.status);
                         const statusColor = statusColors[statusEnum] || "bg-gray-100 text-gray-700";
                         const statusLabel = statusLabels[statusEnum] || item.status;
@@ -97,7 +107,6 @@ export const OutgoingEmailList = forwardRef<HTMLDivElement, OutgoingEmailListPro
                                                 <span className="text-sm font-semibold text-foreground">
                                                     {item.to}
                                                 </span>
-                                                {/* ✅ استخدام Badge مطابق لـ OutgoingEmailDetail */}
                                                 <Badge className={cn("text-[10px]", statusColor)}>
                                                     {statusLabel}
                                                 </Badge>

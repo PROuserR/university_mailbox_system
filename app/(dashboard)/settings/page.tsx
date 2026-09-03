@@ -256,10 +256,7 @@ export default function DeanSettingsPage() {
               case "files-backup":
     setFormValues({
         // Job Control
-        isDailyBackupJobEnabled: settings.isDailyBackupJobEnabled,
-        isMonthlyBackupJobEnabled: settings.isMonthlyBackupJobEnabled,
-        isAnnualBackupJobEnabled: settings.isAnnualBackupJobEnabled,
-        isCleanupJobEnabled: settings.isCleanupJobEnabled,
+        isCleanupBackupJobEnabled: settings.isCleanupBackupJobEnabled,
         
         // Enable/Disable Backup Types
         dailyBackupEnabled: settings.dailyBackupEnabled,
@@ -480,14 +477,14 @@ export default function DeanSettingsPage() {
                 </div>
             </div>
 
-          {/* ===== 2. إعدادات المرفقات ===== */}
+        {/* ===== 2. إعدادات المرفقات ===== */}
 <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
     <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
             <FontAwesomeIcon icon={faFile} className="text-blue-500" />
             إعدادات المرفقات
         </h2>
-            <EditButton onClick={() => openModal("file")} />
+        <EditButton onClick={() => openModal("file")} />
     </div>
     <div className="space-y-4">
         <SettingCard
@@ -511,11 +508,15 @@ export default function DeanSettingsPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                    {settings.allowedExtensionsList.map((ext, index) => (
-                        <span key={index} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                            {ext}
-                        </span>
-                    ))}
+                    {settings.allowedExtensionsList && settings.allowedExtensionsList.length > 0 ? (
+                        settings.allowedExtensionsList.map((ext, index) => (
+                            <span key={index} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                                {ext}
+                            </span>
+                        ))
+                    ) : (
+                        <span className="text-xs text-slate-400">لا توجد امتدادات محددة</span>
+                    )}
                 </div>
             </div>
         </div>
@@ -531,11 +532,15 @@ export default function DeanSettingsPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                    {settings.blockedMimeTypesList.map((mime, index) => (
-                        <span key={index} className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
-                            {mime}
-                        </span>
-                    ))}
+                    {settings.blockedMimeTypesList && settings.blockedMimeTypesList.length > 0 ? (
+                        settings.blockedMimeTypesList.map((mime, index) => (
+                            <span key={index} className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
+                                {mime}
+                            </span>
+                        ))
+                    ) : (
+                        <span className="text-xs text-slate-400">لا توجد أنواع محظورة</span>
+                    )}
                 </div>
             </div>
         </div>
@@ -766,36 +771,6 @@ export default function DeanSettingsPage() {
             <EditButton onClick={() => openModal("files-backup")} />
     </div>
     <div className="space-y-4">
-        {/* Job Control */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <SettingCard
-                label="مهمة النسخ اليومي"
-                description="تفعيل مهمة النسخ الاحتياطي اليومي"
-                value={settings.isDailyBackupJobEnabled ? "مفعل" : "معطل"}
-                icon={faClock}
-            />
-            <SettingCard
-                label="مهمة النسخ الشهري"
-                description="تفعيل مهمة النسخ الاحتياطي الشهري"
-                value={settings.isMonthlyBackupJobEnabled ? "مفعل" : "معطل"}
-                icon={faClock}
-            />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <SettingCard
-                label="مهمة النسخ السنوي"
-                description="تفعيل مهمة النسخ الاحتياطي السنوي"
-                value={settings.isAnnualBackupJobEnabled ? "مفعل" : "معطل"}
-                icon={faClock}
-            />
-            <SettingCard
-                label="مهمة التنظيف"
-                description="تفعيل مهمة تنظيف النسخ الاحتياطية"
-                value={settings.isCleanupJobEnabled ? "مفعل" : "معطل"}
-                icon={faTrash}
-            />
-        </div>
-
         {/* Enable/Disable Backup Types */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <SettingCard
@@ -815,6 +790,12 @@ export default function DeanSettingsPage() {
                 description="تفعيل النسخ الاحتياطي السنوي للملفات"
                 value={settings.annualBackupEnabled ? "مفعل" : "معطل"}
                 icon={faClock}
+            />
+            <SettingCard
+                label="مهمة التنظيف"
+                description="تفعيل مهمة تنظيف النسخ الاحتياطية"
+                value={settings.isCleanupBackupJobEnabled ? "مفعل" : "معطل"}
+                icon={faTrash}
             />
         </div>
 
@@ -1214,52 +1195,9 @@ export default function DeanSettingsPage() {
 
    {modalType === "files-backup" && (
     <div className="space-y-4 ">
-        {/* Job Control */}
-        <div className="border-b border-gray-100 pb-3">
-            <h3 className="text-sm font-semibold text-slate-700 mb-2">التحكم بالمهام</h3>
-            <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={formValues.isDailyBackupJobEnabled || false}
-                        onChange={(e) => setFormValues({...formValues, isDailyBackupJobEnabled: e.target.checked})}
-                        className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <label className="text-sm text-slate-700">مهمة يومية</label>
-                </div>
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={formValues.isMonthlyBackupJobEnabled || false}
-                        onChange={(e) => setFormValues({...formValues, isMonthlyBackupJobEnabled: e.target.checked})}
-                        className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <label className="text-sm text-slate-700">مهمة شهرية</label>
-                </div>
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={formValues.isAnnualBackupJobEnabled || false}
-                        onChange={(e) => setFormValues({...formValues, isAnnualBackupJobEnabled: e.target.checked})}
-                        className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <label className="text-sm text-slate-700">مهمة سنوية</label>
-                </div>
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={formValues.isCleanupJobEnabled || false}
-                        onChange={(e) => setFormValues({...formValues, isCleanupJobEnabled: e.target.checked})}
-                        className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <label className="text-sm text-slate-700">مهمة تنظيف</label>
-                </div>
-            </div>
-        </div>
-
         {/* Enable/Disable Backup Types */}
         <div className="border-b border-gray-100 pb-3">
-            <h3 className="text-sm font-semibold text-slate-700 mb-2">أنواع النسخ الاحتياطي</h3>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">أنواع النسخ الاحتياطي والتحكم بالمهام</h3>
             <div className="grid grid-cols-3 gap-2">
                 <div className="flex items-center gap-3">
                     <input
@@ -1287,6 +1225,15 @@ export default function DeanSettingsPage() {
                         className="w-4 h-4 rounded border-gray-300"
                     />
                     <label className="text-sm text-slate-700">سنوي</label>
+                </div>
+                   <div className="flex items-center gap-3">
+                    <input
+                        type="checkbox"
+                        checked={formValues.isCleanupBackupJobEnabled || false}
+                        onChange={(e) => setFormValues({...formValues, isCleanupBackupJobEnabled: e.target.checked})}
+                        className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <label className="text-sm text-slate-700">مهمة تنظيف</label>
                 </div>
             </div>
         </div>

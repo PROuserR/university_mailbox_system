@@ -164,6 +164,12 @@ const ADMIN_ITEMS: AdminItem[] = [
     permission: PERMISSIONS.MANAGE_BACKUP,
   },
   {
+    icon: faDatabase,
+    label: "تتبع النسخ الاحتياطية",
+    path: "/backup-progress",
+    permission: PERMISSIONS.MANAGE_BACKUP,
+  },
+  {
     icon: faUniversity,
     label: "الأقسام",
     path: "/departments",

@@ -83,7 +83,6 @@ export default function ProfilePage() {
     const fetchProfilePicture = async () => {
         try {
             setImageLoading(true);
-            // ✅ استخدام fetch مباشرة للحصول على الصورة كـ Blob
             const response = await myAPI.get("/Profiles/picture", {
                 responseType: "blob",
             });
@@ -93,11 +92,9 @@ export default function ProfilePage() {
                 const url = URL.createObjectURL(blob);
                 setImageUrl(url);
             } else {
-                // ✅ إذا لم توجد صورة، استخدم fallback
                 setImageUrl("");
             }
         } catch (error) {
-            console.error("Failed to load profile picture:", error);
             setImageUrl("");
         } finally {
             setImageLoading(false);

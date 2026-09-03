@@ -1,124 +1,386 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/signalR.ts
 import * as signalR from "@microsoft/signalr";
-import { authService } from "@/services/auth.service";
-import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
 
-let connection: signalR.HubConnection | null = null;
-let connectionPromise: Promise<signalR.HubConnection | null> | null = null;
+// ============================================================
+// ===== State Management =====
+// ============================================================
 
-const getHubUrl = (): string => {
-    return process.env.NEXT_PUBLIC_SIGNALR_URL || "https://localhost:7236/hubs/notification";
+type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
+
+interface SignalRState {
+    connection: signalR.HubConnection | null;
+    state: ConnectionState;
+    reconnectAttempts: number;
+    maxReconnectAttempts: number;
+    reconnectDelay: number;
+    backoffMultiplier: number;
+    isManualDisconnect: boolean;
+    callbacks: Set<(notification: any) => void>;
+    listeners: Set<(state: ConnectionState) => void>;
+    isInitialized: boolean;
+}
+
+const state: SignalRState = {
+    connection: null,
+    state: 'disconnected',
+    reconnectAttempts: 0,
+    maxReconnectAttempts: 3,
+    reconnectDelay: 5000,
+    backoffMultiplier: 1.5,
+    isManualDisconnect: false,
+    callbacks: new Set(),
+    listeners: new Set(),
+    isInitialized: false,
 };
 
-export const startSignalRConnection = async (onNotificationReceived: (notification: any) => void) => {
-  if (connectionPromise) {
-    return connectionPromise;
-  }
+let reconnectTimer: NodeJS.Timeout | null = null;
+let connectionPromise: Promise<signalR.HubConnection | null> | null = null;
 
-  if (connection && connection.state === signalR.HubConnectionState.Connected) {
-    return connection;
-  }
+// ============================================================
+// ===== Configuration =====
+// ============================================================
 
-  if (connection && connection.state !== signalR.HubConnectionState.Disconnected) {
-    try {
-      await connection.stop();
-    } catch (err) {
-      console.warn("Error stopping existing connection:", err);
+const getHubUrl = (): string => {
+    const signalRUrl = process.env.NEXT_PUBLIC_SIGNALR_URL;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    
+    if (signalRUrl) {
+        return signalRUrl;
     }
-    connection = null;
-  }
-
-  const hubUrl = getHubUrl();
-  console.log("🔌 Connecting to SignalR hub:", hubUrl);
-
-  connection = new signalR.HubConnectionBuilder()
-    .withUrl(hubUrl, {
-      withCredentials: true,
-      transport: signalR.HttpTransportType.LongPolling,
-    })
-    .withAutomaticReconnect([0, 2000, 5000, 10000, 15000, 30000])
-    .configureLogging(signalR.LogLevel.Information)
-    .build();
-
-  connection.on("ReceiveNotification", async (notification: any) => {
-    console.log("🔔✅ ReceiveNotification received:", notification);
-
-    const notificationType = notification?.Type || notification?.type;
-
-    if (notificationType === "PermissionsUpdated") {
-      console.log("🔄 Permissions update detected, refreshing permissions...");
-      try {
-        await authService.refreshDelegatedPermissions();
-        console.log("✅ Permissions refreshed successfully");
-        
-        toast.success("تم تحديث صلاحياتك", {
-          duration: 3000,
-          icon: "🔑",
-        });
-      } catch (error) {
-        console.error("❌ Failed to refresh permissions:", error);
-        toast.error("فشل تحديث الصلاحيات، يرجى تحديث الصفحة");
-      }
-      return;
+    
+    if (apiUrl) {
+        return apiUrl.replace(/\/api$/, '') + '/hubs/notification';
     }
+    
+    return 'https://localhost:7236/hubs/notification';
+};
 
-    onNotificationReceived(notification);
-  });
+const getReconnectDelay = (attempt: number): number => {
+    const delay = state.reconnectDelay * Math.pow(state.backoffMultiplier, attempt);
+    return Math.min(delay, 30000);
+};
 
-  connection.onreconnecting((error) => {
-    console.warn("🔄 SignalR reconnecting...", error);
-  });
+// ============================================================
+// ===== Core Functions =====
+// ============================================================
 
-  connection.onreconnected((connectionId) => {
-    console.log("✅ SignalR reconnected successfully! ConnectionId:", connectionId);
-  });
+const updateState = (newState: ConnectionState) => {
+    state.state = newState;
+    state.listeners.forEach((listener) => {
+        try {
+            listener(newState);
+        } catch (error) {
+            // تجاهل
+        }
+    });
+};
 
-  connection.onclose((error) => {
-    console.warn("❌ SignalR connection closed:", error);
-    connection = null;
-    connectionPromise = null;
-  });
+const handleIncomingNotification = (notification: any) => {
+    state.callbacks.forEach((callback) => {
+        try {
+            callback(notification);
+        } catch (error) {
+            // تجاهل
+        }
+    });
+};
 
-  connectionPromise = (async () => {
+const createConnection = (): signalR.HubConnection | null => {
     try {
-      await connection!.start();
-      console.log("✅ SignalR Connected successfully! State:", connection!.state);
-      return connection;
-    } catch (err) {
-      console.error("❌ SignalR Connection failed:", err);
-      connection = null;
-      setTimeout(() => {
+        const hubUrl = getHubUrl();
+
+        return new signalR.HubConnectionBuilder()
+            .withUrl(hubUrl, {
+                withCredentials: true,
+                transport: signalR.HttpTransportType.LongPolling,
+                timeout: 30000,
+            })
+            .withAutomaticReconnect({
+                nextRetryDelayInMilliseconds: (retryContext) => {
+                    const attempt = retryContext.previousRetryCount || 0;
+                    
+                    if (retryContext.elapsedMilliseconds > 60000) {
+                        return null;
+                    }
+                    
+                    return Math.min(
+                        getReconnectDelay(attempt),
+                        30000
+                    );
+                }
+            })
+            // ✅ إخفاء جميع الـ Logs
+            .configureLogging(signalR.LogLevel.None)
+            .build();
+    } catch (error) {
+        return null;
+    }
+};
+
+const setupConnectionEvents = (connection: signalR.HubConnection) => {
+    connection.on('ReceiveNotification', handleIncomingNotification);
+
+    connection.onreconnecting(() => {
+        updateState('reconnecting');
+    });
+
+    connection.onreconnected(() => {
+        updateState('connected');
+        state.reconnectAttempts = 0;
+    });
+
+    connection.onclose((error) => {
+        state.connection = null;
         connectionPromise = null;
-        startSignalRConnection(onNotificationReceived);
-      }, 5000);
-      return null;
-    } finally {
-      connectionPromise = null;
-    }
-  })();
+        
+        if (!state.isManualDisconnect) {
+            updateState('disconnected');
+            scheduleReconnect();
+        } else {
+            updateState('disconnected');
+            state.isManualDisconnect = false;
+        }
+    });
+};
 
-  return connectionPromise;
+// ============================================================
+// ===== Reconnection Logic =====
+// ============================================================
+
+const scheduleReconnect = () => {
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+
+    if (state.reconnectAttempts >= state.maxReconnectAttempts) {
+        updateState('failed');
+        return;
+    }
+
+    const delay = getReconnectDelay(state.reconnectAttempts);
+    state.reconnectAttempts++;
+    
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        attemptReconnect();
+    }, delay);
+};
+
+const attemptReconnect = async () => {
+    if (connectionPromise) {
+        return;
+    }
+
+    if (state.connection?.state === signalR.HubConnectionState.Connected) {
+        state.reconnectAttempts = 0;
+        return;
+    }
+
+    updateState('connecting');
+
+    try {
+        const conn = await startSignalRConnection();
+        if (conn?.state === signalR.HubConnectionState.Connected) {
+            state.reconnectAttempts = 0;
+            updateState('connected');
+        } else {
+            scheduleReconnect();
+        }
+    } catch (error) {
+        scheduleReconnect();
+    }
+};
+
+// ============================================================
+// ===== Silent Connection (بدون أخطاء في Console) =====
+// ============================================================
+
+const silentStart = async (): Promise<signalR.HubConnection | null> => {
+    try {
+        return await startSignalRConnection();
+    } catch {
+        return null;
+    }
+};
+
+// ============================================================
+// ===== Public API =====
+// ============================================================
+
+export const startSignalRConnection = async (): Promise<signalR.HubConnection | null> => {
+    // ✅ منع المحاولة إذا كان الـ Connection في حالة Connected
+    if (state.connection?.state === signalR.HubConnectionState.Connected) {
+        return state.connection;
+    }
+
+    // ✅ منع المحاولة إذا كان هناك اتصال قائم في حالة Reconnecting
+    if (state.connection?.state === signalR.HubConnectionState.Reconnecting) {
+        return state.connection;
+    }
+
+    // ✅ منع المحاولات المتزامنة
+    if (connectionPromise) {
+        return connectionPromise;
+    }
+
+    // ✅ إيقاف الاتصال القديم
+    if (state.connection) {
+        try {
+            await state.connection.stop();
+        } catch {
+            // تجاهل
+        }
+        state.connection = null;
+    }
+
+    updateState('connecting');
+    state.isManualDisconnect = false;
+
+    // ✅ إنشاء الاتصال
+    const connection = createConnection();
+    if (!connection) {
+        updateState('disconnected');
+        scheduleReconnect();
+        return null;
+    }
+
+    setupConnectionEvents(connection);
+    state.connection = connection;
+
+    connectionPromise = (async () => {
+        try {
+            await connection.start();
+            updateState('connected');
+            state.reconnectAttempts = 0;
+            state.isInitialized = true;
+            return connection;
+        } catch {
+            // ✅ تجاهل الخطأ تماماً
+            state.connection = null;
+            updateState('disconnected');
+            scheduleReconnect();
+            return null;
+        } finally {
+            connectionPromise = null;
+        }
+    })();
+
+    return connectionPromise;
 };
 
 export const stopSignalRConnection = async () => {
-  if (connectionPromise) {
-    await connectionPromise;
-    connectionPromise = null;
-  }
-  if (connection) {
-    try {
-      await connection.stop();
-    } catch (err) {
-      console.warn("Error stopping connection:", err);
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
     }
-    connection = null;
-    console.log("SignalR Disconnected");
-  }
+
+    state.isManualDisconnect = true;
+    state.reconnectAttempts = 0;
+    updateState('disconnected');
+
+    if (connectionPromise) {
+        await connectionPromise;
+        connectionPromise = null;
+    }
+
+    if (state.connection) {
+        try {
+            await state.connection.stop();
+        } catch {
+            // تجاهل
+        }
+        state.connection = null;
+    }
 };
 
-export const getConnection = () => connection;
+// ============================================================
+// ===== Callback Management =====
+// ============================================================
+
+export const registerNotificationCallback = (callback: (notification: any) => void) => {
+    state.callbacks.add(callback);
+    
+    // ✅ بدء الاتصال بصمت
+    if (!state.isInitialized) {
+        silentStart();
+    }
+    
+    return () => {
+        state.callbacks.delete(callback);
+    };
+};
+
+export const clearCallbacks = () => {
+    state.callbacks.clear();
+};
+
+// ============================================================
+// ===== State Listener Management =====
+// ============================================================
+
+export const subscribeToState = (listener: (state: ConnectionState) => void) => {
+    state.listeners.add(listener);
+    return () => {
+        state.listeners.delete(listener);
+    };
+};
+
+// ============================================================
+// ===== Utility Functions =====
+// ============================================================
+
+export const getConnection = () => state.connection;
 
 export const isConnected = () => {
-  return connection && connection.state === signalR.HubConnectionState.Connected;
+    return state.connection?.state === signalR.HubConnectionState.Connected;
+};
+
+export const getConnectionState = () => state.state;
+
+export const getConnectionId = () => {
+    return state.connection?.connectionId || null;
+};
+
+export const reconnect = async (): Promise<signalR.HubConnection | null> => {
+    state.reconnectAttempts = 0;
+    
+    if (state.connection) {
+        try {
+            await state.connection.stop();
+        } catch {
+            // تجاهل
+        }
+        state.connection = null;
+    }
+    connectionPromise = null;
+    
+    return startSignalRConnection();
+};
+
+// ============================================================
+// ===== React Hook for SignalR State =====
+// ============================================================
+
+export const useSignalRState = () => {
+    const [currentState, setCurrentState] = useState<ConnectionState>('disconnected');
+    const [isConnected, setIsConnected] = useState(false);
+
+    useEffect(() => {
+        const unsubscribe = subscribeToState((newState) => {
+            setCurrentState(newState);
+            setIsConnected(newState === 'connected');
+        });
+
+        queueMicrotask(() => {
+            setCurrentState(state.state);
+            setIsConnected(state.state === 'connected');
+        });
+
+        return unsubscribe;
+    }, []);
+
+    return { state: currentState, isConnected };
 };

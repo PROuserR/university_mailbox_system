@@ -691,7 +691,6 @@ const handleSendEmail = () => {
             toast.success("تم تحميل الملف للمعاينة");
         } catch (error: any) {
             if (error.name !== "AbortError") {
-                console.error("View error:", error);
                 toast.error(error.message || "فشل في تحميل الملف للمعاينة");
                 closePreview();
             }
@@ -740,7 +739,6 @@ const handleSendEmail = () => {
 
             toast.success("تم تحميل المرفق بنجاح");
         } catch (error: any) {
-            console.error("Download error:", error);
 
             if (error.message?.includes("Network") ||
                 error.message?.includes("CORS") ||

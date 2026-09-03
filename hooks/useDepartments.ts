@@ -105,7 +105,6 @@ export const useUpdateDepartment = (onSuccess?: () => void) => {
             toast.success("تم تحديث القسم بنجاح", { duration: 3000 });
             queryClient.invalidateQueries({ queryKey: ["departments"] });
             queryClient.invalidateQueries({ queryKey: ["departments", "active"] });
-            // ✅ تحديث المستخدمين النشطين بعد تغيير رئيس القسم
             queryClient.invalidateQueries({ queryKey: ["users", "active"] });
             if (onSuccess) onSuccess();
         },
@@ -146,7 +145,6 @@ export const useAddDepartmentMember = (onSuccess?: () => void) => {
             toast.success("تم إضافة العضو بنجاح", { duration: 3000 });
             queryClient.invalidateQueries({ queryKey: ["department", variables.departmentId, "members"] });
             queryClient.invalidateQueries({ queryKey: ["departments"] });
-            // ✅ تحديث المستخدمين النشطين بعد تغيير العضوية
             queryClient.invalidateQueries({ queryKey: ["users", "active"] });
             if (onSuccess) onSuccess();
         },
@@ -166,7 +164,6 @@ export const useRemoveDepartmentMember = (onSuccess?: () => void) => {
             toast.success("تم إزالة العضو بنجاح", { duration: 3000 });
             queryClient.invalidateQueries({ queryKey: ["department", variables.departmentId, "members"] });
             queryClient.invalidateQueries({ queryKey: ["departments"] });
-            // ✅ تحديث المستخدمين النشطين بعد تغيير العضوية
             queryClient.invalidateQueries({ queryKey: ["users", "active"] });
             if (onSuccess) onSuccess();
         },
@@ -191,7 +188,6 @@ export const useSetDepartmentHead = (onSuccess?: () => void) => {
             queryClient.invalidateQueries({ queryKey: ["departments"] });
             queryClient.invalidateQueries({ queryKey: ["department", variables.departmentId] });
             queryClient.invalidateQueries({ queryKey: ["department", variables.departmentId, "members"] });
-            // ✅ تحديث المستخدمين النشطين بعد تغيير الرئيس
             queryClient.invalidateQueries({ queryKey: ["users", "active"] });
             if (onSuccess) onSuccess();
         },

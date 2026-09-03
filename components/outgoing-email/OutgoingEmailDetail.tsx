@@ -208,10 +208,7 @@ export function OutgoingEmailDetail({
     const handleTestConnection = async () => {
         try {
             await testConnectionMutation.mutateAsync();
-            // التوست يظهر من الـ Hook تلقائياً
         } catch (error) {
-            // الخطأ يعالج في الـ Hook
-            console.error("Test connection error:", error);
         }
     };
 
@@ -238,7 +235,6 @@ export function OutgoingEmailDetail({
             setPreviewUrl(url);
         } catch (error: any) {
             if (error.name !== "AbortError") {
-                console.error("View error:", error);
             }
             closePreview();
         } finally {
@@ -274,7 +270,6 @@ export function OutgoingEmailDetail({
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(urlBlob), 1000);
         } catch (error: any) {
-            console.error("Download error:", error);
         } finally {
             setDownloading(null);
         }
@@ -307,8 +302,6 @@ export function OutgoingEmailDetail({
             // التوست يظهر من الـ Hook تلقائياً
             setResendModalOpen(false);
         } catch (error) {
-            // الخطأ يعالج في الـ Hook
-            console.error("Resend error:", error);
         }
     };
 
@@ -326,11 +319,8 @@ export function OutgoingEmailDetail({
                 includeAllAttachments: editData.includeAllAttachments,
                 attachmentIds: editData.attachmentIds.length > 0 ? editData.attachmentIds : undefined,
             });
-            // التوست يظهر من الـ Hook تلقائياً
             setEditModalOpen(false);
         } catch (error) {
-            // الخطأ يعالج في الـ Hook
-            console.error("Update error:", error);
         }
     };
 
@@ -341,13 +331,8 @@ export function OutgoingEmailDetail({
 
     const confirmDelete = async () => {
         try {
-            // ✅ استخدام mutateAsync للانتظار حتى الرد
             await deleteMutation.mutateAsync(item.id);
-            // التوست يظهر من الـ Hook تلقائياً
-            // onSuccess في الـ Hook يقوم بـ: setDeleteConfirmOpen(false), onRefresh(), onClose()
         } catch (error) {
-            // الخطأ يعالج في الـ Hook
-            console.error("Delete error:", error);
         }
     };
 

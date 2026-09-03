@@ -3,14 +3,9 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    useMutation,
-    useQuery,
-    useQueryClient,
-} from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -27,56 +22,53 @@ import {
     faSync,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { apiWrapper } from "@/utils/apiClient";
-import { NotificationItem, NotificationsResponse } from "@/types/api/notification";
+import { NotificationItem } from "@/types/api/notification";
 import { authService } from "@/services/auth.service";
 import useUserInfoStore from "@/store/userInfoStore";
+import { useNotifications } from "@/hooks/useNotifications";
 
 export default function NotificationsDropdown() {
     const [open, setOpen] = useState(false);
     const [isRefreshingPermissions, setIsRefreshingPermissions] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const queryClient = useQueryClient();
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { isLoggedIn } = useUserInfoStore();
     const toastIdRef = useRef<string | null>(null);
 
+    // ✅ استخدام useNotifications
     const {
-        data,
+        notifications: allNotifications,
+        unreadCount,
         isLoading,
-        isError,
-        refetch,
-    } = useQuery<NotificationsResponse>({
-        queryKey: ["notifications"],
-        queryFn: async (): Promise<NotificationsResponse> => {
-            try {
-                const response = await apiWrapper.get<NotificationsResponse>(
-                    "/Notifications",
-                    { page: 1, pageSize: 20 }
-                );
+        refresh,
+        markAsRead: markAsReadHook,
+        markAllAsRead: markAllAsReadHook,
+        deleteNotification: deleteNotificationHook,
+    } = useNotifications(20);
 
-                if (!response.success || !response.data) {
-                    throw new Error("لم يتم العثور على بيانات الإشعارات");
-                }
+    // ============================================================
+    // ===== Click Outside =====
+    // ============================================================
 
-                if (!response.data.isSuccess) {
-                    throw new Error(response.data.message || "فشل تحميل الإشعارات");
-                }
-
-                return response.data;
-            } catch (error: any) {
-                throw error;
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setOpen(false);
             }
-        },
-        refetchInterval: isLoggedIn ? 30000 : false,
-        enabled: isLoggedIn,
-        staleTime: 10000,
-        retry: (failureCount, error: any) => {
-            if (error?.response?.status === 401 || error?.status === 401) {
-                return false;
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            if (toastIdRef.current) {
+                toast.dismiss(toastIdRef.current);
             }
-            return failureCount < 2;
-        }
-    });
+        };
+    }, []);
+
+    // ============================================================
+    // ===== Refresh Permissions =====
+    // ============================================================
 
     const handleRefreshPermissions = async () => {
         setIsRefreshingPermissions(true);
@@ -96,99 +88,9 @@ export default function NotificationsDropdown() {
         }
     };
 
-    const markAsReadMutation = useMutation({
-        mutationFn: async (notificationId: number) => {
-            const response = await apiWrapper.post(`/Notifications/${notificationId}/read`);
-            if (!response.success) {
-                throw new Error(response.message || "فشل في تحديد الإشعار كمقروء");
-            }
-            return response;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["notifications"] });
-            if (toastIdRef.current) {
-                toast.dismiss(toastIdRef.current);
-            }
-            toastIdRef.current = toast.success("تم تحديد الإشعار كمقروء", { duration: 3000 });
-        },
-        onError: (error: any) => {
-            if (error?.response?.status !== 401 && error?.status !== 401) {
-                if (toastIdRef.current) {
-                    toast.dismiss(toastIdRef.current);
-                }
-                toastIdRef.current = toast.error(error?.message || "فشل في تحديد الإشعار كمقروء", { duration: 3000 });
-            }
-        },
-    });
-
-    const markAllAsReadMutation = useMutation({
-        mutationFn: async () => {
-            const response = await apiWrapper.post("/Notifications/read-all");
-            if (!response.success) {
-                throw new Error(response.message || "فشل في تحديد جميع الإشعارات كمقروءة");
-            }
-            return response;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["notifications"] });
-            if (toastIdRef.current) {
-                toast.dismiss(toastIdRef.current);
-            }
-            toastIdRef.current = toast.success("تم تحديد جميع الإشعارات كمقروءة", { duration: 3000 });
-        },
-        onError: (error: any) => {
-            if (error?.response?.status !== 401 && error?.status !== 401) {
-                if (toastIdRef.current) {
-                    toast.dismiss(toastIdRef.current);
-                }
-                toastIdRef.current = toast.error(error?.message || "فشل في تحديد جميع الإشعارات كمقروءة", { duration: 3000 });
-            }
-        },
-    });
-
-    const deleteNotificationMutation = useMutation({
-        mutationFn: async (notificationId: number) => {
-            const response = await apiWrapper.delete(`/Notifications/${notificationId}`);
-            if (!response.success) {
-                throw new Error(response.message || "فشل في حذف الإشعار");
-            }
-            return response;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["notifications"] });
-            if (toastIdRef.current) {
-                toast.dismiss(toastIdRef.current);
-            }
-            toastIdRef.current = toast.success("تم حذف الإشعار", { duration: 3000 });
-        },
-        onError: (error: any) => {
-            if (error?.response?.status !== 401 && error?.status !== 401) {
-                if (toastIdRef.current) {
-                    toast.dismiss(toastIdRef.current);
-                }
-                toastIdRef.current = toast.error(error?.message || "فشل في حذف الإشعار", { duration: 3000 });
-            }
-        },
-    });
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setOpen(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-            if (toastIdRef.current) {
-                toast.dismiss(toastIdRef.current);
-            }
-        };
-    }, []);
-
-    const notifications = data?.data?.items || [];
-    const unreadCount = data?.data?.unreadCount || 0;
+    // ============================================================
+    // ===== Helpers =====
+    // ============================================================
 
     const getNotificationIcon = (type: NotificationItem["type"]) => {
         switch (type) {
@@ -218,13 +120,9 @@ export default function NotificationsDropdown() {
         }
     };
 
-    const handleReadNotification = async (notificationId: number) => {
-        try {
-            await markAsReadMutation.mutateAsync(notificationId);
-        } catch {
-            // خطأ تم معالجته في الـ mutation
-        }
-    };
+    // ============================================================
+    // ===== Render =====
+    // ============================================================
 
     if (!isLoggedIn) {
         return null;
@@ -235,7 +133,7 @@ export default function NotificationsDropdown() {
             <button
                 onClick={() => {
                     setOpen((prev) => !prev);
-                    if (!open) refetch();
+                    if (!open) refresh();
                 }}
                 className="relative w-8 h-8 rounded-xl bg-white/80 border border-blue-200/50 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center"
             >
@@ -265,6 +163,7 @@ export default function NotificationsDropdown() {
                             left-0 max-sm:left-[-20px] max-sm:-translate-x-1/2
                             max-sm:origin-top"
                     >
+                        {/* ===== Header ===== */}
                         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white">
                             <div className="flex items-center gap-1.5">
                                 <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
@@ -295,15 +194,10 @@ export default function NotificationsDropdown() {
 
                                 {unreadCount > 0 && (
                                     <button
-                                        onClick={() => markAllAsReadMutation.mutate()}
-                                        disabled={markAllAsReadMutation.isPending}
-                                        className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500 text-white text-[9px] font-medium hover:bg-blue-600 transition disabled:opacity-50"
+                                        onClick={() => markAllAsReadHook()}
+                                        className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500 text-white text-[9px] font-medium hover:bg-blue-600 transition"
                                     >
-                                        {markAllAsReadMutation.isPending ? (
-                                            <FontAwesomeIcon icon={faSpinner} spin className="text-[7px]" />
-                                        ) : (
-                                            <FontAwesomeIcon icon={faCheckDouble} className="text-[7px]" />
-                                        )}
+                                        <FontAwesomeIcon icon={faCheckDouble} className="text-[7px]" />
                                         الكل
                                     </button>
                                 )}
@@ -317,7 +211,11 @@ export default function NotificationsDropdown() {
                             </div>
                         </div>
 
-                        <div className="max-h-[350px] overflow-y-auto">
+                        {/* ===== Content ===== */}
+                        <div
+                            ref={scrollContainerRef}
+                            className="max-h-[350px] overflow-y-auto"
+                        >
                             {isLoading && (
                                 <div className="flex flex-col items-center justify-center gap-1.5 py-8 text-blue-600">
                                     <FontAwesomeIcon icon={faSpinner} spin className="text-lg" />
@@ -325,20 +223,7 @@ export default function NotificationsDropdown() {
                                 </div>
                             )}
 
-                            {isError && (
-                                <div className="flex flex-col items-center justify-center gap-1.5 py-8 text-yellow-500">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-lg" />
-                                    <p className="text-[10px]">فشل في تحميل الإشعارات</p>
-                                    <button
-                                        onClick={() => refetch()}
-                                        className="mt-1 px-3 py-0.5 rounded-lg bg-yellow-100 text-yellow-700 text-[9px] hover:bg-yellow-200 transition"
-                                    >
-                                        إعادة المحاولة
-                                    </button>
-                                </div>
-                            )}
-
-                            {!isLoading && !isError && notifications.length === 0 && (
+                            {!isLoading && allNotifications.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-8 text-gray-400">
                                     <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1.5">
                                         <FontAwesomeIcon icon={faInbox} className="text-lg" />
@@ -348,9 +233,9 @@ export default function NotificationsDropdown() {
                                 </div>
                             )}
 
-                            {!isLoading && !isError && notifications.length > 0 && (
+                            {!isLoading && allNotifications.length > 0 && (
                                 <div className="divide-y divide-gray-100">
-                                    {notifications.map((notification, index) => {
+                                    {allNotifications.map((notification, index) => {
                                         const NotificationContent = (
                                             <div
                                                 className={`p-2.5 transition-all duration-150 cursor-pointer ${getNotificationBg(notification.type, notification.isRead)}`}
@@ -395,16 +280,11 @@ export default function NotificationsDropdown() {
                                                                     onClick={(e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
-                                                                        handleReadNotification(notification.id);
+                                                                        markAsReadHook(notification.id);
                                                                     }}
-                                                                    disabled={markAsReadMutation.isPending}
-                                                                    className="px-1.5 py-0.5 rounded-lg bg-blue-50 text-blue-600 text-[8px] font-medium hover:bg-blue-100 transition disabled:opacity-50 flex items-center gap-0.5"
+                                                                    className="px-1.5 py-0.5 rounded-lg bg-blue-50 text-blue-600 text-[8px] font-medium hover:bg-blue-100 transition flex items-center gap-0.5"
                                                                 >
-                                                                    {markAsReadMutation.isPending ? (
-                                                                        <FontAwesomeIcon icon={faSpinner} spin className="text-[6px]" />
-                                                                    ) : (
                                                                     <FontAwesomeIcon icon={faCheck} className="text-[6px]" />
-                                                                    )}
                                                                     مقروء
                                                                 </button>
                                                             )}
@@ -412,10 +292,9 @@ export default function NotificationsDropdown() {
                                                                 onClick={(e) => {
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
-                                                                    deleteNotificationMutation.mutate(notification.id);
+                                                                    deleteNotificationHook(notification.id);
                                                                 }}
-                                                                disabled={deleteNotificationMutation.isPending}
-                                                                className="px-1.5 py-0.5 rounded-lg bg-red-50 text-red-500 text-[8px] font-medium hover:bg-red-100 transition disabled:opacity-50 flex items-center gap-0.5"
+                                                                className="px-1.5 py-0.5 rounded-lg bg-red-50 text-red-500 text-[8px] font-medium hover:bg-red-100 transition flex items-center gap-0.5"
                                                             >
                                                                 <FontAwesomeIcon icon={faTrash} className="text-[6px]" />
                                                                 حذف
@@ -431,14 +310,14 @@ export default function NotificationsDropdown() {
                                                 key={notification.id}
                                                 initial={{ opacity: 0, y: 6 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: index * 0.02 }}
+                                                transition={{ delay: Math.min(index * 0.02, 0.3) }}
                                             >
                                                 {notification.link ? (
                                                     <Link
                                                         href={notification.link}
                                                         onClick={() => {
                                                             if (!notification.isRead) {
-                                                                handleReadNotification(notification.id);
+                                                                markAsReadHook(notification.id);
                                                             }
                                                             setOpen(false);
                                                         }}
@@ -455,16 +334,6 @@ export default function NotificationsDropdown() {
                             )}
                         </div>
 
-                        {notifications.length > 0 && (
-                            <div className="border-t border-gray-100 p-1.5 text-center">
-                                <button
-                                    onClick={() => setOpen(false)}
-                                    className="text-[9px] text-blue-500 hover:text-blue-700 font-medium transition"
-                                >
-                                    عرض جميع الإشعارات
-                                </button>
-                            </div>
-                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

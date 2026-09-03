@@ -1,8 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/preserve-manual-memoization */
 // app/(dashboard)/delegations/page.tsx
+
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useMemo, useState, useRef, useLayoutEffect } from "react";
+import { useEffect, useMemo, useState, useRef, useLayoutEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -21,12 +24,17 @@ import {
     faPlusCircle,
     faRefresh,
     faEdit,
+    faHistory,
+    faChevronLeft,
+    faChevronRight,
+    faList,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useDelegation } from "@/hooks/useDelegation";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import useUserInfoStore from "@/store/userInfoStore";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { Pagination } from "@/components/ui/Pagination";
 import { cn } from "@/lib/utils";
 
 // ==============================
@@ -36,6 +44,29 @@ import { cn } from "@/lib/utils";
 function formatDate(date: string | null): string {
     if (!date) return "—";
     return new Date(date).toLocaleDateString("ar-SA");
+}
+
+function formatDateTime(date: string): string {
+    return new Date(date).toLocaleString("ar-SA", {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
+function getActionBadge(action: string): { color: string; label: string } {
+    const actions: Record<string, { color: string; label: string }> = {
+        'Create': { color: 'bg-emerald-100 text-emerald-700', label: 'إنشاء' },
+        'Update': { color: 'bg-blue-100 text-blue-700', label: 'تحديث' },
+        'Delete': { color: 'bg-red-100 text-red-700', label: 'حذف' },
+        'View': { color: 'bg-purple-100 text-purple-700', label: 'عرض' },
+        'Execute': { color: 'bg-orange-100 text-orange-700', label: 'تنفيذ' },
+        'Approve': { color: 'bg-green-100 text-green-700', label: 'موافقة' },
+        'Reject': { color: 'bg-red-100 text-red-700', label: 'رفض' },
+    };
+    return actions[action] || { color: 'bg-gray-100 text-gray-700', label: action };
 }
 
 // ==============================
@@ -53,7 +84,6 @@ export default function DelegationsPage() {
 
     const {
         allDelegations,
-        myDelegations,
         statistics,
         isLoading,
         canManageDelegations,
@@ -61,6 +91,7 @@ export default function DelegationsPage() {
         isDean,
         employees,
         deans,
+        headOfDepartments,
         allUsers,
         revokeDelegation,
         loadAllData,
@@ -71,15 +102,27 @@ export default function DelegationsPage() {
         updateDelegation,
         availablePermissions,
         loadAvailablePermissions,
+        useDelegationUsage,
+        isCreating,
+        isUpdating,
+        isRevoking,
     } = useDelegation();
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
+
     const [search, setSearch] = useState("");
-    const [activeTab, setActiveTab] = useState<'my' | 'all'>('all');
     const [showDetails, setShowDetails] = useState(false);
     const [selectedDelegation, setSelectedDelegation] = useState<any | null>(null);
     const [showCreate, setShowCreate] = useState(false);
     const [showEdit, setShowEdit] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
+    // ✅ States لعرض الاستخدامات
+    const [showUsage, setShowUsage] = useState(false);
+    const [usageDelegation, setUsageDelegation] = useState<any | null>(null);
+    const [usagePage, setUsagePage] = useState(1);
+    const [usagePageSize, setUsagePageSize] = useState(10);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const savedScrollTop = useRef<number>(0);
@@ -107,19 +150,19 @@ export default function DelegationsPage() {
     const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
 
     // ==============================
-    // SET ACTIVE TAB BASED ON ROLE
+    // USAGE QUERY
     // ==============================
-    const defaultTab = useMemo(() => {
-        if (isAdmin || isDean) {
-            return 'all';
-        }
-        return 'my';
-    }, [isAdmin, isDean]);
 
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setActiveTab(defaultTab);
-    }, [defaultTab]);
+    const usageQuery = useDelegationUsage(
+        usageDelegation?.id || null,
+        usagePage,
+        usagePageSize
+    );
+
+    const usageData = usageQuery.data;
+    const usageItems = usageData?.items || [];
+    const usageTotalCount = usageData?.totalCount || 0;
+    const usageTotalPages = usageData?.totalPages || 0;
 
     // ==============================
     // STATISTICS
@@ -149,7 +192,7 @@ export default function DelegationsPage() {
     // FILTER
     // ==============================
     const filteredDelegations = useMemo(() => {
-        const sourceDelegations = activeTab === 'my' ? myDelegations : allDelegations;
+        const sourceDelegations = allDelegations;
         
         if (!sourceDelegations || sourceDelegations.length === 0) {
             return [];
@@ -163,14 +206,26 @@ export default function DelegationsPage() {
 
             return matchesSearch;
         });
-    }, [activeTab, myDelegations, allDelegations, search]);
+    }, [allDelegations, search]);
+
+    const paginatedDelegations = useMemo(() => {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        return filteredDelegations.slice(startIndex, endIndex);
+    }, [filteredDelegations, currentPage, pageSize]);
+
+    const totalPages = Math.ceil(filteredDelegations.length / pageSize);
+
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        setCurrentPage(1);
+    };
 
     // ==============================
     // HANDLERS
     // ==============================
 
     const handleRevokeClick = (id: number, delegateUserId: number) => {
-      
         if (delegateUserId === currentUserId) {
             toast.error("لا يمكنك إلغاء تفويضك الخاص");
             return;
@@ -189,8 +244,7 @@ export default function DelegationsPage() {
     const confirmRevoke = async (id: number) => {
         try {
             await revokeDelegation(id);
-            toast.success("تم إلغاء التفويض بنجاح");
-            await loadAllData();
+            // ✅ البيانات ستتحدث تلقائياً عن طريق React Query
         } catch (error: any) {
             toast.error(error?.message || "فشل إلغاء التفويض");
         }
@@ -247,10 +301,9 @@ export default function DelegationsPage() {
                 notes: notes || undefined,
                 permissionIds: selectedPermissionIds,
             });
-            toast.success("تم تحديث التفويض بنجاح");
+            // ✅ البيانات ستتحدث تلقائياً عن طريق React Query
             setShowEdit(false);
             resetForm();
-            await loadAllData();
         } catch (error: any) {
             toast.error(error?.message || "فشل تحديث التفويض");
         } finally {
@@ -277,6 +330,7 @@ export default function DelegationsPage() {
                 notes: notes || undefined,
                 permissionIds: selectedPermissionIds,
             });
+            // ✅ البيانات ستتحدث تلقائياً عن طريق React Query
             setShowCreate(false);
             resetForm();
         } catch (error: any) {
@@ -287,7 +341,6 @@ export default function DelegationsPage() {
     };
 
     const togglePermission = (id: number) => {
-        // حفظ موضع التمرير الحالي قبل التغيير
         if (scrollContainerRef.current) {
             savedScrollTop.current = scrollContainerRef.current.scrollTop;
         }
@@ -315,19 +368,39 @@ export default function DelegationsPage() {
     };
 
     // ==============================
-    // EFFECTS
+    // HANDLERS FOR USAGE
     // ==============================
 
-    useEffect(() => {
-        loadAllData();
-    }, []);
+    const handleShowUsage = (delegation: any) => {
+        setUsageDelegation(delegation);
+        setUsagePage(1);
+        setShowUsage(true);
+    };
 
+    const handleUsagePageChange = (page: number) => {
+        setUsagePage(page);
+    };
+
+    const handleUsagePageSizeChange = (size: number) => {
+        setUsagePageSize(size);
+        setUsagePage(1);
+    };
+
+    // ==============================
+    // EFFECTS - تم التعديل ✅
+    // ==============================
+
+    // ❌ تم إزالة useEffect الذي كان يستدعي loadAllData()
+    // ✅ الآن البيانات تتحمّل تلقائياً عن طريق React Query
+    
+    // ✅ فقط نقوم بتحميل الصلاحيات عند فتح المودال
     useEffect(() => {
         if (showCreate || showEdit) {
             loadAvailablePermissions();
         }
     }, [showCreate, showEdit]);
 
+    // ✅ الحفاظ على موضع التمرير
     useLayoutEffect(() => {
         if (!showCreate && !showEdit) return;
         
@@ -337,44 +410,50 @@ export default function DelegationsPage() {
         container.scrollTop = savedScrollTop.current;
     }, [selectedPermissionIds, showCreate, showEdit]);
 
+    // ==============================
+    // FILTER PERMISSIONS
+    // ==============================
+
     const filteredPermissions = useMemo(() => {
         if (!delegateUserId) {
             return availablePermissions;
         }
-        if (showEdit && selectedDelegation) {
-            const targetUser = allUsers.find(u => u.id === Number(delegateUserId));
-            
-            if (targetUser) {
-                if (targetUser.roles?.includes('Dean')) {
-                    if (isDean) return [];
-                    return availablePermissions;
-                }
-                
-                if (targetUser.roles?.includes('Employee') || targetUser.roles?.includes('User')) {
-                    return availablePermissions.filter(p => p.isDelegatable === true);
-                }
-            }
-            
-            return availablePermissions.filter(p => p.isDelegatable === true);
+
+        const targetUser = allUsers.find(u => u.id === Number(delegateUserId));
+        
+        if (!targetUser) {
+            return availablePermissions;
         }
 
-        const selectedUser = allUsers.find(u => u.id === Number(delegateUserId));
-        
-        if (selectedUser?.roles?.includes('Dean')) {
-            if (isDean) {
+        const userRoles = targetUser.roles || [];
+
+        if (isAdmin) {
+            return availablePermissions;
+        }
+
+        if (isDean) {
+            if (userRoles.includes('Dean')) {
                 return [];
             }
             return availablePermissions;
         }
 
-        if (selectedUser?.roles?.includes('Employee') || selectedUser?.roles?.includes('User')) {
+        const isEligible = userRoles.includes('Employee') || 
+                           userRoles.includes('User') ||
+                           userRoles.includes('HeadOfDepartment');
+        
+        if (isEligible) {
             return availablePermissions.filter(p => p.isDelegatable === true);
         }
 
         return availablePermissions;
-    }, [availablePermissions, delegateUserId, allUsers]);
+    }, [availablePermissions, delegateUserId, allUsers, isAdmin, isDean]);
 
     const sortedPermissions = useMemo(() => {
+        if (!filteredPermissions || filteredPermissions.length === 0) {
+            return [];
+        }
+        
         return [...filteredPermissions].sort((a, b) => {
             const aSelected = selectedPermissionIds.includes(a.id);
             const bSelected = selectedPermissionIds.includes(b.id);
@@ -382,7 +461,6 @@ export default function DelegationsPage() {
             if (!aSelected && bSelected) return 1;
             return a.displayName.localeCompare(b.displayName);
         });
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     }, [filteredPermissions, selectedPermissionIds]);
 
     // ==============================
@@ -405,7 +483,7 @@ export default function DelegationsPage() {
         );
     }
 
-    const delegations = filteredDelegations;
+    const delegations = paginatedDelegations;
 
     return (
         <div dir="rtl" className="min-h-screen bg-slate-50 p-3 sm:p-4">
@@ -431,7 +509,7 @@ export default function DelegationsPage() {
                                     message: "هل أنت متأكد من إضافة التفويضات الافتراضية لجميع المستخدمين؟",
                                     onConfirm: async () => {
                                         await addDefaultDelegations();
-                                        await loadAllData();
+                                        // ✅ البيانات ستتحدث تلقائياً
                                         setConfirmModal(prev => ({ ...prev, isOpen: false }));
                                     },
                                     variant: "success",
@@ -446,32 +524,31 @@ export default function DelegationsPage() {
                         </button>
                     </PermissionGate>
 
-                    {/* ✅ زر إعادة تعيين - يظهر فقط للمدير (Admin) */}
-{isAdmin && (
-    <PermissionGate permissions={['CreateDelegation']}>
-        <button
-            onClick={() => {
-                setConfirmModal({
-                    isOpen: true,
-                    title: "إعادة تعيين التفويضات الافتراضية",
-                    message: "هل أنت متأكد من إعادة تعيين التفويضات الافتراضية لجميع المستخدمين؟",
-                    onConfirm: async () => {
-                        await resetDefaultDelegations();
-                        await loadAllData();
-                        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                    },
-                    variant: "warning",
-                    icon: faRefresh,
-                });
-            }}
-            disabled={isLoading}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-50 flex items-center gap-1.5"
-        >
-            <FontAwesomeIcon icon={faRefresh} />
-            إعادة تعيين
-        </button>
-    </PermissionGate>
-)}
+                    {isAdmin && (
+                        <PermissionGate permissions={['CreateDelegation']}>
+                            <button
+                                onClick={() => {
+                                    setConfirmModal({
+                                        isOpen: true,
+                                        title: "إعادة تعيين التفويضات الافتراضية",
+                                        message: "هل أنت متأكد من إعادة تعيين التفويضات الافتراضية لجميع المستخدمين؟",
+                                        onConfirm: async () => {
+                                            await resetDefaultDelegations();
+                                            // ✅ البيانات ستتحدث تلقائياً
+                                            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                                        },
+                                        variant: "warning",
+                                        icon: faRefresh,
+                                    });
+                                }}
+                                disabled={isLoading}
+                                className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                                <FontAwesomeIcon icon={faRefresh} />
+                                إعادة تعيين
+                            </button>
+                        </PermissionGate>
+                    )}
 
                     <PermissionGate permissions={['RevokeDelegation']}>
                         <button
@@ -482,7 +559,7 @@ export default function DelegationsPage() {
                                     message: "هل أنت متأكد من إلغاء جميع التفويضات المنتهية؟",
                                     onConfirm: async () => {
                                         await revokeExpiredDelegations();
-                                        await loadAllData();
+                                        // ✅ البيانات ستتحدث تلقائياً
                                         setConfirmModal(prev => ({ ...prev, isOpen: false }));
                                     },
                                     variant: "danger",
@@ -563,23 +640,10 @@ export default function DelegationsPage() {
                         />
                         <input
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => handleSearchChange(e.target.value)}
                             placeholder="البحث عن المفوض إليه أو العميد..."
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 sm:py-2 pr-8 sm:pr-10 pl-3 text-xs sm:text-sm outline-none focus:border-blue-400"
                         />
-                    </div>
-
-                    <div className="flex gap-1.5 flex-wrap">
-                        <select
-                            value={activeTab}
-                            onChange={(e) => setActiveTab(e.target.value as 'my' | 'all')}
-                            className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs outline-none focus:border-blue-400"
-                        >
-                            <option value="my">تفويضاتي</option>
-                            {canManageDelegations && (
-                                <option value="all">جميع التفويضات</option>
-                            )}
-                        </select>
                     </div>
                 </div>
             </div>
@@ -590,130 +654,159 @@ export default function DelegationsPage() {
                     <div className="h-32 sm:h-40 flex flex-col items-center justify-center text-slate-400 gap-1.5 sm:gap-2">
                         <FontAwesomeIcon icon={faUsers} className="text-2xl sm:text-3xl" />
                         <p className="text-xs sm:text-sm">
-                            {activeTab === 'my' ? 'لا توجد تفويضات لك' : 'لا توجد تفويضات'}
+                            لا توجد تفويضات
                         </p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-right text-xs sm:text-sm">
-                            <thead>
-                                <tr className="bg-blue-50 text-slate-700">
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">المفوض إليه</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden sm:table-cell">العميد</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الصلاحيات</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden md:table-cell">الفترة</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الحالة</th>
-                                    <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {delegations.map((item) => (
-                                    <tr
-                                        key={item.id}
-                                        className="border-t border-slate-100 hover:bg-slate-50 transition"
-                                    >
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px] sm:text-xs">
-                                                    {item.delegateUserName?.charAt(0) || "?"}
-                                                </div>
-                                                <span className="font-semibold text-slate-800 text-xs sm:text-sm truncate max-w-[80px] sm:max-w-[120px]" title={item.delegateUserName}>
-                                                    {item.delegateUserName}
-                                                </span>
-                                            </div>
-                                        </td>
-
-                                        <td className="p-2 sm:p-3 text-slate-600 text-[10px] sm:text-xs hidden sm:table-cell truncate max-w-[100px]" title={item.delegatorName}>
-                                            {item.delegatorName || "—"}
-                                        </td>
-
-                                        <td className="p-2 sm:p-3">
-                                            <div className="flex flex-wrap gap-1">
-                                                {item.permissions?.slice(0, 2).map((p: any) => (
-                                                    <span key={p.id} className="text-[8px] sm:text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">
-                                                        {p.displayName}
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-right text-xs sm:text-sm">
+                                <thead>
+                                    <tr className="bg-blue-50 text-slate-700">
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">المفوض إليه</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden sm:table-cell">المفوض</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الصلاحيات</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap hidden md:table-cell">الفترة</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الحالة</th>
+                                        <th className="p-2 sm:p-3 font-semibold whitespace-nowrap">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {delegations.map((item) => (
+                                        <tr
+                                            key={item.id}
+                                            className="border-t border-slate-100 hover:bg-slate-50 transition"
+                                        >
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px] sm:text-xs">
+                                                        {item.delegateUserName?.charAt(0) || "?"}
+                                                    </div>
+                                                    <span className="font-semibold text-slate-800 text-xs sm:text-sm truncate max-w-[80px] sm:max-w-[120px]" title={item.delegateUserName}>
+                                                        {item.delegateUserName}
                                                     </span>
-                                                ))}
-                                                {item.permissions?.length > 2 && (
-                                                    <span className="text-[8px] sm:text-[10px] text-slate-400">
-                                                        +{item.permissions.length - 2}
+                                                </div>
+                                            </td>
+
+                                            <td className="p-2 sm:p-3 text-slate-600 text-[10px] sm:text-xs hidden sm:table-cell truncate max-w-[100px]" title={item.delegatorName}>
+                                                {item.delegatorName || "—"}
+                                            </td>
+
+                                            <td className="p-2 sm:p-3">
+                                                <div className="flex flex-wrap gap-1">
+                                                    {item.permissions?.slice(0, 2).map((p: any) => (
+                                                        <span key={p.id} className="text-[8px] sm:text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">
+                                                            {p.displayName}
+                                                        </span>
+                                                    ))}
+                                                    {item.permissions?.length > 2 && (
+                                                        <span className="text-[8px] sm:text-[10px] text-slate-400">
+                                                            +{item.permissions.length - 2}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            <td className="p-2 sm:p-3 text-[10px] sm:text-xs text-slate-500 hidden md:table-cell whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>من: {formatDate(item.startDate)}</span>
+                                                    <span>إلى: {formatDate(item.endDate)}</span>
+                                                </div>
+                                            </td>
+
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                {item.isActive ? (
+                                                    <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] whitespace-nowrap">
+                                                        <FontAwesomeIcon icon={faCheckCircle} className="text-[6px] sm:text-[7px]" />
+                                                        نشط
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] whitespace-nowrap">
+                                                        <FontAwesomeIcon icon={faBan} className="text-[6px] sm:text-[7px]" />
+                                                        منتهي
                                                     </span>
                                                 )}
-                                            </div>
-                                        </td>
+                                            </td>
 
-                                        <td className="p-2 sm:p-3 text-[10px] sm:text-xs text-slate-500 hidden md:table-cell whitespace-nowrap">
-                                            <div className="flex flex-col">
-                                                <span>من: {formatDate(item.startDate)}</span>
-                                                <span>إلى: {formatDate(item.endDate)}</span>
-                                            </div>
-                                        </td>
-
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            {item.isActive ? (
-                                                <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] whitespace-nowrap">
-                                                    <FontAwesomeIcon icon={faCheckCircle} className="text-[6px] sm:text-[7px]" />
-                                                    نشط
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] whitespace-nowrap">
-                                                    <FontAwesomeIcon icon={faBan} className="text-[6px] sm:text-[7px]" />
-                                                    منتهي
-                                                </span>
-                                            )}
-                                        </td>
-
-                                        <td className="p-2 sm:p-3 whitespace-nowrap">
-                                            <div className="flex gap-1.5">
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedDelegation(item);
-                                                        setShowDetails(true);
-                                                    }}
-                                                    className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition flex items-center justify-center"
-                                                    title="تفاصيل"
-                                                >
-                                                    <FontAwesomeIcon icon={faEye} className="text-sm" />
-                                                </button>
-
-                                                <PermissionGate permissions={['UpdateDelegation']}>
+                                            <td className="p-2 sm:p-3 whitespace-nowrap">
+                                                <div className="flex gap-1.5">
+                                                    {/* ✅ زر عرض الاستخدامات */}
                                                     <button
-                                                        onClick={() => handleEditClick(item)}
-                                                        disabled={!item.isActive || item.delegateUserId === currentUserId || (isDean && allUsers.find(u => u.id === item.delegateUserId)?.roles?.includes('Dean'))}
-                                                        className={cn(
-                                                            "w-8 h-8 rounded-xl transition flex items-center justify-center",
-                                                            !item.isActive || item.delegateUserId === currentUserId
-                                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                                                : "bg-blue-100 text-blue-600 hover:bg-blue-200"
-                                                        )}
-                                                        title={item.delegateUserId === currentUserId ? "لا يمكن تعديل تفويضك الخاص" : "تعديل"}
+                                                        onClick={() => handleShowUsage(item)}
+                                                        className="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 hover:bg-purple-200 transition flex items-center justify-center"
+                                                        title="سجل الاستخدامات"
                                                     >
-                                                        <FontAwesomeIcon icon={faEdit} className="text-sm" />
+                                                        <FontAwesomeIcon icon={faHistory} className="text-sm" />
                                                     </button>
-                                                </PermissionGate>
 
-                                                <PermissionGate permissions={['RevokeDelegation']}>
                                                     <button
-                                                        onClick={() => handleRevokeClick(item.id, item.delegateUserId)}
-                                                        disabled={!item.isActive || item.delegateUserId === currentUserId}
-                                                        className={cn(
-                                                            "w-8 h-8 rounded-xl transition flex items-center justify-center",
-                                                            !item.isActive || item.delegateUserId === currentUserId
-                                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                                                : "bg-red-100 text-red-600 hover:bg-red-200"
-                                                        )}
-                                                        title={item.delegateUserId === currentUserId ? "لا يمكن إلغاء تفويضك الخاص" : "إلغاء"}
+                                                        onClick={() => {
+                                                            setSelectedDelegation(item);
+                                                            setShowDetails(true);
+                                                        }}
+                                                        className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 transition flex items-center justify-center"
+                                                        title="تفاصيل"
                                                     >
-                                                        <FontAwesomeIcon icon={faTrash} className="text-sm" />
+                                                        <FontAwesomeIcon icon={faEye} className="text-sm" />
                                                     </button>
-                                                </PermissionGate>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+
+                                                    <PermissionGate permissions={['UpdateDelegation']}>
+                                                        <button
+                                                            onClick={() => handleEditClick(item)}
+                                                            disabled={!item.isActive || item.delegateUserId === currentUserId || (isDean && allUsers.find(u => u.id === item.delegateUserId)?.roles?.includes('Dean'))}
+                                                            className={cn(
+                                                                "w-8 h-8 rounded-xl transition flex items-center justify-center",
+                                                                !item.isActive || item.delegateUserId === currentUserId
+                                                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                                    : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                                                            )}
+                                                            title={item.delegateUserId === currentUserId ? "لا يمكن تعديل تفويضك الخاص" : "تعديل"}
+                                                        >
+                                                            <FontAwesomeIcon icon={faEdit} className="text-sm" />
+                                                        </button>
+                                                    </PermissionGate>
+
+                                                    <PermissionGate permissions={['RevokeDelegation']}>
+                                                        <button
+                                                            onClick={() => handleRevokeClick(item.id, item.delegateUserId)}
+                                                            disabled={!item.isActive || item.delegateUserId === currentUserId}
+                                                            className={cn(
+                                                                "w-8 h-8 rounded-xl transition flex items-center justify-center",
+                                                                !item.isActive || item.delegateUserId === currentUserId
+                                                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                                    : "bg-red-100 text-red-600 hover:bg-red-200"
+                                                            )}
+                                                            title={item.delegateUserId === currentUserId ? "لا يمكن إلغاء تفويضك الخاص" : "إلغاء"}
+                                                        >
+                                                            <FontAwesomeIcon icon={faTrash} className="text-sm" />
+                                                        </button>
+                                                    </PermissionGate>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* ===== PAGINATION ===== */}
+                        {filteredDelegations.length > pageSize && (
+                            <div className="border-t border-slate-100 p-3">
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                    pageSize={pageSize}
+                                    totalCount={filteredDelegations.length}
+                                    showPageSize={true}
+                                    onPageSizeChange={(size) => {
+                                        setPageSize(size);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
@@ -797,6 +890,138 @@ export default function DelegationsPage() {
                 icon={confirmModal.icon}
             />
 
+            {/* ================================================================ */}
+            {/* ✅ MODAL: عرض سجل الاستخدامات */}
+            {/* ================================================================ */}
+            {showUsage && usageDelegation && (
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-3xl p-4 sm:p-6 shadow-xl max-h-[90vh] flex flex-col">
+                        {/* Header */}
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <h2 className="text-base sm:text-lg font-bold text-slate-800">
+                                    سجل الاستخدامات
+                                </h2>
+                                <p className="text-xs text-slate-500">
+                                    التفويض: {usageDelegation.delegateUserName} - {usageDelegation.delegatorName}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => { setShowUsage(false); setUsageDelegation(null); }}
+                                className="text-slate-400 hover:text-red-500"
+                            >
+                                <FontAwesomeIcon icon={faXmark} className="text-lg" />
+                            </button>
+                        </div>
+
+                        {/* Loading */}
+                        {usageQuery.isLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <FontAwesomeIcon icon={faSpinner} spin className="text-2xl text-blue-500" />
+                            </div>
+                        ) : usageItems.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+                                <FontAwesomeIcon icon={faList} className="text-3xl mb-2" />
+                                <p className="text-sm">لا توجد استخدامات لهذا التفويض</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Table */}
+                                <div className="overflow-y-auto flex-1">
+                                    <table className="w-full text-right text-xs sm:text-sm">
+                                        <thead className="sticky top-0 bg-blue-50">
+                                            <tr className="text-slate-700">
+                                                <th className="p-2 font-semibold whitespace-nowrap">المستخدم</th>
+                                                <th className="p-2 font-semibold whitespace-nowrap">الصلاحية</th>
+                                                <th className="p-2 font-semibold whitespace-nowrap">الإجراء</th>
+                                                <th className="p-2 font-semibold whitespace-nowrap hidden sm:table-cell">الوقت</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {usageItems.map((usage: any) => {
+                                                const badge = getActionBadge(usage.action);
+                                                return (
+                                                    <tr key={usage.id} className="border-t border-slate-100 hover:bg-slate-50">
+                                                        <td className="p-2 whitespace-nowrap font-medium text-slate-700">
+                                                            {usage.userName}
+                                                        </td>
+                                                        <td className="p-2 whitespace-nowrap">
+                                                            <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                                                                {usage.permissionName}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-2 whitespace-nowrap">
+                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${badge.color}`}>
+                                                                {badge.label}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-2 whitespace-nowrap text-slate-500 text-[10px] hidden sm:table-cell">
+                                                            {formatDateTime(usage.usedAt)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Pagination for Usage */}
+                                {usageTotalCount > usagePageSize && (
+                                    <div className="border-t border-slate-100 pt-3 mt-3">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="text-[10px] text-slate-500">
+                                                إجمالي: {usageTotalCount} استخدام
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleUsagePageChange(usagePage - 1)}
+                                                    disabled={!usageData?.hasPreviousPage}
+                                                    className={cn(
+                                                        "px-2 py-1 rounded text-xs transition",
+                                                        usageData?.hasPreviousPage
+                                                            ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                                            : "bg-slate-50 text-slate-300 cursor-not-allowed"
+                                                    )}
+                                                >
+                                                    <FontAwesomeIcon icon={faChevronRight} />
+                                                </button>
+                                                <span className="text-xs text-slate-600">
+                                                    صفحة {usagePage} من {usageTotalPages || 1}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleUsagePageChange(usagePage + 1)}
+                                                    disabled={!usageData?.hasNextPage}
+                                                    className={cn(
+                                                        "px-2 py-1 rounded text-xs transition",
+                                                        usageData?.hasNextPage
+                                                            ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                                            : "bg-slate-50 text-slate-300 cursor-not-allowed"
+                                                    )}
+                                                >
+                                                    <FontAwesomeIcon icon={faChevronLeft} />
+                                                </button>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <select
+                                                    value={usagePageSize}
+                                                    onChange={(e) => handleUsagePageSizeChange(Number(e.target.value))}
+                                                    className="text-xs border border-slate-200 rounded px-2 py-1 outline-none"
+                                                >
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={20}>20</option>
+                                                    <option value={50}>50</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* ===== CREATE MODAL ===== */}
             {showCreate && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -824,6 +1049,7 @@ export default function DelegationsPage() {
                                 >
                                     <option value="">اختر المستخدم...</option>
                                     
+                                    {/* العمداء */}
                                     {isAdmin && deans.length > 0 && (
                                         <optgroup label="العمداء">
                                             {deans.map((user) => (
@@ -834,6 +1060,18 @@ export default function DelegationsPage() {
                                         </optgroup>
                                     )}
                                     
+                                    {/* رؤساء الأقسام */}
+                                    {headOfDepartments.length > 0 && (
+                                        <optgroup label="رؤساء الأقسام">
+                                            {headOfDepartments.map((user) => (
+                                                <option value={user.id} key={user.id}>
+                                                    {user.fullName} ({user.email}) - رئيس قسم
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                    
+                                    {/* الموظفين */}
                                     {employees.length > 0 && (
                                         <optgroup label="الموظفين">
                                             {employees.map((user) => (
@@ -846,8 +1084,8 @@ export default function DelegationsPage() {
                                 </select>
                                 <p className="text-[10px] text-slate-400 mt-0.5">
                                     عرض {allUsers.length} من المستخدمين النشطين
-                                    {isAdmin && ' (العمداء + الموظفين)'}
-                                    {isDean && ' (الموظفين فقط)'}
+                                    {isAdmin && ' (العمداء + رؤساء الأقسام + الموظفين)'}
+                                    {isDean && ' (رؤساء الأقسام + الموظفين)'}
                                 </p>
                             </div>
 
@@ -935,11 +1173,11 @@ export default function DelegationsPage() {
                                 إلغاء
                             </button>
                             <button
-                                disabled={submitting || !delegateUserId || selectedPermissionIds.length === 0}
+                                disabled={submitting || isCreating || !delegateUserId || selectedPermissionIds.length === 0}
                                 onClick={handleCreateDelegation}
                                 className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-slate-900 py-2 rounded-xl font-semibold transition disabled:opacity-50 text-sm flex items-center justify-center gap-2"
                             >
-                                {submitting ? (
+                                {submitting || isCreating ? (
                                     <>
                                         <FontAwesomeIcon icon={faSpinner} spin />
                                         جاري الإنشاء...
@@ -981,7 +1219,7 @@ export default function DelegationsPage() {
                                 <label className="text-xs font-medium text-slate-600">الصلاحيات *</label>
                                 <div 
                                     ref={scrollContainerRef}
-                                    className="mt-1 grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto  border border-slate-200 rounded-xl p-2"
+                                    className="mt-1 grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-2"
                                 >
                                     {sortedPermissions.length === 0 ? (
                                         <p className="text-xs text-slate-400 col-span-2 text-center py-2">
@@ -1060,11 +1298,11 @@ export default function DelegationsPage() {
                                 إلغاء
                             </button>
                             <button
-                                disabled={submitting}
+                                disabled={submitting || isUpdating}
                                 onClick={handleUpdateDelegation}
                                 className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-slate-900 py-2 rounded-xl font-semibold transition disabled:opacity-50 text-sm flex items-center justify-center gap-2"
                             >
-                                {submitting ? (
+                                {submitting || isUpdating ? (
                                     <>
                                         <FontAwesomeIcon icon={faSpinner} spin />
                                         جاري الحفظ...

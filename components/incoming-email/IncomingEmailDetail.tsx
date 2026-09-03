@@ -263,7 +263,6 @@ export function IncomingEmailDetail({
             setPreviewUrl(url);
         } catch (error: any) {
             if (error.name !== "AbortError") {
-                console.error("View error:", error);
             }
             closePreview();
         } finally {
@@ -299,7 +298,6 @@ export function IncomingEmailDetail({
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(urlBlob), 1000);
         } catch (error: any) {
-            console.error("Download error:", error);
         } finally {
             setDownloading(null);
         }

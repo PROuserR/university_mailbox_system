@@ -1,139 +1,176 @@
+// components/ui/Pagination.tsx
+
 "use client";
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChevronLeft,
-  faChevronRight,
-  faAnglesLeft,
-  faAnglesRight,
-} from "@fortawesome/free-solid-svg-icons";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  totalItems?: number;
-
-  // ✅ DEFAULT NOW IS 10
-  itemsPerPage?: number;
-
-  onPageChange: (page: number) => void;
-  showInfo?: boolean;
-  visiblePages?: number;
-  className?: string;
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    pageSize?: number;
+    totalCount?: number;
+    className?: string;
+    showPageSize?: boolean;
+    pageSizeOptions?: number[];
+    onPageSizeChange?: (size: number) => void;
 }
 
-export default function Pagination({
-  currentPage,
-  totalPages,
-  totalItems = 0,
-  itemsPerPage = 10, // 🔥 DEFAULT FIX HERE
-  onPageChange,
-  showInfo = true,
-  visiblePages = 5,
-  className = "",
+export function Pagination({
+    currentPage,
+    totalPages,
+    onPageChange,
+    pageSize = 5,
+    totalCount = 0,
+    className,
+    showPageSize = false,
+    pageSizeOptions = [5, 10, 20, 30, 50],
+    onPageSizeChange,
 }: PaginationProps) {
-  if (totalPages <= 0) return null;
+    if (totalPages <= 1 && !showPageSize) return null;
 
-  const getVisiblePages = (): number[] => {
-    let pages: number[] = [];
+    const getVisiblePages = (): (number | string)[] => {
+        const delta = 1;
+        const range: number[] = [];
+        const rangeWithDots: (number | string)[] = [];
 
-    if (totalPages <= visiblePages) {
-      pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-    } else if (currentPage <= 3) {
-      pages = Array.from({ length: visiblePages }, (_, i) => i + 1);
-    } else if (currentPage >= totalPages - 2) {
-      pages = Array.from(
-        { length: visiblePages },
-        (_, i) => totalPages - visiblePages + i + 1
-      );
-    } else {
-      const offset = Math.floor(visiblePages / 2);
-      pages = Array.from(
-        { length: visiblePages },
-        (_, i) => currentPage - offset + i
-      );
-    }
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+                range.push(i);
+            }
+        }
 
-    return pages;
-  };
+        let l: number | undefined;
+        range.forEach((i) => {
+            if (l !== undefined) {
+                if (i - l === 2) {
+                    rangeWithDots.push(l + 1);
+                } else if (i - l !== 1) {
+                    rangeWithDots.push('...');
+                }
+            }
+            rangeWithDots.push(i);
+            l = i;
+        });
 
-  // ✅ SAFE CALCULATION (no divide by 0 bugs)
-  const startItem = totalItems
-    ? (currentPage - 1) * itemsPerPage + 1
-    : 0;
+        return rangeWithDots;
+    };
 
-  const endItem = totalItems
-    ? Math.min(currentPage * itemsPerPage, totalItems)
-    : 0;
+    const pages = getVisiblePages();
 
-  return (
-    <div
-      className={`p-2 md:p-3 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-2 ${className}`}
-    >
-      {/* INFO */}
-      {showInfo && (
-        <div className="text-xs md:text-sm text-gray-500 order-2 sm:order-1">
-          {totalItems
-            ? `عرض ${startItem} - ${endItem} من ${totalItems}`
-            : `صفحة ${currentPage} من ${totalPages}`}
+    const start = totalCount > 0 ? Math.min((currentPage - 1) * pageSize + 1, totalCount) : 0;
+    const end = totalCount > 0 ? Math.min(currentPage * pageSize, totalCount) : 0;
+
+    return (
+        <div className={cn("flex flex-col sm:flex-row items-center justify-between gap-3 py-3", className)}>
+            {/* معلومات العدد */}
+            {totalCount > 0 && (
+                <div className="text-sm text-muted-foreground order-2 sm:order-1">
+                    عرض <span className="font-medium text-foreground">{start}</span> -{' '}
+                    <span className="font-medium text-foreground">{end}</span> من{' '}
+                    <span className="font-medium text-foreground">{totalCount}</span>
+                </div>
+            )}
+
+            {/* أزرار التنقل */}
+            <div className="flex items-center gap-1 order-1 sm:order-2">
+                {/* زر الصفحة الأولى */}
+                <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={() => onPageChange(1)}
+                    disabled={currentPage === 1}
+                    className="h-8 w-8 rounded-lg border-slate-200 hover:border-slate-300 disabled:opacity-40"
+                >
+                    <ChevronsRight className="h-4 w-4" />
+                </Button>
+
+                {/* زر الصفحة السابقة */}
+                <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="h-8 w-8 rounded-lg border-slate-200 hover:border-slate-300 disabled:opacity-40"
+                >
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+
+                {/* أرقام الصفحات */}
+                <div className="flex items-center gap-0.5 mx-1">
+                    {pages.map((page, index) => {
+                        if (page === '...') {
+                            return (
+                                <span key={`dots-${index}`} className="px-1.5 text-sm text-muted-foreground">
+                                    …
+                                </span>
+                            );
+                        }
+                        const isActive = currentPage === page;
+                        return (
+                            <Button
+                                key={page}
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => onPageChange(page as number)}
+                                className={cn(
+                                    "h-8 w-8 rounded-lg text-sm font-medium transition-all",
+                                    isActive
+                                        ? "bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
+                                        : "hover:bg-slate-100 text-slate-600"
+                                )}
+                            >
+                                {page}
+                            </Button>
+                        );
+                    })}
+                </div>
+
+                {/* زر الصفحة التالية */}
+                <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="h-8 w-8 rounded-lg border-slate-200 hover:border-slate-300 disabled:opacity-40"
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                {/* زر الصفحة الأخيرة */}
+                <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={() => onPageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="h-8 w-8 rounded-lg border-slate-200 hover:border-slate-300 disabled:opacity-40"
+                >
+                    <ChevronsLeft className="h-4 w-4" />
+                </Button>
+            </div>
+
+            {/* تغيير عدد العناصر في الصفحة */}
+            {showPageSize && onPageSizeChange && (
+                <div className="flex items-center gap-2 order-3">
+                    <span className="text-sm text-muted-foreground">عرض</span>
+                    <select
+                        value={pageSize}
+                        onChange={(e) => {
+                            onPageSizeChange(Number(e.target.value));
+                            onPageChange(1);
+                        }}
+                        className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                        {pageSizeOptions.map((size) => (
+                            <option key={size} value={size}>
+                                {size}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
         </div>
-      )}
-
-      {/* CONTROLS */}
-      <div className="flex items-center gap-0.5 order-1 sm:order-2 flex-wrap justify-center">
-
-        {/* FIRST */}
-        <button
-          onClick={() => onPageChange(1)}
-          disabled={currentPage === 1}
-          className="p-1.5 md:p-2 hover:bg-gray-100 rounded-md disabled:opacity-50"
-        >
-          <FontAwesomeIcon icon={faAnglesRight} />
-        </button>
-
-        {/* PREV */}
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="p-1.5 md:p-2 hover:bg-gray-100 rounded-md disabled:opacity-50"
-        >
-          <FontAwesomeIcon icon={faChevronRight} />
-        </button>
-
-        {/* PAGES */}
-        <div className="flex gap-1">
-          {getVisiblePages().map((pageNum) => (
-            <button
-              key={pageNum}
-              onClick={() => onPageChange(pageNum)}
-              className={`min-w-[32px] h-8 px-2 rounded-md text-xs transition ${currentPage === pageNum
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
-                }`}
-            >
-              {pageNum}
-            </button>
-          ))}
-        </div>
-
-        {/* NEXT */}
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="p-1.5 md:p-2 hover:bg-gray-100 rounded-md disabled:opacity-50"
-        >
-          <FontAwesomeIcon icon={faChevronLeft} />
-        </button>
-
-        {/* LAST */}
-        <button
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage === totalPages}
-          className="p-1.5 md:p-2 hover:bg-gray-100 rounded-md disabled:opacity-50"
-        >
-          <FontAwesomeIcon icon={faAnglesLeft} />
-        </button>
-      </div>
-    </div>
-  );
+    );
 }

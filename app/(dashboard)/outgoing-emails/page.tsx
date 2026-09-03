@@ -251,22 +251,14 @@ function OutgoingEmailsContent() {
     });
 
     // ===== Process Failed =====
-    // ✅ استخدام mutateAsync بدلاً من mutate
     const { mutateAsync: processFailed, isPending: isProcessing } = useProcessFailedEmails(() => {
-        // هذا الـ onSuccess يُستخدم لتحديث القائمة بعد المعالجة
         refetch();
     });
 
-    // ✅ استخدام mutateAsync مع await للانتظار حتى الرد
     const handleProcessFailed = async () => {
         try {
-            // انتظر حتى يعود الـ Response من الخادم
             const count = await processFailed();
-            // التوست يظهر من الـ Hook تلقائياً
-            console.log("تمت معالجة:", count, "بريد فاشل");
         } catch (error) {
-            // الخطأ يعالج في الـ Hook
-            console.error("خطأ في معالجة البريد الفاشل:", error);
         }
     };
 

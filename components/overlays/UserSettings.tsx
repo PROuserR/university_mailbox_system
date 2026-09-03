@@ -77,7 +77,7 @@ export default function UserSettingsOverlay({ user }: Props) {
     }, [hasPermission]);
 
     const canViewSettings = useMemo(() => {
-        return role === "Dean" || role === "Admin" || hasPermission(PERMISSIONS.SYSTEM_MANAGE);
+        return  role === "Admin" || hasPermission(PERMISSIONS.SYSTEM_MANAGE);
     }, [role, hasPermission]);
 
     return (

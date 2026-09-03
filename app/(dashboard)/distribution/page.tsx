@@ -4,28 +4,19 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { apiWrapper } from "@/utils/apiClient";
-import { AnimatePresence, motion } from "framer-motion";
 import { useSearchStore } from "@/store/searchStore";
 import useUserInfoStore from "@/store/userInfoStore";
 import useShowMailDetailsStore from "@/store/showMailDetails";
-import useInfiniteScroll from "@/hooks/useInfiniteScroll";
-import MailCard from "@/components/mail/MailCard";
-import MailViewer from "@/components/mail/MailViewer";
-import MailListLoader from "@/components/ui/MailListLoader";
-import MailListError from "@/components/ui/MailListError";
-import { Mail } from "@/types/api/Mail/Mail";
 import { InboxEmailList } from "@/components/distribution/InboxEmailList";
 import { OutboxEmailList } from "@/components/distribution/OutboxEmailList";
 import { InboxEmailDetail } from "@/components/distribution/InboxEmailDetail";
 import { OutboxEmailDetail } from "@/components/distribution/OutboxEmailDetail";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Drawer } from "vaul";
-import { useSwipeable } from "react-swipeable";
 import {
   RefreshCw,
   Filter,
@@ -33,79 +24,16 @@ import {
   SortAsc,
   SortDesc,
 } from "lucide-react";
-import {
-  faInbox,
-  faPaperPlane,
-  faSortAmountDown,
-  faSortAmountUp,
-  faSpinner,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useSearchParams, useRouter } from "next/navigation";
-import toast from "react-hot-toast";
 import type {
   DistributionInboxDto,
   DistributionOutboxDto,
 } from "@/types/api/distribution.types";
 import { ApiResult } from "@/types/api/ApiResult";
 
-// ✅ استيراد useAuth للتحقق من الصلاحية
 import { useAuth } from "@/hooks/useAuth";
 
-// ================= TYPES =================
-
-interface Attachment {
-  id: number;
-  fileName: string;
-  filePath: string;
-  fileSize: number;
-  mimeType: string;
-  isPrimary: boolean;
-  uploadedAt: string;
-  uploadedBy: string;
-  downloadUrl: string | null;
-}
-
-interface DistributionMail {
-  id: number;
-  distributedDate: string;
-  status: string;
-  readAt: string | null;
-  isRead: boolean;
-  isAutoDistributed: boolean;
-  notes: string | null;
-  distributorName?: string;
-  distributorEmail?: string;
-  distributorRole?: string;
-  receiverId?: number;
-  receiverName?: string;
-  receiverEmail?: string;
-  receiverRole?: string;
-  correspondenceId: number;
-  correspondenceNumber: string;
-  correspondenceTitle: string;
-  correspondenceContent: string | null;
-  mainType: string;
-  isProfessional: boolean;
-  documentType: string;
-  senderEntity: string | null;
-  senderReference: string | null;
-  issuedDate: string | null;
-  receivedDate: string | null;
-  sentDate: string | null;
-  attachments: Attachment[];
-}
-
-interface PageResponse {
-  items: DistributionMail[];
-  totalCount: number;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
-}
 
 // ================= SORT TYPES =================
 
@@ -152,13 +80,9 @@ function DistributionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { role } = useUserInfoStore();
   const { searchQuery } = useSearchStore();
-  const { isMailDetailsStoreShown, triggerMailDetailsStoreShown } =
-    useShowMailDetailsStore();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  // ✅ استخدام useAuth للتحقق من الصلاحية
   const { hasPermission, isLoading: authLoading } = useAuth();
   const canViewOutbox = hasPermission("ViewDistribution");
 
@@ -175,13 +99,10 @@ function DistributionContent() {
   const [mainTypeFilter, setMainTypeFilter] = useState<string>("all");
   const [professionalFilter, setProfessionalFilter] = useState<string>("all");
 
-  // ✅ قراءة نوع التبويب من الـ URL - فقط للصادر نحتاج التحقق
   useEffect(() => {
     const tab = searchParams.get("tab");
 
-    // ✅ إذا كان التبويب هو الصادر
     if (tab === "outbox") {
-      // ✅ إذا لم يكن لديه صلاحية، نعيد التوجيه إلى /unauthorized
       if (!canViewOutbox) {
         router.push("/unauthorized");
         return;
@@ -300,8 +221,39 @@ function DistributionContent() {
     enabled: activeTab === "outbox" && canViewOutbox,
   });
 
-  const inboxItems = inboxData?.pages.flatMap((p) => p.items) ?? [];
-  const outboxItems = outboxData?.pages.flatMap((p) => p.items) ?? [];
+  // ============================================================
+  // ✅ منع تكرار الـ keys باستخدام Set
+  // ============================================================
+  const inboxItems = useMemo(() => {
+    if (!inboxData?.pages) return [];
+    const seen = new Set<number>();
+    const result: DistributionInboxDto[] = [];
+    inboxData.pages.forEach((page) => {
+      page.items.forEach((item) => {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          result.push(item);
+        }
+      });
+    });
+    return result;
+  }, [inboxData]);
+
+  const outboxItems = useMemo(() => {
+    if (!outboxData?.pages) return [];
+    const seen = new Set<number>();
+    const result: DistributionOutboxDto[] = [];
+    outboxData.pages.forEach((page) => {
+      page.items.forEach((item) => {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          result.push(item);
+        }
+      });
+    });
+    return result;
+  }, [outboxData]);
+
   const totalInbox = inboxData?.pages[0]?.totalCount ?? 0;
   const totalOutbox = outboxData?.pages[0]?.totalCount ?? 0;
 
@@ -357,8 +309,6 @@ function DistributionContent() {
       setSelectedId(modernItems[currentIndex + 1].id);
     }
   };
-
-
 
   const handleRefresh = () => {
     if (activeTab === "inbox") {

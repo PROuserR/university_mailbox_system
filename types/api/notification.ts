@@ -1,4 +1,4 @@
-// types/notification.ts
+// types/api/notification.ts
 
 import PagedResult from "./PagedResponse";
 
@@ -12,6 +12,7 @@ export interface Notification {
   createdAt: string;
   readAt?: string;
 }
+
 export type NotificationItem = {
   id: number;
   title: string;
@@ -29,6 +30,17 @@ export interface NotificationsResponse {
   message: string;
   errors: string[] | null;
   statusCode: number;
+}
+
+export interface NotificationPageData {
+  items: Notification[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  unreadCount: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
 }
 
 export interface NotificationPageResponse extends PagedResult<Notification> {

@@ -70,7 +70,6 @@ export function usePendingApprovals(pageSize: number = 20) {
       } catch (error: any) {
         if (!isMounted.current) return;
         toast.error(error.message || "فشل تحميل الموافقات المعلقة");
-        console.error(error);
         throw error;
       }
     },
@@ -263,7 +262,6 @@ const rejectSingle = useCallback(async (distributionId: number, reason?: string)
       } catch (error: any) {
         if (!isMounted.current) return;
         toast.error(error.message || "فشل تحميل الموافقات المعلقة");
-        console.error(error);
       } finally {
         if (isMounted.current) {
           setIsLoading(false);

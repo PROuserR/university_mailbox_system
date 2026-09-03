@@ -2,7 +2,7 @@
 
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { IncomingEmailDto, IncomingEmailStatus } from "@/types/api/incoming-email";
 import { format } from "date-fns";
@@ -31,7 +31,20 @@ export const IncomingEmailList = forwardRef<HTMLDivElement, IncomingEmailListPro
         bottomRef,
         isFetchingNextPage = false,
     }, ref) => {
-        if (isLoading && items.length === 0) {
+        // ✅ استخدام Set لمنع تكرار الـ keys
+        const uniqueItems = useMemo(() => {
+            const seen = new Set<number>();
+            const result: IncomingEmailDto[] = [];
+            items.forEach((item) => {
+                if (!seen.has(item.id)) {
+                    seen.add(item.id);
+                    result.push(item);
+                }
+            });
+            return result;
+        }, [items]);
+
+        if (isLoading && uniqueItems.length === 0) {
             return (
                 <div ref={ref} className="flex h-full items-center justify-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-3">
@@ -42,7 +55,7 @@ export const IncomingEmailList = forwardRef<HTMLDivElement, IncomingEmailListPro
             );
         }
 
-        if (items.length === 0) {
+        if (uniqueItems.length === 0) {
             return (
                 <div ref={ref} className="flex h-full items-center justify-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
@@ -56,7 +69,7 @@ export const IncomingEmailList = forwardRef<HTMLDivElement, IncomingEmailListPro
         return (
             <div ref={ref} className="flex flex-col h-full">
                 <div className="flex-1 overflow-y-auto">
-                    {items.map((item) => {
+                    {uniqueItems.map((item) => {
                         const isSelected = selectedId === item.id;
                         const statusColor = statusColors[item.status] || "bg-gray-100 text-gray-700";
                         const statusLabel = statusLabels[item.status] || item.status;

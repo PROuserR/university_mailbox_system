@@ -99,7 +99,6 @@ export function useAuthGuard(options: AuthGuardOptions = {}) {
 
         setIsAuthorized(true);
       } catch (error) {
-        console.error('Auth guard error:', error);
         router.push(redirectTo);
         setIsAuthorized(false);
         setIsAuthenticatedState(false);

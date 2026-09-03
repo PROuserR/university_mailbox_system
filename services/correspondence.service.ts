@@ -12,6 +12,7 @@ import {
     CorrespondenceParentSelectorDto,
 } from "@/types/api/correspondence.types";
 import { ApiResult } from "@/types/api/ApiResult";
+import PagedResult from "@/types/api/PagedResponse";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7236/api";
 const BASE_URL = "Correspondences";
 
@@ -19,17 +20,6 @@ const BASE_URL = "Correspondences";
 // ===== Types =====
 // ============================================================
 
-interface PagedResult<T> {
-    items: T[];
-    totalCount: number;
-    pageNumber: number;
-    pageSize: number;
-    totalPages: number;
-}
-
-// ============================================================
-// ===== Get Correspondences =====
-// ============================================================
 
 export const getCorrespondencesForParentSelector = async (
     searchDto: CorrespondenceParentSelectorSearchDto
@@ -71,9 +61,10 @@ export const getCorrespondencesPaged = async (
         pageNumber: data.pageNumber || 1,
         pageSize: data.pageSize || 10,
         totalPages: data.totalPages || 0,
+        hasNextPage: data.hasNextPage ?? data.pageNumber < data.totalPages, // ✅
+        hasPreviousPage: data.hasPreviousPage ?? data.pageNumber > 1,      // ✅
     };
 };
-
 export const getCorrespondenceById = async (
     id: number
 ): Promise<CorrespondenceResponse> => {
