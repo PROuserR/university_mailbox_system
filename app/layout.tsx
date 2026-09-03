@@ -42,11 +42,6 @@ export default function RootLayout({
     >
       <head>
         <style>{`
-          svg {
-            width: 1em !important;
-            height: 1em !important;
-            flex-shrink: 0;
-          }
           [class*="fa-"],
           [class*="lucide"] {
             font-size: inherit !important;
