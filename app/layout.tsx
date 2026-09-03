@@ -24,7 +24,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "University Mailbox System",
+  title: "ديوان كلية الهندسة المعلوماتية",
   description: "University Mailbox System",
 };
 
@@ -40,6 +40,7 @@ export default function RootLayout({
       dir="rtl"
       data-scroll-behavior="smooth"
     >
+      
       <body className="min-h-screen bg-white">
         <Providers>
           {children}

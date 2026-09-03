@@ -130,7 +130,7 @@ function NavbarContent() {
                             <Image
                                 width={36}
                                 height={36}
-                                src="/aleppo_university_logo.svg"
+                                src="/logo.svg"
                                 alt="Aleppo university logo"
                                 className="drop-shadow-md"
                             />

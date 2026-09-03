@@ -215,7 +215,7 @@ export default function LoginPage() {
                 <div className="w-full text-center mb-4">
                     <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 mb-2 drop-shadow-lg">
                         <Image
-                            src="/aleppo_university_logo.svg"
+                            src="/logo.svg"
                             alt="Aleppo university logo"
                             width={80}
                             height={80}
