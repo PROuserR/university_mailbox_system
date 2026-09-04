@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/(dashboard)/mail/create/page.tsx
+// app/(dashboard)/Correspondence/create/page.tsx
 
 "use client";
 

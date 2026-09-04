@@ -11,9 +11,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import { apiWrapper } from "@/utils/apiClient";
-import { UserLoginData } from "@/types/api/User/UserLoginData";
 import useUserInfoStore from "@/store/userInfoStore";
 import { ApiResult } from "@/types/api/ApiResult";
+import { LoginResponse } from "@/types/api/user";
 
 // ============================================
 // ===== VALIDATION FUNCTIONS =====
@@ -125,7 +125,7 @@ export default function LoginPage() {
 
     const loginUser = async () => {
         try {
-            const res = await apiWrapper.post<ApiResult<UserLoginData>>('/auth/login', {
+            const res = await apiWrapper.post<ApiResult<LoginResponse>>('/auth/login', {
                 email: emailInput,
                 password: passwordInput
             });

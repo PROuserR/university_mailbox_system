@@ -32,7 +32,6 @@ import {
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { PERMISSIONS } from "@/lib/permissions";
 import { useIgnoredUsers, useProcessIgnored } from "@/hooks/useAnalytics";
-import { IgnoredUserReportDto } from "@/types/api/analytics.types";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { PermissionGate } from "@/components/auth/PermissionGate";
@@ -43,6 +42,7 @@ import toast from "react-hot-toast";
 // ============================================================
 
 const DAYS_OPTIONS = [
+  { value: 1, label: "1 أيام" },
   { value: 3, label: "3 أيام" },
   { value: 7, label: "7 أيام" },
   { value: 14, label: "14 يوم" },
@@ -68,20 +68,6 @@ const getDaysColor = (days: number) => {
   if (days <= 14) return "text-orange-600";
   if (days <= 30) return "text-red-500";
   return "text-red-700";
-};
-
-const getDaysBadge = (days: number) => {
-  const colors: Record<string, string> = {
-    "yellow": "bg-yellow-100 text-yellow-700",
-    "orange": "bg-orange-100 text-orange-700",
-    "red": "bg-red-100 text-red-700",
-    "darkRed": "bg-red-200 text-red-800",
-  };
-
-  if (days <= 7) return colors.yellow;
-  if (days <= 14) return colors.orange;
-  if (days <= 30) return colors.red;
-  return colors.darkRed;
 };
 
 // ============================================================
@@ -178,21 +164,6 @@ export default function IgnoredUsersPage() {
     toast.success("تم تحديث التقرير", { duration: 2000 });
   };
 
-  const navigateToCorrespondence = (correspondenceId: number) => {
-    const uiMode = localStorage.getItem('ui-mode-storage');
-    let isModern = false;
-    try {
-      const parsed = JSON.parse(uiMode || '{}');
-      isModern = parsed.state?.uiMode === 'modern';
-    } catch {
-      isModern = false;
-    }
-
-    if (isModern) {
-      router.push(`/correspondences?id=${correspondenceId}`);
-    } 
-  };
-
   // ============================================================
   // ===== Computed =====
   // ============================================================
@@ -204,7 +175,10 @@ export default function IgnoredUsersPage() {
   const hasNextPage = data?.hasNextPage || false;
 
   const totalIgnoredCorrespondences = useMemo(() => {
-    return items.reduce((acc, user) => acc + user.ignoredCorrespondences.length, 0);
+    return items.reduce(
+      (acc, user) => acc + user.ignoredCorrespondences.length,
+      0
+    );
   }, [items]);
 
   // ============================================================
@@ -262,7 +236,10 @@ export default function IgnoredUsersPage() {
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition text-sm disabled:opacity-50"
               disabled={isLoading}
             >
-              <FontAwesomeIcon icon={faRefresh} className={isLoading ? "animate-spin" : ""} />
+              <FontAwesomeIcon
+                icon={faRefresh}
+                className={isLoading ? "animate-spin" : ""}
+              />
               تحديث
             </button>
 
@@ -275,7 +252,10 @@ export default function IgnoredUsersPage() {
                 disabled={isProcessing || items.length === 0}
                 className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-red-500 text-white hover:bg-red-600 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={isProcessing ? faSpinner : faTrash} spin={isProcessing} />
+                <FontAwesomeIcon
+                  icon={isProcessing ? faSpinner : faTrash}
+                  spin={isProcessing}
+                />
                 {isProcessing ? "جاري المعالجة..." : "تطبيق التجاهل"}
               </button>
             </PermissionGate>
@@ -287,15 +267,21 @@ export default function IgnoredUsersPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
         <div className="bg-white rounded-xl border border-red-100 p-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs text-slate-400">إجمالي المستخدمين المتجاهلين</span>
+            <span className="text-[10px] sm:text-xs text-slate-400">
+              إجمالي المستخدمين المتجاهلين
+            </span>
             <FontAwesomeIcon icon={faUsers} className="text-red-500" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-red-600 mt-1">{totalCount}</p>
+          <p className="text-xl sm:text-2xl font-bold text-red-600 mt-1">
+            {totalCount}
+          </p>
         </div>
 
         <div className="bg-white rounded-xl border border-orange-100 p-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs text-slate-400">إجمالي المراسلات المتجاهلة</span>
+            <span className="text-[10px] sm:text-xs text-slate-400">
+              إجمالي المراسلات المتجاهلة
+            </span>
             <FontAwesomeIcon icon={faEnvelope} className="text-orange-500" />
           </div>
           <p className="text-xl sm:text-2xl font-bold text-orange-600 mt-1">
@@ -305,24 +291,38 @@ export default function IgnoredUsersPage() {
 
         <div className="bg-white rounded-xl border border-yellow-100 p-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs text-slate-400">الحد الأدنى للأيام</span>
+            <span className="text-[10px] sm:text-xs text-slate-400">
+              الحد الأدنى للأيام
+            </span>
             <FontAwesomeIcon icon={faClock} className="text-yellow-500" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-yellow-600 mt-1">{daysThreshold} يوم</p>
+          <p className="text-xl sm:text-2xl font-bold text-yellow-600 mt-1">
+            {daysThreshold} يوم
+          </p>
         </div>
       </div>
 
       {/* ===== USERS LIST ===== */}
       {isLoading && items.length === 0 ? (
         <div className="flex items-center justify-center min-h-[40vh]">
-          <FontAwesomeIcon icon={faSpinner} spin className="text-3xl text-blue-600" />
-          <span className="mr-3 text-blue-600 text-sm">جاري تحميل التقرير...</span>
+          <FontAwesomeIcon
+            icon={faSpinner}
+            spin
+            className="text-3xl text-blue-600"
+          />
+          <span className="mr-3 text-blue-600 text-sm">
+            جاري تحميل التقرير...
+          </span>
         </div>
       ) : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-green-100 p-8 text-center shadow-sm">
           <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-xl font-bold text-green-600">لا يوجد مستخدمون متجاهلون</h2>
-          <p className="text-sm text-slate-400 mt-1">جميع المستخدمين في الحدود الطبيعية</p>
+          <h2 className="text-xl font-bold text-green-600">
+            لا يوجد مستخدمون متجاهلون
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">
+            جميع المستخدمين في الحدود الطبيعية
+          </p>
         </div>
       ) : (
         <>
@@ -352,19 +352,31 @@ export default function IgnoredUsersPage() {
                         <h3 className="font-bold text-slate-800 text-sm sm:text-base truncate">
                           {user.fullName}
                         </h3>
-                        <p className="text-[10px] sm:text-xs text-slate-400">@{user.userName}</p>
+                        <p className="text-[10px] sm:text-xs text-slate-400">
+                          @{user.userName}
+                        </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                       <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm">
-                        <FontAwesomeIcon icon={faEnvelope} className="text-slate-400 text-[10px] sm:text-xs" />
-                        <span className="font-medium text-slate-700">{user.unreadCount}</span>
-                        <span className="text-slate-400 text-[10px] sm:text-xs hidden sm:inline">غير مقروء</span>
+                        <FontAwesomeIcon
+                          icon={faEnvelope}
+                          className="text-slate-400 text-[10px] sm:text-xs"
+                        />
+                        <span className="font-medium text-slate-700">
+                          {user.unreadCount}
+                        </span>
+                        <span className="text-slate-400 text-[10px] sm:text-xs hidden sm:inline">
+                          غير مقروء
+                        </span>
                       </div>
                       {user.oldestUnreadDate && (
                         <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm">
-                          <FontAwesomeIcon icon={faClock} className="text-slate-400 text-[10px] sm:text-xs" />
+                          <FontAwesomeIcon
+                            icon={faClock}
+                            className="text-slate-400 text-[10px] sm:text-xs"
+                          />
                           <span className="text-slate-500 text-[10px] sm:text-xs hidden md:inline">
                             {formatDate(user.oldestUnreadDate)}
                           </span>
@@ -411,21 +423,18 @@ export default function IgnoredUsersPage() {
                                         {corr.title}
                                       </p>
                                       <p className="text-slate-400 text-[9px] sm:text-[10px]">
-                                        #{corr.correspondenceNumber} · {formatDate(corr.distributedAt)}
+                                        #{corr.correspondenceNumber} ·{" "}
+                                        {formatDate(corr.distributedAt)}
                                       </p>
                                     </div>
-                                    <span className={`font-medium mr-2 text-[10px] sm:text-xs ${getDaysColor(corr.daysPending)}`}>
+                                    <span
+                                      className={`font-medium mr-2 text-[10px] sm:text-xs ${getDaysColor(
+                                        corr.daysPending
+                                      )}`}
+                                    >
                                       {corr.daysPending} يوم
                                     </span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigateToCorrespondence(corr.correspondenceId);
-                                      }}
-                                      className="px-2 py-1 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition text-[9px] sm:text-[10px] flex-shrink-0"
-                                    >
-                                      عرض
-                                    </button>
+                                    {/* ✅ تم إزالة زر "عرض" */}
                                   </div>
                                 ))}
                               </div>
