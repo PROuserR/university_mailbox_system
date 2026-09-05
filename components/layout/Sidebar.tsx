@@ -35,7 +35,8 @@ import {
     faHandshake,
     faBriefcase,        // ✅ أيقونة الوظائف
     faTrashCan,         // ✅ أيقونة الملفات المؤقتة
-    faUsersGear,        // ✅ أيقونة إدارة المستخدمين
+    faUsersGear,
+    faStar,        // ✅ أيقونة إدارة المستخدمين
 } from "@fortawesome/free-solid-svg-icons";
 import useMailFilterStore from "@/store/mailFilterStore";
 import SidebarItem from "./SidebarItem";
@@ -323,6 +324,13 @@ function SidebarContentWrapper() {
             icon: faFileAlt,
             label: "إدارة الملفات",
             path: "/file-management",
+            permission: PERMISSIONS.MANAGE_FAILED_FILE_DELETIONS,
+        });
+
+        items.push({
+            icon: faStar,
+            label: "التنبؤ",
+            path: "/predict",
             permission: PERMISSIONS.MANAGE_FAILED_FILE_DELETIONS,
         });
 

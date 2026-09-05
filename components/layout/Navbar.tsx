@@ -135,7 +135,7 @@ function NavbarContent() {
                                 className="drop-shadow-md"
                             />
                             <span className="hidden sm:inline text-sm font-bold text-blue-800">
-                                ديوان جامعة حلب
+                                ديوان  كلية الهندسة المعلوماتية
                             </span>
                         </motion.div>
                     </Link>
