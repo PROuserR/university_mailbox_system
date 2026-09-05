@@ -21,10 +21,7 @@ import { Drawer } from "vaul";
 import { useSearchStore } from "@/store/searchStore";
 import { useDocumentTypes } from "@/hooks/useCorrespondence";
 import { useSenderEntities } from "@/hooks/useCorrespondence";
-import toast from "react-hot-toast";
-import { cn } from "@/lib/utils";
 import { useAllDistributionsInfinite } from "@/hooks/useDistribute";
-import { format } from "date-fns";
 import { DistributionResponseByIdDto } from "@/types/api/distribution.types";
 
 const PAGE_HEIGHT = "calc(100vh - 64px)";

@@ -8,8 +8,6 @@ import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "rea
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { apiWrapper } from "@/utils/apiClient";
 import { useSearchStore } from "@/store/searchStore";
-import useUserInfoStore from "@/store/userInfoStore";
-import useShowMailDetailsStore from "@/store/showMailDetails";
 import { InboxEmailList } from "@/components/distribution/InboxEmailList";
 import { OutboxEmailList } from "@/components/distribution/OutboxEmailList";
 import { InboxEmailDetail } from "@/components/distribution/InboxEmailDetail";
