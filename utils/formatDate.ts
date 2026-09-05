@@ -1,7 +1,14 @@
-export default function formatDate(isoString: string | undefined) {
-    if (isoString) {
+// lib/utils.ts
+
+export default function formatDate(isoString: string | undefined): string {
+    if (!isoString) return "";
+    
+    try {
         const date = new Date(isoString);
+        if (isNaN(date.getTime())) return "";
+        
         const now = new Date();
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
         const isToday =
             date.getFullYear() === now.getFullYear() &&
@@ -11,27 +18,29 @@ export default function formatDate(isoString: string | undefined) {
         const isThisYear = date.getFullYear() === now.getFullYear();
 
         if (isToday) {
-            // HH:mm (Arabic numerals + format)
-            return date.toLocaleTimeString('ar', {
-                hour: '2-digit',
-                minute: '2-digit',
+            return date.toLocaleTimeString("ar-EG", {
+                hour: "2-digit",
+                minute: "2-digit",
                 hour12: false,
+                timeZone,
             });
         }
 
         if (isThisYear) {
-            // Month name + day (Arabic)
-            return date.toLocaleDateString('ar', {
-                month: 'short', // or 'long'
-                day: '2-digit',
+            return date.toLocaleDateString("ar-EG", {
+                day: "2-digit",
+                month: "short",
+                timeZone,
             });
         }
 
-        // Different year → Year Month Day (Arabic)
-        return date.toLocaleDateString('ar', {
-            year: 'numeric',
-            month: 'short',
-            day: '2-digit',
+        return date.toLocaleDateString("ar-EG", {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            timeZone,
         });
+    } catch {
+        return "";
     }
 }

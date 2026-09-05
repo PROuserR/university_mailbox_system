@@ -28,10 +28,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
-import { format, parseISO } from "date-fns";
-import { ar } from "date-fns/locale";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 // ============================================================
@@ -39,21 +36,24 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 // ============================================================
 
 const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString("ar-SA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
 };
 
 const formatDateTime = (date: string) => {
-  return new Date(date).toLocaleString("ar-SA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
 };
 
 const getDaysColor = (days: number) => {

@@ -20,7 +20,7 @@ import PagedResult from '@/types/api/PagedResponse';
 
 export function useDelegation() {
   const queryClient = useQueryClient();
-  const { role } = useUserInfoStore();
+  const { role, id: currentUserId } = useUserInfoStore();
 
   const isAdmin = role === 'Admin';
   const isDean = role === 'Dean';
@@ -34,8 +34,8 @@ export function useDelegation() {
   const usersQuery = useQuery({
     queryKey: ['delegation', 'users'],
     queryFn: () => delegationService.getActiveUsers(),
-    staleTime: 5 * 60 * 1000, // 5 دقائق
-    gcTime: 10 * 60 * 1000, // 10 دقائق (كان cacheTime)
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
   });
@@ -59,7 +59,7 @@ export function useDelegation() {
     refetchOnWindowFocus: false,
   });
 
-  // 4. الصلاحيات المتاحة للتفويض
+  // 4. الصلاحيات المتاحة للتفويض (لـ Admin و Dean فقط)
   const availablePermissionsQuery = useQuery({
     queryKey: ['delegation', 'available-permissions'],
     queryFn: () => delegationService.getAvailablePermissions(),
@@ -69,12 +69,11 @@ export function useDelegation() {
     refetchOnWindowFocus: false,
   });
 
-  // 5. صلاحياتي الحالية
+  // 5. صلاحياتي الحالية (لجلب صلاحيات العميد)
   const myPermissionsQuery = useQuery({
     queryKey: ['delegation', 'my-permissions'],
     queryFn: async () => {
       const data = await delegationService.getMyPermissions();
-      // تحديث الصلاحيات في الـ auth service
       const permissionNames = data.filter(p => p.isGranted).map(p => p.name);
       await authService.setDelegatedPermissions(permissionNames);
       return data;
@@ -106,7 +105,7 @@ export function useDelegation() {
     });
   };
 
-    const useDelegationUsage = (delegationId: number | null, page: number = 1, pageSize: number = 10) => {
+  const useDelegationUsage = (delegationId: number | null, page: number = 1, pageSize: number = 10) => {
     return useQuery({
       queryKey: ['delegation', 'usage', delegationId, page, pageSize],
       queryFn: async () => {
@@ -131,15 +130,13 @@ export function useDelegation() {
   };
 
   // ============================================================
-  // ===== MUTATIONS (العمليات التي تعدل البيانات) =====
+  // ===== MUTATIONS =====
   // ============================================================
 
-  // إنشاء تفويض جديد
   const createMutation = useMutation({
     mutationFn: (dto: CreateDelegationDto) => 
       delegationService.createDelegation(dto),
     onSuccess: () => {
-      // تحديث جميع الـ queries المرتبطة بالتفويضات
       queryClient.invalidateQueries({ queryKey: ['delegation'] });
       toast.success('تم إنشاء التفويض بنجاح');
     },
@@ -148,13 +145,11 @@ export function useDelegation() {
     },
   });
 
-  // تحديث تفويض
   const updateMutation = useMutation({
     mutationFn: ({ id, dto }: { id: number; dto: UpdateDelegationDto }) =>
       delegationService.updateDelegation(id, dto),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['delegation'] });
-      // تحديث التفويض المحدد في cache
       queryClient.invalidateQueries({ 
         queryKey: ['delegation', 'detail', variables.id] 
       });
@@ -165,7 +160,6 @@ export function useDelegation() {
     },
   });
 
-  // إضافة صلاحيات لتفويض
   const addPermissionsMutation = useMutation({
     mutationFn: ({ id, permissionIds }: { id: number; permissionIds: number[] }) =>
       delegationService.addPermissionsToDelegation(id, permissionIds),
@@ -181,7 +175,6 @@ export function useDelegation() {
     },
   });
 
-  // إلغاء تفويض
   const revokeMutation = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
       delegationService.revokeDelegation(id, reason),
@@ -200,7 +193,6 @@ export function useDelegation() {
     },
   });
 
-  // إلغاء التفويضات المنتهية
   const revokeExpiredMutation = useMutation({
     mutationFn: () => delegationService.revokeExpiredDelegations(),
     onSuccess: (count) => {
@@ -212,7 +204,6 @@ export function useDelegation() {
     },
   });
 
-  // إضافة التفويضات الافتراضية
   const addDefaultMutation = useMutation({
     mutationFn: () => delegationService.addDefaultDelegations(),
     onSuccess: (count) => {
@@ -224,7 +215,6 @@ export function useDelegation() {
     },
   });
 
-  // إعادة تعيين التفويضات الافتراضية
   const resetDefaultMutation = useMutation({
     mutationFn: () => delegationService.resetDefaultDelegations(),
     onSuccess: (count) => {
@@ -237,7 +227,7 @@ export function useDelegation() {
   });
 
   // ============================================================
-  // ===== COMPUTED DATA (بيانات محسوبة) =====
+  // ===== COMPUTED DATA =====
   // ============================================================
 
   const usersData = usersQuery.data || [];
@@ -267,6 +257,42 @@ export function useDelegation() {
     myDelegationsQuery.isLoading || 
     myPermissionsQuery.isLoading;
 
+  const getAvailablePermissionsForUser = useCallback((targetUserId: number): AvailablePermissionDto[] => {
+    if (isAdmin) {
+      const targetUser = usersData.find(u => u.id === targetUserId);
+      const isTargetDean = targetUser?.roles?.includes('Dean') || false;
+      
+      if (isTargetDean) {
+        return availablePermissions;
+      }
+      
+      const isTargetEmployee = targetUser?.roles?.includes('Employee') || false;
+      const isTargetHead = targetUser?.roles?.includes('HeadOfDepartment') || false;
+      
+      if (isTargetEmployee || isTargetHead) {
+        return availablePermissions.filter(p => p.isDelegatable === true);
+      }
+      
+      return availablePermissions;
+    }
+
+    if (isDean) {
+      const myGrantedPermissions = myPermissions.filter(p => p.isGranted);
+      
+      return availablePermissions.filter(availableP => {
+        const hasPermission = myGrantedPermissions.some(myP => myP.id === availableP.id);
+        const isDelegatable = availableP.isDelegatable !== false;
+        
+        return hasPermission && isDelegatable;
+      });
+    }
+
+    return availablePermissions.filter(p => p.isDelegatable === true);
+  }, [isAdmin, isDean, availablePermissions, myPermissions, usersData]);
+
+  // ============================================================
+  // ===== WRAPPER FUNCTIONS =====
+  // ============================================================
 
   const loadAllData = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['delegation'] });
@@ -287,10 +313,10 @@ export function useDelegation() {
     return result;
   }, [queryClient]);
 
-  const loadDelegationUsage = useCallback(async (delegationId: number) => {
+  const loadDelegationUsage = useCallback(async (delegationId: number, page: number = 1, pageSize: number = 10) => {
     const result = await queryClient.fetchQuery({
-      queryKey: ['delegation', 'usage', delegationId],
-      queryFn: () => delegationService.getDelegationUsage(delegationId),
+      queryKey: ['delegation', 'usage', delegationId, page, pageSize],
+      queryFn: () => delegationService.getDelegationUsage(delegationId, page, pageSize),
     });
     return result;
   }, [queryClient]);
@@ -335,9 +361,10 @@ export function useDelegation() {
     addDefaultDelegations: addDefaultMutation.mutateAsync,
     resetDefaultDelegations: resetDefaultMutation.mutateAsync,
     
-    // حالات الـ Mutations (للتحكم في الـ UI)
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isRevoking: revokeMutation.isPending,
+
+    getAvailablePermissionsForUser,
   };
 }

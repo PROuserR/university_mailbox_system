@@ -44,12 +44,11 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { format, parseISO, subMonths } from "date-fns";
-import { ar } from "date-fns/locale";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { PERMISSIONS } from "@/lib/permissions";
 import { useCorrespondenceFull } from "@/hooks/useAnalytics";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import formatDate from "@/utils/formatDate";
 
 // ============================================================
 // ===== Types =====
@@ -73,25 +72,79 @@ const STATUS_COLORS = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#
 
 // ============================================================
 // ===== Helpers =====
+//// ============================================================
+// ===== دوال التاريخ - بدون date-fns =====
 // ============================================================
 
 const getDefaultDates = () => {
   const endDate = new Date();
-  const startDate = subMonths(endDate, 3);
+  const startDate = new Date(endDate);
+  startDate.setMonth(startDate.getMonth() - 3);
+  
   return {
-    fromDate: format(startDate, "yyyy-MM-dd"),
-    toDate: format(endDate, "yyyy-MM-dd"),
+    fromDate: formatDateToYYYYMMDD(startDate),
+    toDate: formatDateToYYYYMMDD(endDate),
   };
 };
 
-const formatDate = (date: string) => {
-  if (!date) return "-";
-  return format(parseISO(date), "dd MMM", { locale: ar });
+const formatDateToYYYYMMDD = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
-const formatDateFull = (date: string) => {
+const formatDateShort = (date: string | null | undefined): string => {
   if (!date) return "-";
-  return format(parseISO(date), "dd MMM yyyy", { locale: ar });
+  try {
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) return "-";
+    
+    return parsed.toLocaleDateString("ar-EG", {
+      day: "2-digit",
+      month: "short",
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+  } catch {
+    return "-";
+  }
+};
+
+const formatDateFull = (date: string | null | undefined): string => {
+  if (!date) return "-";
+  try {
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) return "-";
+    
+    return parsed.toLocaleDateString("ar-EG", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+  } catch {
+    return "-";
+  }
+};
+
+const formatDateTime = (date: string | null | undefined): string => {
+  if (!date) return "-";
+  try {
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) return "-";
+    
+    return parsed.toLocaleString("ar-EG", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+  } catch {
+    return "-";
+  }
 };
 
 const getRiskColor = (riskLevel: string) => {

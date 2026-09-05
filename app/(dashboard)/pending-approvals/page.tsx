@@ -51,7 +51,15 @@ function getMainTypeColor(type: string) {
 
 function formatDate(date: string | null) {
     if (!date) return "—";
-    return new Date(date).toLocaleDateString("ar-SA");
+    return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
 }
 
 // ==============================

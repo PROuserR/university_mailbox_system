@@ -260,12 +260,14 @@ export default function NotificationsDropdown() {
                                                                     {notification.message}
                                                                 </p>
                                                                 <p className="text-[8px] text-gray-400 mt-0.5">
-                                                                    {new Date(notification.createdAt).toLocaleString("ar", {
-                                                                        hour: "2-digit",
-                                                                        minute: "2-digit",
-                                                                        day: "numeric",
-                                                                        month: "short",
-                                                                    })}
+                                                                    {new Date(notification.createdAt).toLocaleString("ar-EG", {
+                                                                            month: "2-digit",
+                                                                            day: "2-digit",
+                                                                            hour: "2-digit",
+                                                                            minute: "2-digit",
+                                                                            hour12: false,
+                                                                            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                                                                        })}
                                                                 </p>
                                                             </div>
 

@@ -2,8 +2,6 @@
 // components/distribution/InboxEmailDetail.tsx
 "use client";
 
-import { format } from "date-fns";
-import { ar } from "date-fns/locale";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -76,12 +74,19 @@ function getFileGradient(type: string) {
 function formatDateDisplay(date: string | null | undefined): string {
   if (!date) return "-";
   try {
-    return format(new Date(date), "dd/MM/yyyy", { locale: ar });
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) return "-";
+    
+    return parsed.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
   } catch {
     return "-";
   }
 }
-
 export function InboxEmailDetail({
   item,
   onClose,

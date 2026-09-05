@@ -38,21 +38,25 @@ import { Pagination } from "@/components/ui/Pagination";
 import { cn } from "@/lib/utils";
 
 // ==============================
-// HELPERS
+// HELPERS 
 // ==============================
 
 function formatDate(date: string | null): string {
     if (!date) return "—";
-    return new Date(date).toLocaleDateString("ar-SA");
+    return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
 }
 
 function formatDateTime(date: string): string {
-    return new Date(date).toLocaleString("ar-SA", {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+    return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
 }
 
@@ -102,6 +106,7 @@ export default function DelegationsPage() {
         updateDelegation,
         availablePermissions,
         loadAvailablePermissions,
+        getAvailablePermissionsForUser,
         useDelegationUsage,
         isCreating,
         isUpdating,
@@ -414,40 +419,21 @@ export default function DelegationsPage() {
     // FILTER PERMISSIONS
     // ==============================
 
-    const filteredPermissions = useMemo(() => {
-        if (!delegateUserId) {
-            return availablePermissions;
-        }
+    
+const filteredPermissions = useMemo(() => {
+  if (!delegateUserId) {
+    return availablePermissions;
+  }
 
-        const targetUser = allUsers.find(u => u.id === Number(delegateUserId));
-        
-        if (!targetUser) {
-            return availablePermissions;
-        }
+  const permissions = getAvailablePermissionsForUser(delegateUserId);
+  
+  if (!permissions || permissions.length === 0) {
+    return [];
+  }
 
-        const userRoles = targetUser.roles || [];
+  return permissions;
+}, [getAvailablePermissionsForUser, delegateUserId]);
 
-        if (isAdmin) {
-            return availablePermissions;
-        }
-
-        if (isDean) {
-            if (userRoles.includes('Dean')) {
-                return [];
-            }
-            return availablePermissions;
-        }
-
-        const isEligible = userRoles.includes('Employee') || 
-                           userRoles.includes('User') ||
-                           userRoles.includes('HeadOfDepartment');
-        
-        if (isEligible) {
-            return availablePermissions.filter(p => p.isDelegatable === true);
-        }
-
-        return availablePermissions;
-    }, [availablePermissions, delegateUserId, allUsers, isAdmin, isDean]);
 
     const sortedPermissions = useMemo(() => {
         if (!filteredPermissions || filteredPermissions.length === 0) {

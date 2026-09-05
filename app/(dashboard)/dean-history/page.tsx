@@ -369,9 +369,32 @@ export default function DeanHistoryPage() {
     });
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("ar-SA");
-  };
+ // ==============================
+// HELPERS - المعدل
+// ==============================
+
+// ✅ استخدام Local Time بدلاً من UTC واللغة الهجرية
+function formatDate(date: string | null): string {
+    if (!date) return "—";
+    return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+}
+
+function formatDateTime(date: string): string {
+    return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+}
 
   const getStatusBadge = (isCurrent: boolean) => {
     if (isCurrent) {

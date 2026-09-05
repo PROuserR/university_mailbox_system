@@ -80,11 +80,12 @@ const getStatusDotColor = (status: string) => {
 
 const formatDate = (date: string | null) => {
   if (!date) return "—";
-  return new Date(date).toLocaleDateString("ar-SA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+   return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
 };
 
 // ============================================================

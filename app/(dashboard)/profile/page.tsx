@@ -48,7 +48,6 @@ interface Profile {
     profileImageUrl: string | null;
     roles: string[];
     isActive: boolean;
-    isBanned: boolean;
     createdAt: string;
     lastLoginAt: string | null;
     profileImageId: number | null;
@@ -66,7 +65,6 @@ export default function ProfilePage() {
     const [userLanguage, setUserLanguage] = useState<string>("ar");
     const [imageUrl, setImageUrl] = useState<string>("");
     const [imageLoading, setImageLoading] = useState(true);
-    // ✅ وضع التعديل
     const [isEditing, setIsEditing] = useState(false);
 
     const [form, setForm] = useState({
@@ -107,7 +105,6 @@ export default function ProfilePage() {
 
     const fetchLanguage = async () => {
         try {
-            // ✅ استخدام apiWrapper مع النوع الصحيح
             const response = await apiWrapper.get<ApiResult<string>>("/Profiles/language");
 
             if (response.data?.isSuccess) {
@@ -213,7 +210,6 @@ export default function ProfilePage() {
 
             if (response.data?.isSuccess) {
                 toast.success("تم رفع الصورة الشخصية");
-                // ✅ إعادة تحميل الصورة
                 if (imageUrl) {
                     URL.revokeObjectURL(imageUrl);
                 }
@@ -290,14 +286,20 @@ export default function ProfilePage() {
             Admin: "مدير النظام",
             Employee: "موظف",
             User: "مستخدم",
+            HeadOfDepartment: "مستخدم",
         };
         return roles[role] ?? role;
     }
 
-    function formatDate(date: string | null) {
-        if (!date) return "—";
-        return new Date(date).toLocaleDateString("ar-SA");
-    }
+    function formatDate(date: string | null): string {
+    if (!date) return "—";
+    return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+}
 
     // ==============================
     // RENDER
@@ -427,12 +429,7 @@ export default function ProfilePage() {
                             <FontAwesomeIcon icon={profile.isActive ? faUserCheck : faUserSlash} className="text-[10px]" />
                             {profile.isActive ? "نشط" : "غير نشط"}
                         </span>
-                        {profile.isBanned && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                                <FontAwesomeIcon icon={faUserSlash} className="text-[10px]" />
-                                محظور
-                            </span>
-                        )}
+                        
                     </div>
                 </div>
 

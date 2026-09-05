@@ -3,8 +3,6 @@
 
 "use client";
 
-import { format } from "date-fns";
-import { arSA } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
@@ -20,7 +18,6 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { DistributionResponseByIdDto } from "@/types/api/distribution.types";
 
 interface DistributionDetailProps {
@@ -40,13 +37,12 @@ interface DistributionDetailProps {
 
 const formatDate = (date: string | null) => {
   if (!date) return "-";
-  return new Date(date).toLocaleString("ar-SA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return new Date(date).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
 };
 
 const formatDateShort = (date?: string | null): string => {
@@ -54,7 +50,13 @@ const formatDateShort = (date?: string | null): string => {
   try {
     const parsed = new Date(date);
     if (isNaN(parsed.getTime())) return "";
-    return format(parsed, "dd/MM/yyyy", { locale: arSA });
+    
+    return parsed.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
   } catch {
     return "";
   }

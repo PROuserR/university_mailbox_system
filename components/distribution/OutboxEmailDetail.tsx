@@ -3,7 +3,6 @@
 "use client";
 
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -84,7 +83,6 @@ export function OutboxEmailDetail({
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleView = async (attachmentId: number, fileName: string, mimeType: string) => {
-        // ✅ إلغاء أي طلب سابق
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
@@ -98,7 +96,6 @@ export function OutboxEmailDetail({
         setPreviewName(fileName || "ملف");
 
         try {
-            // ✅ استخدام viewAttachment مع signal
             const blob = await viewAttachment(attachmentId, controller.signal);
 
             if (!blob || blob.size === 0) {
@@ -111,7 +108,6 @@ export function OutboxEmailDetail({
         } catch (error: any) {
             if (error.name !== "AbortError") {
                 
-                // ✅ عرض رسالة خطأ مناسبة
                 if (error.message?.includes("403")) {
                     toast.error("ليس لديك صلاحية لعرض هذا الملف");
                 } else if (error.message?.includes("404")) {
@@ -294,27 +290,6 @@ export function OutboxEmailDetail({
               </p>
             </div>
           </div>
-        {/* <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon-sm" onClick={() => setIsStarred(!isStarred)}>
-              <StarIcon className={cn("h-4 w-4", isStarred && "fill-yellow-500 text-yellow-500")} />
-            </Button>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm">
-                  <ReplyIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>رد</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm">
-                  <ForwardIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>إعادة توجيه</TooltipContent>
-            </Tooltip>
-          </div> */}
         </div>
       </div>
 

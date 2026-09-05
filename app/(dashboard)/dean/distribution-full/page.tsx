@@ -245,7 +245,12 @@ export default function DistributionFullPage() {
         <h3 className="text-sm font-bold text-slate-700 mb-3">ملخص التوزيعات</h3>
         <DistributionSummaryCards data={data.summary} />
         <div className="mt-4 text-center text-[10px] text-gray-400">
-          تم إنشاء التقرير: {new Date(data.generatedAt).toLocaleString("ar-SA")}
+          تم إنشاء التقرير: {new Date(data.generatedAt).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    })}
         </div>
       </div>
     </div>
