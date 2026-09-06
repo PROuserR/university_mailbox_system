@@ -249,9 +249,6 @@ export default function PredictionPage() {
       const prediction =
         response.data?.prediction_stage2;
 
-
-
-
       if (prediction != "0")
         setStage2Prediction(prediction);
       else {
@@ -939,6 +936,8 @@ export default function PredictionPage() {
                     text="شغّل المرحلة 2 لتقدير وقت الاستجابة. او ليس هناك رد"
                   />
                 )}
+
+
 
             </ResultCard>
 
