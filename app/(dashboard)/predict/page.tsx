@@ -11,8 +11,6 @@ import {
   faClock,
   faEnvelope,
   faPaperclip,
-  faBuilding,
-  faUser,
   faFileLines,
   faCalendar,
   faBolt,
@@ -23,7 +21,7 @@ import {
   faRobot,
   faCircleInfo,
 } from "@fortawesome/free-solid-svg-icons";
-
+import myAPI from "@/utils/myAPI";
 
 // ============================================================
 // API
@@ -105,6 +103,8 @@ export default function PredictionPage() {
 
   const [stage2Prediction, setStage2Prediction] =
     useState<Stage2Prediction | null>(null);
+
+  const [readingPrecentage, setReadingPrecentage] = useState(0)
 
 
   // ============================================================
@@ -195,7 +195,17 @@ export default function PredictionPage() {
   // Stage 1
   // ============================================================
 
+  // const getReadingPrecentage = async () => {
+  //   const response = await myAPI.get(
+  //     `/Analytics/receiver/dashboard`
+  //   );
+  //   const result = response.data.data.summary.readPercentage / 100
+  //   setReadingPrecentage(result)
+  // }
+
   const runStage1 = async () => {
+
+
     setStage1Loading(true);
     setStage1Prediction(null);
 
@@ -208,14 +218,8 @@ export default function PredictionPage() {
       const rawPrediction =
         response.data?.prediction;
 
-      const prediction =
-        rawPrediction === 1 ||
-        rawPrediction === true ||
-        rawPrediction === "1" ||
-        rawPrediction === "true";
 
-      setStage1Prediction(prediction);
-
+      setStage1Prediction(rawPrediction);
       toast.success("اكتمل توقع المرحلة 1.");
     } catch (error) {
 
@@ -245,7 +249,14 @@ export default function PredictionPage() {
       const prediction =
         response.data?.prediction_stage2;
 
-      setStage2Prediction(prediction);
+
+
+
+      if (prediction != "0")
+        setStage2Prediction(prediction);
+      else {
+        return
+      }
 
       toast.success("اكتمل توقع المرحلة 2.");
     } catch (error) {
@@ -522,7 +533,7 @@ export default function PredictionPage() {
                 }
               />
 
-              <TextInput
+              {/* <TextInput
                 label="جهة الإرسال"
                 icon={faBuilding}
                 value={form.senderEntity}
@@ -532,14 +543,15 @@ export default function PredictionPage() {
                     value
                   )
                 }
-              />
+                
+              /> */}
 
             </div>
 
 
             {/* IDs */}
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
+            {/* <div className="mt-5 grid gap-4 md:grid-cols-2">
 
               <NumberInput
                 label="معرّف المستلم"
@@ -565,7 +577,7 @@ export default function PredictionPage() {
                 }
               />
 
-            </div>
+            </div> */}
 
 
             {/* Attachments */}
@@ -584,7 +596,7 @@ export default function PredictionPage() {
                 }
               />
 
-              <NumberInput
+              {/* <NumberInput
                 label="حجم المرفقات"
                 icon={faPaperclip}
                 value={form.totalAttachmentSize}
@@ -594,7 +606,7 @@ export default function PredictionPage() {
                     value
                   )
                 }
-              />
+              /> */}
 
               <NumberInput
                 label="طول المحتوى"
@@ -648,7 +660,7 @@ export default function PredictionPage() {
                 }
               />
 
-              <Toggle
+              {/* <Toggle
                 label="من المدير"
                 checked={form.isFromHead}
                 onChange={(value) =>
@@ -657,7 +669,7 @@ export default function PredictionPage() {
                     value
                   )
                 }
-              />
+              /> */}
 
             </div>
 
@@ -740,6 +752,7 @@ export default function PredictionPage() {
 
               <AnimatePresence mode="wait">
 
+
                 {stage1Prediction !== null && !stage1Loading && (
 
                   <motion.div
@@ -759,7 +772,6 @@ export default function PredictionPage() {
                       scale: 0.9,
                     }}
                   >
-
                     <div
                       className={`rounded-2xl border p-5 ${stage1Prediction
                         ? "border-emerald-400/20 bg-emerald-400/[0.06]"
@@ -798,15 +810,17 @@ export default function PredictionPage() {
                               : "text-red-300"
                               }`}
                           >
-                            {stage1Prediction
+
+                            {stage1Prediction.willReply
                               ? "من المرجح أن يرد"
                               : "من غير المرجح أن يرد"}
                           </p>
 
                           <p className="mt-1 text-sm text-slate-400">
-                            {stage1Prediction
+                            {stage1Prediction.replyProbability}
+                            {/* {stage1Prediction
                               ? "يتوقع النموذج أن هذا المستلم سيرد على الأرجح."
-                              : "يتوقع النموذج أن هذا المستلم لن يرد على الأرجح."}
+                              : "يتوقع النموذج أن هذا المستلم لن يرد على الأرجح."} */}
                           </p>
 
                         </div>
@@ -912,14 +926,17 @@ export default function PredictionPage() {
 
                   )}
 
+
+
               </AnimatePresence>
+
 
 
               {!stage2Prediction &&
                 !stage2Loading && (
                   <EmptyState
                     icon={faClock}
-                    text="شغّل المرحلة 2 لتقدير وقت الاستجابة."
+                    text="شغّل المرحلة 2 لتقدير وقت الاستجابة. او ليس هناك رد"
                   />
                 )}
 
