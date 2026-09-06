@@ -315,11 +315,6 @@ const getStatusBadge = (status: string) => {
       color:
         "bg-emerald-100 text-emerald-700 border-emerald-300",
     },
-    Completed: {
-      label: "مكتمل",
-      color:
-        "bg-emerald-100 text-emerald-700 border-emerald-300",
-    },
     Ignored: {
       label: "متجاهل",
       color:
@@ -363,7 +358,6 @@ const getMainTypeLabel = (type: string) => {
     Incoming: "وارد",
     Outgoing: "صادر",
     Internal: "داخلي",
-    Approval: "موافقة",
   };
 
   return labels[type] || type;
@@ -550,12 +544,6 @@ export function DistributionDetail({
       // ------------------------------------------------------
 
       const stage1Payload = buildStage1Payload();
-
-      console.log(
-        "Prediction Stage 1 Payload:",
-        stage1Payload
-      );
-
       const stage1Validation =
         validatePayload(stage1Payload);
 
@@ -574,11 +562,6 @@ export function DistributionDetail({
           }
         );
 
-      console.log(
-        "Prediction Stage 1 Response:",
-        stage1Response.data
-      );
-
       setPrediction((previous) => ({
         ...previous,
         stage1:
@@ -594,12 +577,6 @@ export function DistributionDetail({
       // ------------------------------------------------------
 
       const stage2Payload = buildStage2Payload();
-
-      console.log(
-        "Prediction Stage 2 Payload:",
-        stage2Payload
-      );
-
       const stage2Validation =
         validatePayload(stage2Payload);
 
@@ -617,12 +594,6 @@ export function DistributionDetail({
             },
           }
         );
-
-      console.log(
-        "Prediction Stage 2 Response:",
-        stage2Response.data
-      );
-
       setPrediction((previous) => ({
         ...previous,
         stage2:
@@ -634,21 +605,12 @@ export function DistributionDetail({
         "تم تنفيذ المرحلة الثانية بنجاح"
       );
     } catch (error: unknown) {
-      console.error(
-        "Prediction API Error:",
-        error
-      );
 
       const axiosError =
         error as AxiosError<ApiErrorResponse>;
 
       const responseData =
         axiosError.response?.data;
-
-      console.error(
-        "Prediction API Response:",
-        responseData
-      );
 
       let errorMessage =
         "حدث خطأ أثناء تنفيذ التنبؤ";

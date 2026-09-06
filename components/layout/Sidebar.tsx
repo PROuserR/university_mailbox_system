@@ -331,7 +331,7 @@ function SidebarContentWrapper() {
             icon: faStar,
             label: "التنبؤ",
             path: "/predict",
-            permission: PERMISSIONS.MANAGE_FAILED_FILE_DELETIONS,
+            permission: PERMISSIONS.VIEW_ANALYTICS,
         });
 
         return items;

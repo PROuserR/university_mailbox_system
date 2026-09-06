@@ -52,8 +52,7 @@ export default function RootLayout({
             containerClassName=""
             containerStyle={{}}
             toastOptions={{
-              // ✅ خيارات عامة للـ Toast
-              duration: 5000,
+              duration: 3000,
               style: {
                 background: '#363636',
                 color: '#fff',
@@ -62,25 +61,22 @@ export default function RootLayout({
                 fontSize: '14px',
                 maxWidth: '500px',
               },
-              // ✅ خيارات للـ Success
               success: {
-                duration: 4000,
+                duration: 3000,
                 style: {
                   background: '#10b981',
                   color: '#fff',
                 },
                 icon: '✅',
               },
-              // ✅ خيارات للـ Error
               error: {
-                duration: 6000,
+                duration: 3000,
                 style: {
                   background: '#ef4444',
                   color: '#fff',
                 },
                 icon: '❌',
               },
-              // ✅ خيارات للـ Loading
               loading: {
                 duration: 3000,
                 style: {

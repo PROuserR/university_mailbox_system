@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useCorrespondenceWithReplies } from "@/hooks/useCorrespondence";
 import { getStatusLabel, getStatusColor } from "@/types/api/correspondence.types";
 import { format } from "date-fns";
-import { arSA } from "date-fns/locale";
+import { arEG } from "date-fns/locale";
 
 interface CorrespondenceEmailListProps {
     items: CorrespondenceResponse[];
@@ -34,7 +34,7 @@ const formatDateDisplay = (date?: string | null): string => {
     try {
         const parsed = new Date(date);
         if (isNaN(parsed.getTime())) return "";
-        return format(parsed, "dd/MM/yyyy", { locale: arSA });
+        return format(parsed, "dd/MM/yyyy", { locale: arEG });
     } catch {
         return "";
     }

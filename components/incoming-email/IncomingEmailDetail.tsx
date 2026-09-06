@@ -5,7 +5,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { arSA } from "date-fns/locale";
+import { arEG } from "date-fns/locale";
 import {
     XIcon,
     ChevronLeftIcon,
@@ -520,7 +520,7 @@ export function IncomingEmailDetail({
                         </div>
                     </div>
                     <div className="text-right text-sm text-muted-foreground">
-                        <p>{format(new Date(item.receivedAt), "dd/MM/yyyy HH:mm", { locale: arSA })}</p>
+                        <p>{format(new Date(item.receivedAt), "dd/MM/yyyy HH:mm", { locale: arEG })}</p>
                     </div>
                 </div>
 

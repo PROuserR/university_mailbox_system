@@ -27,6 +27,10 @@ import {
     faPen,
     faFolder,
     faCloud,
+    faRuler,
+    faHashtag,
+    faTag,
+    faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useSettings } from "@/hooks/useSettings";
@@ -51,12 +55,12 @@ interface ToggleCardProps {
     onEdit?: () => void;
 }
 
-function ToggleCard({ 
-    label, 
-    description, 
-    enabled, 
-    onToggle, 
-    disabled = false, 
+function ToggleCard({
+    label,
+    description,
+    enabled,
+    onToggle,
+    disabled = false,
     icon,
     showEdit = false,
     onEdit,
@@ -103,6 +107,7 @@ interface SettingCardProps {
     onEdit?: () => void;
     disabled?: boolean;
 }
+
 function formatCronToText(cron: string, type: string): string {
     const parts = cron.trim().split(' ');
     if (parts.length < 5) return "غير محدد";
@@ -134,11 +139,12 @@ function formatCronToText(cron: string, type: string): string {
             return `${h}:${m}`;
     }
 }
-function SettingCard({ 
-    label, 
-    description, 
-    value, 
-    icon, 
+
+function SettingCard({
+    label,
+    description,
+    value,
+    icon,
     suffix = "",
     showEdit = false,
     onEdit,
@@ -201,6 +207,7 @@ export default function DeanSettingsPage() {
         updateDatabaseBackupSettings,
         updateEmailIncomingSettings,
         updateEmailOutgoingSettings,
+        updateAttachmentNamingSettings, // ✅ إضافة
     } = useSettings();
 
     const [modalOpen, setModalOpen] = useState(false);
@@ -222,15 +229,16 @@ export default function DeanSettingsPage() {
                         backgroundServiceIntervalHours: settings.backgroundServiceIntervalHours,
                         requireDeanApprovalForAll: settings.requireDeanApprovalForAll,
                         autoApprovePermanentReceivers: settings.autoApprovePermanentReceivers,
+                        previewFormat: settings.previewFormat || "",
                     });
                     break;
                 case "file":
-    setFormValues({
-        maxAttachmentSizeMB: settings.maxAttachmentSizeMB,
-        allowedExtensions: settings.allowedExtensionsList.join(', '),
-        blockedMimeTypes: settings.blockedMimeTypesList.join(', '),
-    });
-    break;
+                    setFormValues({
+                        maxAttachmentSizeMB: settings.maxAttachmentSizeMB,
+                        allowedExtensions: settings.allowedExtensionsList.join(', '),
+                        blockedMimeTypes: settings.blockedMimeTypesList.join(', '),
+                    });
+                    break;
                 case "archive":
                     setFormValues({
                         archiveAfterDays: settings.archiveAfterDays,
@@ -253,39 +261,33 @@ export default function DeanSettingsPage() {
                         autoDeleteTempFiles: settings.autoDeleteTempFiles,
                     });
                     break;
-              case "files-backup":
-    setFormValues({
-        // Job Control
-        isCleanupBackupJobEnabled: settings.isCleanupBackupJobEnabled,
-        
-        // Enable/Disable Backup Types
-        dailyBackupEnabled: settings.dailyBackupEnabled,
-        monthlyBackupEnabled: settings.monthlyBackupEnabled,
-        annualBackupEnabled: settings.annualBackupEnabled,
-        
-        // Retention Policies
-        dailyRetentionDays: settings.dailyRetentionDays ,
-        monthlyRetentionMonths: settings.monthlyRetentionMonths ,
-        annualRetentionYears: settings.annualRetentionYears ,
-        
-        dailyBackupCron: settings.dailyBackupCron ,
-        monthlyBackupCron: settings.monthlyBackupCron, 
-        annualBackupCron: settings.annualBackupCron ,
-        cleanupCron: settings.cleanupCron ,
-    });
-    break;
+                case "files-backup":
+                    setFormValues({
+                        isCleanupBackupJobEnabled: settings.isCleanupBackupJobEnabled,
+                        dailyBackupEnabled: settings.dailyBackupEnabled,
+                        monthlyBackupEnabled: settings.monthlyBackupEnabled,
+                        annualBackupEnabled: settings.annualBackupEnabled,
+                        dailyRetentionDays: settings.dailyRetentionDays,
+                        monthlyRetentionMonths: settings.monthlyRetentionMonths,
+                        annualRetentionYears: settings.annualRetentionYears,
+                        dailyBackupCron: settings.dailyBackupCron,
+                        monthlyBackupCron: settings.monthlyBackupCron,
+                        annualBackupCron: settings.annualBackupCron,
+                        cleanupCron: settings.cleanupCron,
+                    });
+                    break;
                 case "database-backup":
-    setFormValues({
-        dbBackupEnabled: settings.dbBackupEnabled,
-        dbBackupFrequency: settings.dbBackupFrequency || 1,
-        dbBackupScheduledHour: settings.dbBackupScheduledHour || 2,
-        dbBackupScheduledMinute: settings.dbBackupScheduledMinute || 0,
-        dbBackupWeeklyDay: settings.dbBackupWeeklyDay !== null ? settings.dbBackupWeeklyDay : 0,
-        dbBackupMonthlyDay: settings.dbBackupMonthlyDay !== null ? settings.dbBackupMonthlyDay : 1,
-        dbBackupMaxRetention: settings.dbBackupMaxRetention || 10,
-        dbBackupCompress: settings.dbBackupCompress,
-    });
-    break;
+                    setFormValues({
+                        dbBackupEnabled: settings.dbBackupEnabled,
+                        dbBackupFrequency: settings.dbBackupFrequency || 1,
+                        dbBackupScheduledHour: settings.dbBackupScheduledHour || 2,
+                        dbBackupScheduledMinute: settings.dbBackupScheduledMinute || 0,
+                        dbBackupWeeklyDay: settings.dbBackupWeeklyDay !== null ? settings.dbBackupWeeklyDay : 0,
+                        dbBackupMonthlyDay: settings.dbBackupMonthlyDay !== null ? settings.dbBackupMonthlyDay : 1,
+                        dbBackupMaxRetention: settings.dbBackupMaxRetention || 10,
+                        dbBackupCompress: settings.dbBackupCompress,
+                    });
+                    break;
                 case "email-incoming":
                     setFormValues({
                         enableIncomingEmail: settings.enableIncomingEmail,
@@ -314,6 +316,14 @@ export default function DeanSettingsPage() {
                         outgoingEmailNotifyOnDelivery: settings.outgoingEmailNotifyOnDelivery,
                     });
                     break;
+                case "attachment-naming": // ✅ إضافة
+                    setFormValues({
+                        includeNumber: settings.attachmentIncludeNumber,
+                        includeMainType: settings.attachmentIncludeMainType,
+                        includeOriginalName: settings.attachmentIncludeOriginalName,
+                        maxLength: settings.attachmentNameMaxLength,
+                    });
+                    break;
                 default:
                     setFormValues({});
             }
@@ -326,20 +336,20 @@ export default function DeanSettingsPage() {
                 case "distribution":
                     await updateDistributionSettings(formValues);
                     break;
-              case "file":
-    const allowedExtensions = formValues.allowedExtensions
-        ? formValues.allowedExtensions.split(',').map((s: string) => s.trim()).filter(Boolean)
-        : undefined;
-    const blockedMimeTypes = formValues.blockedMimeTypes
-        ? formValues.blockedMimeTypes.split(',').map((s: string) => s.trim()).filter(Boolean)
-        : undefined;
-    
-    await updateFileSettings({
-        maxAttachmentSizeMB: formValues.maxAttachmentSizeMB,
-        allowedExtensions: allowedExtensions,
-        blockedMimeTypes: blockedMimeTypes,
-    });
-    break;
+                case "file":
+                    const allowedExtensions = formValues.allowedExtensions
+                        ? formValues.allowedExtensions.split(',').map((s: string) => s.trim()).filter(Boolean)
+                        : undefined;
+                    const blockedMimeTypes = formValues.blockedMimeTypes
+                        ? formValues.blockedMimeTypes.split(',').map((s: string) => s.trim()).filter(Boolean)
+                        : undefined;
+
+                    await updateFileSettings({
+                        maxAttachmentSizeMB: formValues.maxAttachmentSizeMB,
+                        allowedExtensions: allowedExtensions,
+                        blockedMimeTypes: blockedMimeTypes,
+                    });
+                    break;
                 case "archive":
                     await updateArchiveSettings(formValues);
                     break;
@@ -361,6 +371,14 @@ export default function DeanSettingsPage() {
                 case "email-outgoing":
                     await updateEmailOutgoingSettings(formValues);
                     break;
+                case "attachment-naming": // ✅ إضافة
+                    await updateAttachmentNamingSettings({
+                        includeNumber: formValues.includeNumber,
+                        includeMainType: formValues.includeMainType,
+                        includeOriginalName: formValues.includeOriginalName,
+                        maxLength: formValues.maxLength,
+                    });
+                    break;
                 default:
                     break;
             }
@@ -370,9 +388,9 @@ export default function DeanSettingsPage() {
         }
     };
 
-   if (isAuthLoading) {
-    return <LoadingSpinner />;
-}
+    if (isAuthLoading) {
+        return <LoadingSpinner />;
+    }
 
     if (!canUpdate) {
         return (
@@ -415,14 +433,14 @@ export default function DeanSettingsPage() {
                         </div>
                     </div>
 
-                        <button
-                            onClick={resetSettings}
-                            disabled={isSaving}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition text-sm disabled:opacity-50"
-                        >
-                            <FontAwesomeIcon icon={faRotate} />
-                            إعادة تعيين
-                        </button>
+                    <button
+                        onClick={resetSettings}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition text-sm disabled:opacity-50"
+                    >
+                        <FontAwesomeIcon icon={faRotate} />
+                        إعادة تعيين
+                    </button>
                 </div>
             </div>
 
@@ -433,14 +451,14 @@ export default function DeanSettingsPage() {
                         <FontAwesomeIcon icon={faUsers} className="text-blue-500" />
                         إعدادات التوزيع
                     </h2>
-                        <EditButton onClick={() => openModal("distribution")} />
+                    <EditButton onClick={() => openModal("distribution")} />
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
                         label="التجاهل التلقائي"
                         description="تفعيل أو تعطيل خاصية التجاهل التلقائي للمراسلات"
                         enabled={settings.autoIgnoreEnabled}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                         disabled={true}
                         icon={faBan}
                     />
@@ -455,7 +473,7 @@ export default function DeanSettingsPage() {
                         label="موافقة العميد للجميع"
                         description="طلب موافقة العميد على جميع التوزيعات"
                         enabled={settings.requireDeanApprovalForAll}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                         disabled={true}
                         icon={faShield}
                     />
@@ -463,7 +481,7 @@ export default function DeanSettingsPage() {
                         label="الموافقة التلقائية للمستلمين الدائمين"
                         description="الموافقة التلقائية على توزيعات المستلمين الدائمين"
                         enabled={settings.autoApprovePermanentReceivers}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                         disabled={true}
                         icon={faCheckCircle}
                     />
@@ -477,84 +495,147 @@ export default function DeanSettingsPage() {
                 </div>
             </div>
 
-        {/* ===== 2. إعدادات المرفقات ===== */}
-<div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
-    <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-            <FontAwesomeIcon icon={faFile} className="text-blue-500" />
-            إعدادات المرفقات
-        </h2>
-        <EditButton onClick={() => openModal("file")} />
-    </div>
-    <div className="space-y-4">
-        <SettingCard
-            label="الحد الأقصى للمرفق"
-            description="الحد الأقصى لحجم المرفق بالميجابايت"
-            value={settings.maxAttachmentSizeMB}
-            suffix="MB"
-            icon={faFile}
-            showEdit={false}
-            onEdit={() => openModal("file")}
-        />
-        <div className="p-3 bg-slate-50 rounded-xl">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
-                        <FontAwesomeIcon icon={faFile} className="text-sm" />
-                    </div>
-                    <div>
-                        <p className="font-medium text-slate-700">الامتدادات المسموحة</p>
-                        <p className="text-xs text-slate-400">أنواع الملفات المسموح برفعها (مفصولة بفواصل)</p>
-                    </div>
+            {/* ===== 2. إعدادات المرفقات ===== */}
+            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faFile} className="text-blue-500" />
+                        إعدادات المرفقات
+                    </h2>
+                    <EditButton onClick={() => openModal("file")} />
                 </div>
-                <div className="flex flex-wrap gap-1">
-                    {settings.allowedExtensionsList && settings.allowedExtensionsList.length > 0 ? (
-                        settings.allowedExtensionsList.map((ext, index) => (
-                            <span key={index} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                                {ext}
-                            </span>
-                        ))
-                    ) : (
-                        <span className="text-xs text-slate-400">لا توجد امتدادات محددة</span>
-                    )}
+                <div className="space-y-4">
+                    <SettingCard
+                        label="الحد الأقصى للمرفق"
+                        description="الحد الأقصى لحجم المرفق بالميجابايت"
+                        value={settings.maxAttachmentSizeMB}
+                        suffix="MB"
+                        icon={faFile}
+                        showEdit={false}
+                        onEdit={() => openModal("file")}
+                    />
+                    <div className="p-3 bg-slate-50 rounded-xl">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                                    <FontAwesomeIcon icon={faFile} className="text-sm" />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-slate-700">الامتدادات المسموحة</p>
+                                    <p className="text-xs text-slate-400">أنواع الملفات المسموح برفعها (مفصولة بفواصل)</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {settings.allowedExtensionsList && settings.allowedExtensionsList.length > 0 ? (
+                                    settings.allowedExtensionsList.map((ext, index) => (
+                                        <span key={index} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                                            {ext}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span className="text-xs text-slate-400">لا توجد امتدادات محددة</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                                    <FontAwesomeIcon icon={faBan} className="text-sm" />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-slate-700">أنواع MIME المحظورة</p>
+                                    <p className="text-xs text-slate-400">أنواع الملفات المحظورة (مفصولة بفواصل)</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {settings.blockedMimeTypesList && settings.blockedMimeTypesList.length > 0 ? (
+                                    settings.blockedMimeTypesList.map((mime, index) => (
+                                        <span key={index} className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
+                                            {mime}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span className="text-xs text-slate-400">لا توجد أنواع محظورة</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div className="p-3 bg-slate-50 rounded-xl">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
-                        <FontAwesomeIcon icon={faBan} className="text-sm" />
-                    </div>
-                    <div>
-                        <p className="font-medium text-slate-700">أنواع MIME المحظورة</p>
-                        <p className="text-xs text-slate-400">أنواع الملفات المحظورة (مفصولة بفواصل)</p>
-                    </div>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                    {settings.blockedMimeTypesList && settings.blockedMimeTypesList.length > 0 ? (
-                        settings.blockedMimeTypesList.map((mime, index) => (
-                            <span key={index} className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
-                                {mime}
-                            </span>
-                        ))
-                    ) : (
-                        <span className="text-xs text-slate-400">لا توجد أنواع محظورة</span>
-                    )}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-            {/* ===== 3. إعدادات البريد الوارد ===== */}
+            {/* ===== 3. إعدادات تسمية المرفقات ===== */}
+            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faTag} className="text-purple-500" />
+                        إعدادات تسمية المرفقات
+                    </h2>
+                    <EditButton onClick={() => openModal("attachment-naming")} />
+                </div>
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <SettingCard
+                            label="تضمين الرقم"
+                            description="تضمين رقم المرفق في اسم الملف"
+                            value={settings.attachmentIncludeNumber ? "مفعل" : "معطل"}
+                            icon={faHashtag}
+                        />
+                        <SettingCard
+                            label="تضمين النوع الرئيسي"
+                            description="تضمين نوع المرفق الرئيسي في اسم الملف"
+                            value={settings.attachmentIncludeMainType ? "مفعل" : "معطل"}
+                            icon={faFile}
+                        />
+                        <SettingCard
+                            label="تضمين الاسم الأصلي"
+                            description="تضمين الاسم الأصلي للملف في اسم الملف"
+                            value={settings.attachmentIncludeOriginalName ? "مفعل" : "معطل"}
+                            icon={faPen}
+                        />
+                    </div>
+                    <SettingCard
+                        label="الحد الأقصى لطول الاسم"
+                        description="الحد الأقصى لطول اسم الملف بعد التسمية"
+                        value={settings.attachmentNameMaxLength}
+                        suffix="حرف"
+                        icon={faRuler}
+                    />
+                       {/* ✅ عرض previewFormat باتجاه LTR */}
+            <div className="p-3 bg-slate-50 rounded-xl">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
+                            <FontAwesomeIcon icon={faEye} className="text-sm" />
+                        </div>
+                        <div>
+                            <p className="font-medium text-slate-700">تنسيق المعاينة</p>
+                            <p className="text-xs text-slate-400">مثال لاسم الملف الناتج</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span 
+                            className="text-sm font-medium text-slate-700 font-mono bg-white px-3 py-1 rounded-lg border border-slate-200"
+                            dir="ltr" // ✅ اتجاه LTR
+                            style={{ unicodeBidi: 'embed' }}
+                        >
+                            {settings.previewFormat || "{number}-{mainType}-{originalName}"}
+                        </span>
+                    </div>
+                </div>
+            </div>
+                </div>
+            </div>
+
+            {/* ===== 4. إعدادات البريد الوارد ===== */}
             <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                         <FontAwesomeIcon icon={faEnvelope} className="text-green-500" />
                         إعدادات البريد الوارد
                     </h2>
-                        <EditButton onClick={() => openModal("email-incoming")} />
+                    <EditButton onClick={() => openModal("email-incoming")} />
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
@@ -614,14 +695,14 @@ export default function DeanSettingsPage() {
                 </div>
             </div>
 
-            {/* ===== 4. إعدادات البريد الصادر ===== */}
+            {/* ===== 5. إعدادات البريد الصادر ===== */}
             <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                         <FontAwesomeIcon icon={faEnvelope} className="text-blue-500" />
                         إعدادات البريد الصادر
                     </h2>
-                        <EditButton onClick={() => openModal("email-outgoing")} />
+                    <EditButton onClick={() => openModal("email-outgoing")} />
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
@@ -686,21 +767,21 @@ export default function DeanSettingsPage() {
                 </div>
             </div>
 
-            {/* ===== 5. إعدادات الأرشفة ===== */}
+            {/* ===== 6. إعدادات الأرشفة ===== */}
             <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                         <FontAwesomeIcon icon={faBoxArchive} className="text-amber-500" />
                         إعدادات الأرشفة
                     </h2>
-                        <EditButton onClick={() => openModal("archive")} />
+                    <EditButton onClick={() => openModal("archive")} />
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
                         label="الأرشفة التلقائية"
                         description="تفعيل أو تعطيل الأرشفة التلقائية للمراسلات القديمة"
                         enabled={settings.autoArchiveEnabled}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                         disabled={true}
                         icon={faBoxArchive}
                     />
@@ -723,21 +804,21 @@ export default function DeanSettingsPage() {
                 </div>
             </div>
 
-            {/* ===== 6. إعدادات تنظيف الملفات المؤقتة ===== */}
+            {/* ===== 7. إعدادات تنظيف الملفات المؤقتة ===== */}
             <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                         <FontAwesomeIcon icon={faTrash} className="text-red-500" />
                         إعدادات تنظيف الملفات المؤقتة
                     </h2>
-                        <EditButton onClick={() => openModal("temp-cleanup")} />
+                    <EditButton onClick={() => openModal("temp-cleanup")} />
                 </div>
                 <div className="space-y-4">
                     <ToggleCard
                         label="تنظيف الملفات المؤقتة"
                         description="تفعيل أو تعطيل تنظيف الملفات المؤقتة تلقائياً"
                         enabled={settings.tempCleanupEnabled}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                         disabled={true}
                         icon={faTrash}
                     />
@@ -761,191 +842,188 @@ export default function DeanSettingsPage() {
                 </div>
             </div>
 
-           {/* // ===== 7. إعدادات النسخ الاحتياطي للملفات ===== */}
-<div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
-    <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-            <FontAwesomeIcon icon={faFolder} className="text-purple-500" />
-            إعدادات النسخ الاحتياطي للملفات
-        </h2>
-            <EditButton onClick={() => openModal("files-backup")} />
-    </div>
-    <div className="space-y-4">
-        {/* Enable/Disable Backup Types */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <SettingCard
-                label="نسخ يومي"
-                description="تفعيل النسخ الاحتياطي اليومي للملفات"
-                value={settings.dailyBackupEnabled ? "مفعل" : "معطل"}
-                icon={faClock}
-            />
-            <SettingCard
-                label="نسخ شهري"
-                description="تفعيل النسخ الاحتياطي الشهري للملفات"
-                value={settings.monthlyBackupEnabled ? "مفعل" : "معطل"}
-                icon={faClock}
-            />
-            <SettingCard
-                label="نسخ سنوي"
-                description="تفعيل النسخ الاحتياطي السنوي للملفات"
-                value={settings.annualBackupEnabled ? "مفعل" : "معطل"}
-                icon={faClock}
-            />
-            <SettingCard
-                label="مهمة التنظيف"
-                description="تفعيل مهمة تنظيف النسخ الاحتياطية"
-                value={settings.isCleanupBackupJobEnabled ? "مفعل" : "معطل"}
-                icon={faTrash}
-            />
-        </div>
-
-        {/* Retention Policies */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <SettingCard
-                label="الاحتفاظ اليومي"
-                description="عدد الأيام للاحتفاظ بالنسخ اليومية"
-                value={settings.dailyRetentionDays}
-                suffix="يوم"
-                icon={faHardDrive}
-            />
-            <SettingCard
-                label="الاحتفاظ الشهري"
-                description="عدد الأشهر للاحتفاظ بالنسخ الشهرية"
-                value={settings.monthlyRetentionMonths}
-                suffix="شهر"
-                icon={faHardDrive}
-            />
-            <SettingCard
-                label="الاحتفاظ السنوي"
-                description="عدد السنوات للاحتفاظ بالنسخ السنوية"
-                value={settings.annualRetentionYears}
-                suffix="سنة"
-                icon={faHardDrive}
-            />
-        </div>
-
-        {/* ✅ عرض الجدولة بوصف بسيط بدلاً من CRON */}
-        <div className="border-t border-gray-100 pt-3">
-            <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <FontAwesomeIcon icon={faClock} className="text-blue-500" />
-                الجدولة الزمنية
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <SettingCard
-                    label="النسخ اليومي"
-                    description="وقت النسخ الاحتياطي اليومي"
-                    value={formatCronToText(settings.dailyBackupCron || "0 2 * * *", 'daily')}
-                    icon={faClock}
-                />
-                <SettingCard
-                    label="النسخ الشهري"
-                    description="وقت النسخ الاحتياطي الشهري"
-                    value={formatCronToText(settings.monthlyBackupCron || "0 3 1 * *", 'monthly')}
-                    icon={faClock}
-                />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                <SettingCard
-                    label="النسخ السنوي"
-                    description="وقت النسخ الاحتياطي السنوي"
-                    value={formatCronToText(settings.annualBackupCron || "0 4 1 1 *", 'yearly')}
-                    icon={faClock}
-                />
-                <SettingCard
-                    label="التنظيف"
-                    description="وقت تنظيف النسخ الاحتياطية"
-                    value={formatCronToText(settings.cleanupCron || "0 5 * * 0", 'weekly')}
-                    icon={faTrash}
-                />
-            </div>
-        </div>
-    </div>
-</div>
-
-            {/* // ===== 8. إعدادات النسخ الاحتياطي لقاعدة البيانات ===== */}
+            {/* ===== 8. إعدادات النسخ الاحتياطي للملفات ===== */}
             <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
-    <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-            <FontAwesomeIcon icon={faDatabase} className="text-blue-500" />
-            إعدادات النسخ الاحتياطي لقاعدة البيانات
-        </h2>
-            <EditButton onClick={() => openModal("database-backup")} />
-    </div>
-    <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <SettingCard
-                label="نسخ قاعدة البيانات"
-                description="تفعيل النسخ الاحتياطي لقاعدة البيانات"
-                value={settings.dbBackupEnabled ? "مفعل" : "معطل"}
-                icon={faDatabase}
-            />
-            <SettingCard
-                label="ضغط النسخ"
-                description="ضغط ملفات النسخ الاحتياطي"
-                value={settings.dbBackupCompress ? "مفعل" : "معطل"}
-                icon={faFile}
-            />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <SettingCard
-                label="الاحتفاظ بالنسخ"
-                description="الحد الأقصى لعدد النسخ المحتفظ بها"
-                value={settings.dbBackupMaxRetention}
-                suffix="نسخة"
-                icon={faHardDrive}
-            />
-            <SettingCard
-                label="التكرار"
-                description="تكرار النسخ الاحتياطي"
-                value={
-                    settings.dbBackupFrequency === 1 ? "يومي" :
-                    settings.dbBackupFrequency === 2 ? "أسبوعي" :
-                    settings.dbBackupFrequency === 3 ? "شهري" : "غير محدد"
-                }
-                icon={faClock}
-            />
-            <SettingCard
-                label="الوقت المحدد"
-                description="ساعة:دقيقة"
-                value={`${settings.dbBackupScheduledHour}:${String(settings.dbBackupScheduledMinute).padStart(2, '0')}`}
-                icon={faClock}
-            />
-        </div>
-        {settings.dbBackupFrequency === 2 && settings.dbBackupWeeklyDay !== null && (
-            <SettingCard
-                label="اليوم الأسبوعي"
-                description="يوم النسخ الاحتياطي الأسبوعي"
-                value={
-                    settings.dbBackupWeeklyDay === 0 ? "الأحد" :
-                    settings.dbBackupWeeklyDay === 1 ? "الإثنين" :
-                    settings.dbBackupWeeklyDay === 2 ? "الثلاثاء" :
-                    settings.dbBackupWeeklyDay === 3 ? "الأربعاء" :
-                    settings.dbBackupWeeklyDay === 4 ? "الخميس" :
-                    settings.dbBackupWeeklyDay === 5 ? "الجمعة" :
-                    settings.dbBackupWeeklyDay === 6 ? "السبت" : "غير محدد"
-                }
-                icon={faClock}
-            />
-        )}
-        {settings.dbBackupFrequency === 3 && settings.dbBackupMonthlyDay !== null && (
-            <SettingCard
-                label="اليوم الشهري"
-                description="يوم النسخ الاحتياطي الشهري"
-                value={`اليوم ${settings.dbBackupMonthlyDay}`}
-                icon={faClock}
-            />
-        )}
-    </div>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faFolder} className="text-purple-500" />
+                        إعدادات النسخ الاحتياطي للملفات
+                    </h2>
+                    <EditButton onClick={() => openModal("files-backup")} />
+                </div>
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <SettingCard
+                            label="نسخ يومي"
+                            description="تفعيل النسخ الاحتياطي اليومي للملفات"
+                            value={settings.dailyBackupEnabled ? "مفعل" : "معطل"}
+                            icon={faClock}
+                        />
+                        <SettingCard
+                            label="نسخ شهري"
+                            description="تفعيل النسخ الاحتياطي الشهري للملفات"
+                            value={settings.monthlyBackupEnabled ? "مفعل" : "معطل"}
+                            icon={faClock}
+                        />
+                        <SettingCard
+                            label="نسخ سنوي"
+                            description="تفعيل النسخ الاحتياطي السنوي للملفات"
+                            value={settings.annualBackupEnabled ? "مفعل" : "معطل"}
+                            icon={faClock}
+                        />
+                        <SettingCard
+                            label="مهمة التنظيف"
+                            description="تفعيل مهمة تنظيف النسخ الاحتياطية"
+                            value={settings.isCleanupBackupJobEnabled ? "مفعل" : "معطل"}
+                            icon={faTrash}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <SettingCard
+                            label="الاحتفاظ اليومي"
+                            description="عدد الأيام للاحتفاظ بالنسخ اليومية"
+                            value={settings.dailyRetentionDays}
+                            suffix="يوم"
+                            icon={faHardDrive}
+                        />
+                        <SettingCard
+                            label="الاحتفاظ الشهري"
+                            description="عدد الأشهر للاحتفاظ بالنسخ الشهرية"
+                            value={settings.monthlyRetentionMonths}
+                            suffix="شهر"
+                            icon={faHardDrive}
+                        />
+                        <SettingCard
+                            label="الاحتفاظ السنوي"
+                            description="عدد السنوات للاحتفاظ بالنسخ السنوية"
+                            value={settings.annualRetentionYears}
+                            suffix="سنة"
+                            icon={faHardDrive}
+                        />
+                    </div>
+
+                    <div className="border-t border-gray-100 pt-3">
+                        <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faClock} className="text-blue-500" />
+                            الجدولة الزمنية
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <SettingCard
+                                label="النسخ اليومي"
+                                description="وقت النسخ الاحتياطي اليومي"
+                                value={formatCronToText(settings.dailyBackupCron || "0 2 * * *", 'daily')}
+                                icon={faClock}
+                            />
+                            <SettingCard
+                                label="النسخ الشهري"
+                                description="وقت النسخ الاحتياطي الشهري"
+                                value={formatCronToText(settings.monthlyBackupCron || "0 3 1 * *", 'monthly')}
+                                icon={faClock}
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                            <SettingCard
+                                label="النسخ السنوي"
+                                description="وقت النسخ الاحتياطي السنوي"
+                                value={formatCronToText(settings.annualBackupCron || "0 4 1 1 *", 'yearly')}
+                                icon={faClock}
+                            />
+                            <SettingCard
+                                label="التنظيف"
+                                description="وقت تنظيف النسخ الاحتياطية"
+                                value={formatCronToText(settings.cleanupCron || "0 5 * * 0", 'weekly')}
+                                icon={faTrash}
+                            />
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* ===== 9. إعدادات التنظيف ===== */}
+            {/* ===== 9. إعدادات النسخ الاحتياطي لقاعدة البيانات ===== */}
+            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faDatabase} className="text-blue-500" />
+                        إعدادات النسخ الاحتياطي لقاعدة البيانات
+                    </h2>
+                    <EditButton onClick={() => openModal("database-backup")} />
+                </div>
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <SettingCard
+                            label="نسخ قاعدة البيانات"
+                            description="تفعيل النسخ الاحتياطي لقاعدة البيانات"
+                            value={settings.dbBackupEnabled ? "مفعل" : "معطل"}
+                            icon={faDatabase}
+                        />
+                        <SettingCard
+                            label="ضغط النسخ"
+                            description="ضغط ملفات النسخ الاحتياطي"
+                            value={settings.dbBackupCompress ? "مفعل" : "معطل"}
+                            icon={faFile}
+                        />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <SettingCard
+                            label="الاحتفاظ بالنسخ"
+                            description="الحد الأقصى لعدد النسخ المحتفظ بها"
+                            value={settings.dbBackupMaxRetention}
+                            suffix="نسخة"
+                            icon={faHardDrive}
+                        />
+                        <SettingCard
+                            label="التكرار"
+                            description="تكرار النسخ الاحتياطي"
+                            value={
+                                settings.dbBackupFrequency === 1 ? "يومي" :
+                                    settings.dbBackupFrequency === 2 ? "أسبوعي" :
+                                        settings.dbBackupFrequency === 3 ? "شهري" : "غير محدد"
+                            }
+                            icon={faClock}
+                        />
+                        <SettingCard
+                            label="الوقت المحدد"
+                            description="ساعة:دقيقة"
+                            value={`${settings.dbBackupScheduledHour}:${String(settings.dbBackupScheduledMinute).padStart(2, '0')}`}
+                            icon={faClock}
+                        />
+                    </div>
+                    {settings.dbBackupFrequency === 2 && settings.dbBackupWeeklyDay !== null && (
+                        <SettingCard
+                            label="اليوم الأسبوعي"
+                            description="يوم النسخ الاحتياطي الأسبوعي"
+                            value={
+                                settings.dbBackupWeeklyDay === 0 ? "الأحد" :
+                                    settings.dbBackupWeeklyDay === 1 ? "الإثنين" :
+                                        settings.dbBackupWeeklyDay === 2 ? "الثلاثاء" :
+                                            settings.dbBackupWeeklyDay === 3 ? "الأربعاء" :
+                                                settings.dbBackupWeeklyDay === 4 ? "الخميس" :
+                                                    settings.dbBackupWeeklyDay === 5 ? "الجمعة" :
+                                                        settings.dbBackupWeeklyDay === 6 ? "السبت" : "غير محدد"
+                            }
+                            icon={faClock}
+                        />
+                    )}
+                    {settings.dbBackupFrequency === 3 && settings.dbBackupMonthlyDay !== null && (
+                        <SettingCard
+                            label="اليوم الشهري"
+                            description="يوم النسخ الاحتياطي الشهري"
+                            value={`اليوم ${settings.dbBackupMonthlyDay}`}
+                            icon={faClock}
+                        />
+                    )}
+                </div>
+            </div>
+
+            {/* ===== 10. إعدادات التنظيف ===== */}
             <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                         <FontAwesomeIcon icon={faClock} className="text-orange-500" />
                         إعدادات التنظيف
                     </h2>
-                        <EditButton onClick={() => openModal("cleanup")} />
+                    <EditButton onClick={() => openModal("cleanup")} />
                 </div>
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
@@ -988,15 +1066,16 @@ export default function DeanSettingsPage() {
                 onSave={handleSave}
                 title={
                     modalType === "distribution" ? "تعديل إعدادات التوزيع" :
-                    modalType === "file" ? "تعديل إعدادات المرفقات" :
-                    modalType === "archive" ? "تعديل إعدادات الأرشفة" :
-                    modalType === "cleanup" ? "تعديل إعدادات التنظيف" :
-                    modalType === "temp-cleanup" ? "تعديل إعدادات التنظيف المؤقت" :
-                    modalType === "files-backup" ? "تعديل إعدادات النسخ الاحتياطي للملفات" :
-                    modalType === "database-backup" ? "تعديل إعدادات النسخ الاحتياطي لقاعدة البيانات" :
-                    modalType === "email-incoming" ? "تعديل إعدادات البريد الوارد" :
-                    modalType === "email-outgoing" ? "تعديل إعدادات البريد الصادر" :
-                    "تعديل الإعدادات"
+                        modalType === "file" ? "تعديل إعدادات المرفقات" :
+                            modalType === "archive" ? "تعديل إعدادات الأرشفة" :
+                                modalType === "cleanup" ? "تعديل إعدادات التنظيف" :
+                                    modalType === "temp-cleanup" ? "تعديل إعدادات التنظيف المؤقت" :
+                                        modalType === "files-backup" ? "تعديل إعدادات النسخ الاحتياطي للملفات" :
+                                            modalType === "database-backup" ? "تعديل إعدادات النسخ الاحتياطي لقاعدة البيانات" :
+                                                modalType === "email-incoming" ? "تعديل إعدادات البريد الوارد" :
+                                                    modalType === "email-outgoing" ? "تعديل إعدادات البريد الصادر" :
+                                                        modalType === "attachment-naming" ? "تعديل إعدادات تسمية المرفقات" :
+                                                            "تعديل الإعدادات"
                 }
                 isSaving={isSaving}
             >
@@ -1007,7 +1086,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="number"
                                 value={formValues.ignoredAfterDays || ""}
-                                onChange={(e) => setFormValues({...formValues, ignoredAfterDays: Number(e.target.value)})}
+                                onChange={(e) => setFormValues({ ...formValues, ignoredAfterDays: Number(e.target.value) })}
                                 className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                             />
                         </div>
@@ -1016,7 +1095,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="number"
                                 value={formValues.backgroundServiceIntervalHours || ""}
-                                onChange={(e) => setFormValues({...formValues, backgroundServiceIntervalHours: Number(e.target.value)})}
+                                onChange={(e) => setFormValues({ ...formValues, backgroundServiceIntervalHours: Number(e.target.value) })}
                                 className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                             />
                         </div>
@@ -1024,7 +1103,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.autoIgnoreEnabled || false}
-                                onChange={(e) => setFormValues({...formValues, autoIgnoreEnabled: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, autoIgnoreEnabled: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">التجاهل التلقائي</label>
@@ -1033,7 +1112,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.requireDeanApprovalForAll || false}
-                                onChange={(e) => setFormValues({...formValues, requireDeanApprovalForAll: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, requireDeanApprovalForAll: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">موافقة العميد للجميع</label>
@@ -1042,7 +1121,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.autoApprovePermanentReceivers || false}
-                                onChange={(e) => setFormValues({...formValues, autoApprovePermanentReceivers: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, autoApprovePermanentReceivers: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">الموافقة التلقائية للمستلمين الدائمين</label>
@@ -1050,43 +1129,43 @@ export default function DeanSettingsPage() {
                     </div>
                 )}
 
-               {modalType === "file" && (
-    <div className="space-y-4">
-        <div>
-            <label className="text-sm font-medium text-slate-700">الحد الأقصى للمرفق (MB)</label>
-            <input
-                type="number"
-                value={formValues.maxAttachmentSizeMB || ""}
-                onChange={(e) => setFormValues({...formValues, maxAttachmentSizeMB: Number(e.target.value)})}
-                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-                placeholder="10"
-            />
-            <p className="text-[10px] text-slate-400 mt-0.5">بين 1 و 100 ميجابايت</p>
-        </div>
-        <div>
-            <label className="text-sm font-medium text-slate-700">الامتدادات المسموحة</label>
-            <input
-                type="text"
-                value={formValues.allowedExtensions || ""}
-                onChange={(e) => setFormValues({...formValues, allowedExtensions: e.target.value})}
-                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-                placeholder=".pdf, .docx, .jpg"
-            />
-            <p className="text-[10px] text-slate-400 mt-0.5">افصل بين الامتدادات بفاصلة، يجب أن تبدأ بـ .</p>
-        </div>
-        <div>
-            <label className="text-sm font-medium text-slate-700">أنواع MIME المحظورة</label>
-            <input
-                type="text"
-                value={formValues.blockedMimeTypes || ""}
-                onChange={(e) => setFormValues({...formValues, blockedMimeTypes: e.target.value})}
-                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-                placeholder="application/x-msdownload, text/javascript"
-            />
-            <p className="text-[10px] text-slate-400 mt-0.5">افصل بين الأنواع بفاصلة</p>
-        </div>
-    </div>
-)}
+                {modalType === "file" && (
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm font-medium text-slate-700">الحد الأقصى للمرفق (MB)</label>
+                            <input
+                                type="number"
+                                value={formValues.maxAttachmentSizeMB || ""}
+                                onChange={(e) => setFormValues({ ...formValues, maxAttachmentSizeMB: Number(e.target.value) })}
+                                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                                placeholder="10"
+                            />
+                            <p className="text-[10px] text-slate-400 mt-0.5">بين 1 و 100 ميجابايت</p>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-slate-700">الامتدادات المسموحة</label>
+                            <input
+                                type="text"
+                                value={formValues.allowedExtensions || ""}
+                                onChange={(e) => setFormValues({ ...formValues, allowedExtensions: e.target.value })}
+                                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                                placeholder=".pdf, .docx, .jpg"
+                            />
+                            <p className="text-[10px] text-slate-400 mt-0.5">افصل بين الامتدادات بفاصلة، يجب أن تبدأ بـ .</p>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-slate-700">أنواع MIME المحظورة</label>
+                            <input
+                                type="text"
+                                value={formValues.blockedMimeTypes || ""}
+                                onChange={(e) => setFormValues({ ...formValues, blockedMimeTypes: e.target.value })}
+                                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                                placeholder="application/x-msdownload, text/javascript"
+                            />
+                            <p className="text-[10px] text-slate-400 mt-0.5">افصل بين الأنواع بفاصلة</p>
+                        </div>
+                    </div>
+                )}
 
                 {modalType === "archive" && (
                     <div className="space-y-4">
@@ -1095,7 +1174,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="number"
                                 value={formValues.archiveAfterDays || ""}
-                                onChange={(e) => setFormValues({...formValues, archiveAfterDays: Number(e.target.value)})}
+                                onChange={(e) => setFormValues({ ...formValues, archiveAfterDays: Number(e.target.value) })}
                                 className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                             />
                         </div>
@@ -1104,7 +1183,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="number"
                                 value={formValues.archiveBatchSize || ""}
-                                onChange={(e) => setFormValues({...formValues, archiveBatchSize: Number(e.target.value)})}
+                                onChange={(e) => setFormValues({ ...formValues, archiveBatchSize: Number(e.target.value) })}
                                 className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                             />
                         </div>
@@ -1112,7 +1191,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.autoArchiveEnabled || false}
-                                onChange={(e) => setFormValues({...formValues, autoArchiveEnabled: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, autoArchiveEnabled: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">الأرشفة التلقائية</label>
@@ -1127,7 +1206,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="number"
                                 value={formValues.cleanupDelayMinutes || ""}
-                                onChange={(e) => setFormValues({...formValues, cleanupDelayMinutes: Number(e.target.value)})}
+                                onChange={(e) => setFormValues({ ...formValues, cleanupDelayMinutes: Number(e.target.value) })}
                                 className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                             />
                         </div>
@@ -1136,7 +1215,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="number"
                                 value={formValues.maxStaleMinutes || ""}
-                                onChange={(e) => setFormValues({...formValues, maxStaleMinutes: Number(e.target.value)})}
+                                onChange={(e) => setFormValues({ ...formValues, maxStaleMinutes: Number(e.target.value) })}
                                 className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                             />
                         </div>
@@ -1144,7 +1223,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.autoCleanupEnabled || false}
-                                onChange={(e) => setFormValues({...formValues, autoCleanupEnabled: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, autoCleanupEnabled: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">التنظيف التلقائي</label>
@@ -1153,7 +1232,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.autoRemoveStaleRunning || false}
-                                onChange={(e) => setFormValues({...formValues, autoRemoveStaleRunning: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, autoRemoveStaleRunning: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">إزالة المهام العالقة</label>
@@ -1168,7 +1247,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="number"
                                 value={formValues.tempFilesMaxAgeMinutes || ""}
-                                onChange={(e) => setFormValues({...formValues, tempFilesMaxAgeMinutes: Number(e.target.value)})}
+                                onChange={(e) => setFormValues({ ...formValues, tempFilesMaxAgeMinutes: Number(e.target.value) })}
                                 className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                             />
                         </div>
@@ -1176,7 +1255,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.tempCleanupEnabled || false}
-                                onChange={(e) => setFormValues({...formValues, tempCleanupEnabled: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, tempCleanupEnabled: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">تفعيل التنظيف المؤقت</label>
@@ -1185,7 +1264,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.autoDeleteTempFiles || false}
-                                onChange={(e) => setFormValues({...formValues, autoDeleteTempFiles: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, autoDeleteTempFiles: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">الحذف التلقائي</label>
@@ -1193,247 +1272,243 @@ export default function DeanSettingsPage() {
                     </div>
                 )}
 
-   {modalType === "files-backup" && (
-    <div className="space-y-4 ">
-        {/* Enable/Disable Backup Types */}
-        <div className="border-b border-gray-100 pb-3">
-            <h3 className="text-sm font-semibold text-slate-700 mb-2">أنواع النسخ الاحتياطي والتحكم بالمهام</h3>
-            <div className="grid grid-cols-3 gap-2">
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={formValues.dailyBackupEnabled || false}
-                        onChange={(e) => setFormValues({...formValues, dailyBackupEnabled: e.target.checked})}
-                        className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <label className="text-sm text-slate-700">يومي</label>
-                </div>
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={formValues.monthlyBackupEnabled || false}
-                        onChange={(e) => setFormValues({...formValues, monthlyBackupEnabled: e.target.checked})}
-                        className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <label className="text-sm text-slate-700">شهري</label>
-                </div>
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={formValues.annualBackupEnabled || false}
-                        onChange={(e) => setFormValues({...formValues, annualBackupEnabled: e.target.checked})}
-                        className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <label className="text-sm text-slate-700">سنوي</label>
-                </div>
-                   <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={formValues.isCleanupBackupJobEnabled || false}
-                        onChange={(e) => setFormValues({...formValues, isCleanupBackupJobEnabled: e.target.checked})}
-                        className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <label className="text-sm text-slate-700">مهمة تنظيف</label>
-                </div>
-            </div>
-        </div>
+                {modalType === "files-backup" && (
+                    <div className="space-y-4 ">
+                        <div className="border-b border-gray-100 pb-3">
+                            <h3 className="text-sm font-semibold text-slate-700 mb-2">أنواع النسخ الاحتياطي والتحكم بالمهام</h3>
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={formValues.dailyBackupEnabled || false}
+                                        onChange={(e) => setFormValues({ ...formValues, dailyBackupEnabled: e.target.checked })}
+                                        className="w-4 h-4 rounded border-gray-300"
+                                    />
+                                    <label className="text-sm text-slate-700">يومي</label>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={formValues.monthlyBackupEnabled || false}
+                                        onChange={(e) => setFormValues({ ...formValues, monthlyBackupEnabled: e.target.checked })}
+                                        className="w-4 h-4 rounded border-gray-300"
+                                    />
+                                    <label className="text-sm text-slate-700">شهري</label>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={formValues.annualBackupEnabled || false}
+                                        onChange={(e) => setFormValues({ ...formValues, annualBackupEnabled: e.target.checked })}
+                                        className="w-4 h-4 rounded border-gray-300"
+                                    />
+                                    <label className="text-sm text-slate-700">سنوي</label>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={formValues.isCleanupBackupJobEnabled || false}
+                                        onChange={(e) => setFormValues({ ...formValues, isCleanupBackupJobEnabled: e.target.checked })}
+                                        className="w-4 h-4 rounded border-gray-300"
+                                    />
+                                    <label className="text-sm text-slate-700">مهمة تنظيف</label>
+                                </div>
+                            </div>
+                        </div>
 
-        {/* Retention Policies */}
-        <div className="border-b border-gray-100 pb-3">
-            <h3 className="text-sm font-semibold text-slate-700 mb-2">سياسات الاحتفاظ</h3>
-            <div className="grid grid-cols-3 gap-3">
-                <div>
-                    <label className="text-xs text-slate-500">الاحتفاظ اليومي (أيام)</label>
-                    <input
-                        type="number"
-                        value={formValues.dailyRetentionDays || 7}
-                        onChange={(e) => setFormValues({...formValues, dailyRetentionDays: Number(e.target.value)})}
-                        className="w-full mt-0.5 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-400"
-                        min={1}
-                        max={365}
-                    />
-                </div>
-                <div>
-                    <label className="text-xs text-slate-500">الاحتفاظ الشهري (أشهر)</label>
-                    <input
-                        type="number"
-                        value={formValues.monthlyRetentionMonths || 12}
-                        onChange={(e) => setFormValues({...formValues, monthlyRetentionMonths: Number(e.target.value)})}
-                        className="w-full mt-0.5 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-400"
-                        min={1}
-                        max={120}
-                    />
-                </div>
-                <div>
-                    <label className="text-xs text-slate-500">الاحتفاظ السنوي (سنوات)</label>
-                    <input
-                        type="number"
-                        value={formValues.annualRetentionYears || 5}
-                        onChange={(e) => setFormValues({...formValues, annualRetentionYears: Number(e.target.value)})}
-                        className="w-full mt-0.5 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-400"
-                        min={1}
-                        max={100}
-                    />
-                </div>
-            </div>
-        </div>
+                        <div className="border-b border-gray-100 pb-3">
+                            <h3 className="text-sm font-semibold text-slate-700 mb-2">سياسات الاحتفاظ</h3>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label className="text-xs text-slate-500">الاحتفاظ اليومي (أيام)</label>
+                                    <input
+                                        type="number"
+                                        value={formValues.dailyRetentionDays || 7}
+                                        onChange={(e) => setFormValues({ ...formValues, dailyRetentionDays: Number(e.target.value) })}
+                                        className="w-full mt-0.5 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-400"
+                                        min={1}
+                                        max={365}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-slate-500">الاحتفاظ الشهري (أشهر)</label>
+                                    <input
+                                        type="number"
+                                        value={formValues.monthlyRetentionMonths || 12}
+                                        onChange={(e) => setFormValues({ ...formValues, monthlyRetentionMonths: Number(e.target.value) })}
+                                        className="w-full mt-0.5 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-400"
+                                        min={1}
+                                        max={120}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-slate-500">الاحتفاظ السنوي (سنوات)</label>
+                                    <input
+                                        type="number"
+                                        value={formValues.annualRetentionYears || 5}
+                                        onChange={(e) => setFormValues({ ...formValues, annualRetentionYears: Number(e.target.value) })}
+                                        className="w-full mt-0.5 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-400"
+                                        min={1}
+                                        max={100}
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
-        {/* CRON Schedules - بدون أي ذكر لـ CRON */}
-<div>
-    <h3 className="text-sm font-semibold text-slate-700 mb-2">جدولة المهام</h3>
-    <div className="space-y-4">
-        <CronEditor
-            value={formValues.dailyBackupCron || "0 2 * * *"}
-            onChange={(cron) => setFormValues({...formValues, dailyBackupCron: cron})}
-            label="النسخ اليومي"
-            description="اختر وقت النسخ الاحتياطي اليومي"
-            frequency="daily"
-        />
-        
-        <div className="border-t border-gray-100 pt-3">
-            <CronEditor
-                value={formValues.monthlyBackupCron || "0 3 1 * *"}
-                onChange={(cron) => setFormValues({...formValues, monthlyBackupCron: cron})}
-                label="النسخ الشهري"
-                description="اختر وقت النسخ الاحتياطي الشهري"
-                frequency="monthly"
-            />
-        </div>
+                        <div>
+                            <h3 className="text-sm font-semibold text-slate-700 mb-2">جدولة المهام</h3>
+                            <div className="space-y-4">
+                                <CronEditor
+                                    value={formValues.dailyBackupCron || "0 2 * * *"}
+                                    onChange={(cron) => setFormValues({ ...formValues, dailyBackupCron: cron })}
+                                    label="النسخ اليومي"
+                                    description="اختر وقت النسخ الاحتياطي اليومي"
+                                    frequency="daily"
+                                />
 
-        <div className="border-t border-gray-100 pt-3">
-            <CronEditor
-                value={formValues.annualBackupCron || "0 4 1 1 *"}
-                onChange={(cron) => setFormValues({...formValues, annualBackupCron: cron})}
-                label="النسخ السنوي"
-                description="اختر وقت النسخ الاحتياطي السنوي"
-                frequency="yearly"
-            />
-        </div>
+                                <div className="border-t border-gray-100 pt-3">
+                                    <CronEditor
+                                        value={formValues.monthlyBackupCron || "0 3 1 * *"}
+                                        onChange={(cron) => setFormValues({ ...formValues, monthlyBackupCron: cron })}
+                                        label="النسخ الشهري"
+                                        description="اختر وقت النسخ الاحتياطي الشهري"
+                                        frequency="monthly"
+                                    />
+                                </div>
 
-        <div className="border-t border-gray-100 pt-3">
-            <CronEditor
-                value={formValues.cleanupCron || "0 5 * * 0"}
-                onChange={(cron) => setFormValues({...formValues, cleanupCron: cron})}
-                label="التنظيف"
-                description="اختر وقت تنظيف النسخ الاحتياطية"
-                frequency="weekly"
-            />
-        </div>
-    </div>
-</div>
-    </div>
-)}
-               {modalType === "database-backup" && (
-    <div className="space-y-4">
-        <div className="flex items-center gap-3">
-            <input
-                type="checkbox"
-                checked={formValues.dbBackupEnabled || false}
-                onChange={(e) => setFormValues({...formValues, dbBackupEnabled: e.target.checked})}
-                className="w-4 h-4 rounded border-gray-300"
-            />
-            <label className="text-sm text-slate-700">تفعيل النسخ الاحتياطي لقاعدة البيانات</label>
-        </div>
+                                <div className="border-t border-gray-100 pt-3">
+                                    <CronEditor
+                                        value={formValues.annualBackupCron || "0 4 1 1 *"}
+                                        onChange={(cron) => setFormValues({ ...formValues, annualBackupCron: cron })}
+                                        label="النسخ السنوي"
+                                        description="اختر وقت النسخ الاحتياطي السنوي"
+                                        frequency="yearly"
+                                    />
+                                </div>
 
-        <div>
-            <label className="text-sm font-medium text-slate-700">تكرار النسخ الاحتياطي</label>
-            <select
-                value={formValues.dbBackupFrequency || 1}
-                onChange={(e) => setFormValues({...formValues, dbBackupFrequency: Number(e.target.value)})}
-                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-            >
-                <option value={1}>يومي</option>
-                <option value={2}>أسبوعي</option>
-                <option value={3}>شهري</option>
-            </select>
-        </div>
+                                <div className="border-t border-gray-100 pt-3">
+                                    <CronEditor
+                                        value={formValues.cleanupCron || "0 5 * * 0"}
+                                        onChange={(cron) => setFormValues({ ...formValues, cleanupCron: cron })}
+                                        label="التنظيف"
+                                        description="اختر وقت تنظيف النسخ الاحتياطية"
+                                        frequency="weekly"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
-        <div className="grid grid-cols-2 gap-3">
-            <div>
-                <label className="text-sm font-medium text-slate-700">الساعة</label>
-                <select
-                    value={formValues.dbBackupScheduledHour || 2}
-                    onChange={(e) => setFormValues({...formValues, dbBackupScheduledHour: Number(e.target.value)})}
-                    className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-                >
-                    {Array.from({length: 24}, (_, i) => i).map(hour => (
-                        <option key={hour} value={hour}>{hour.toString().padStart(2, '0')}</option>
-                    ))}
-                </select>
-            </div>
-            <div>
-                <label className="text-sm font-medium text-slate-700">الدقيقة</label>
-                <select
-                    value={formValues.dbBackupScheduledMinute || 0}
-                    onChange={(e) => setFormValues({...formValues, dbBackupScheduledMinute: Number(e.target.value)})}
-                    className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-                >
-                    {Array.from({length: 60}, (_, i) => i).map(minute => (
-                        <option key={minute} value={minute}>{minute.toString().padStart(2, '0')}</option>
-                    ))}
-                </select>
-            </div>
-        </div>
+                {modalType === "database-backup" && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                checked={formValues.dbBackupEnabled || false}
+                                onChange={(e) => setFormValues({ ...formValues, dbBackupEnabled: e.target.checked })}
+                                className="w-4 h-4 rounded border-gray-300"
+                            />
+                            <label className="text-sm text-slate-700">تفعيل النسخ الاحتياطي لقاعدة البيانات</label>
+                        </div>
 
-        {/* يوم أسبوعي - يظهر فقط عند اختيار أسبوعي */}
-        {formValues.dbBackupFrequency === 2 && (
-            <div>
-                <label className="text-sm font-medium text-slate-700">اليوم الأسبوعي</label>
-                <select
-                    value={formValues.dbBackupWeeklyDay || 0}
-                    onChange={(e) => setFormValues({...formValues, dbBackupWeeklyDay: Number(e.target.value)})}
-                    className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-                >
-                    <option value={0}>الأحد</option>
-                    <option value={1}>الإثنين</option>
-                    <option value={2}>الثلاثاء</option>
-                    <option value={3}>الأربعاء</option>
-                    <option value={4}>الخميس</option>
-                    <option value={5}>الجمعة</option>
-                    <option value={6}>السبت</option>
-                </select>
-            </div>
-        )}
+                        <div>
+                            <label className="text-sm font-medium text-slate-700">تكرار النسخ الاحتياطي</label>
+                            <select
+                                value={formValues.dbBackupFrequency || 1}
+                                onChange={(e) => setFormValues({ ...formValues, dbBackupFrequency: Number(e.target.value) })}
+                                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                            >
+                                <option value={1}>يومي</option>
+                                <option value={2}>أسبوعي</option>
+                                <option value={3}>شهري</option>
+                            </select>
+                        </div>
 
-        {/* يوم شهري - يظهر فقط عند اختيار شهري */}
-        {formValues.dbBackupFrequency === 3 && (
-            <div>
-                <label className="text-sm font-medium text-slate-700">اليوم الشهري</label>
-                <select
-                    value={formValues.dbBackupMonthlyDay || 1}
-                    onChange={(e) => setFormValues({...formValues, dbBackupMonthlyDay: Number(e.target.value)})}
-                    className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-                >
-                    {Array.from({length: 31}, (_, i) => i + 1).map(day => (
-                        <option key={day} value={day}>{day}</option>
-                    ))}
-                </select>
-            </div>
-        )}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-sm font-medium text-slate-700">الساعة</label>
+                                <select
+                                    value={formValues.dbBackupScheduledHour || 2}
+                                    onChange={(e) => setFormValues({ ...formValues, dbBackupScheduledHour: Number(e.target.value) })}
+                                    className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                                >
+                                    {Array.from({ length: 24 }, (_, i) => i).map(hour => (
+                                        <option key={hour} value={hour}>{hour.toString().padStart(2, '0')}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-slate-700">الدقيقة</label>
+                                <select
+                                    value={formValues.dbBackupScheduledMinute || 0}
+                                    onChange={(e) => setFormValues({ ...formValues, dbBackupScheduledMinute: Number(e.target.value) })}
+                                    className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                                >
+                                    {Array.from({ length: 60 }, (_, i) => i).map(minute => (
+                                        <option key={minute} value={minute}>{minute.toString().padStart(2, '0')}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
 
-        <div>
-            <label className="text-sm font-medium text-slate-700">الاحتفاظ بالنسخ</label>
-            <input
-                type="number"
-                value={formValues.dbBackupMaxRetention || 10}
-                onChange={(e) => setFormValues({...formValues, dbBackupMaxRetention: Number(e.target.value)})}
-                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
-                min={1}
-            />
-            <p className="text-[10px] text-slate-400 mt-0.5">الحد الأقصى لعدد النسخ المحتفظ بها (على الأقل 1)</p>
-        </div>
+                        {formValues.dbBackupFrequency === 2 && (
+                            <div>
+                                <label className="text-sm font-medium text-slate-700">اليوم الأسبوعي</label>
+                                <select
+                                    value={formValues.dbBackupWeeklyDay || 0}
+                                    onChange={(e) => setFormValues({ ...formValues, dbBackupWeeklyDay: Number(e.target.value) })}
+                                    className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                                >
+                                    <option value={0}>الأحد</option>
+                                    <option value={1}>الإثنين</option>
+                                    <option value={2}>الثلاثاء</option>
+                                    <option value={3}>الأربعاء</option>
+                                    <option value={4}>الخميس</option>
+                                    <option value={5}>الجمعة</option>
+                                    <option value={6}>السبت</option>
+                                </select>
+                            </div>
+                        )}
 
-        <div className="flex items-center gap-3">
-            <input
-                type="checkbox"
-                checked={formValues.dbBackupCompress || false}
-                onChange={(e) => setFormValues({...formValues, dbBackupCompress: e.target.checked})}
-                className="w-4 h-4 rounded border-gray-300"
-            />
-            <label className="text-sm text-slate-700">ضغط النسخ</label>
-        </div>
-    </div>
-)}
+                        {formValues.dbBackupFrequency === 3 && (
+                            <div>
+                                <label className="text-sm font-medium text-slate-700">اليوم الشهري</label>
+                                <select
+                                    value={formValues.dbBackupMonthlyDay || 1}
+                                    onChange={(e) => setFormValues({ ...formValues, dbBackupMonthlyDay: Number(e.target.value) })}
+                                    className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                                >
+                                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                        <option key={day} value={day}>{day}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="text-sm font-medium text-slate-700">الاحتفاظ بالنسخ</label>
+                            <input
+                                type="number"
+                                value={formValues.dbBackupMaxRetention || 10}
+                                onChange={(e) => setFormValues({ ...formValues, dbBackupMaxRetention: Number(e.target.value) })}
+                                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                                min={1}
+                            />
+                            <p className="text-[10px] text-slate-400 mt-0.5">الحد الأقصى لعدد النسخ المحتفظ بها (على الأقل 1)</p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                checked={formValues.dbBackupCompress || false}
+                                onChange={(e) => setFormValues({ ...formValues, dbBackupCompress: e.target.checked })}
+                                className="w-4 h-4 rounded border-gray-300"
+                            />
+                            <label className="text-sm text-slate-700">ضغط النسخ</label>
+                        </div>
+                    </div>
+                )}
 
                 {modalType === "email-incoming" && (
                     <div className="space-y-4">
@@ -1441,7 +1516,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.enableIncomingEmail || false}
-                                onChange={(e) => setFormValues({...formValues, enableIncomingEmail: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, enableIncomingEmail: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">تفعيل البريد الوارد</label>
@@ -1452,7 +1527,7 @@ export default function DeanSettingsPage() {
                                 <input
                                     type="text"
                                     value={formValues.incomingEmailServer || ""}
-                                    onChange={(e) => setFormValues({...formValues, incomingEmailServer: e.target.value})}
+                                    onChange={(e) => setFormValues({ ...formValues, incomingEmailServer: e.target.value })}
                                     className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     placeholder="mail.example.com"
                                 />
@@ -1463,7 +1538,7 @@ export default function DeanSettingsPage() {
                                     <input
                                         type="number"
                                         value={formValues.incomingEmailPort || ""}
-                                        onChange={(e) => setFormValues({...formValues, incomingEmailPort: Number(e.target.value)})}
+                                        onChange={(e) => setFormValues({ ...formValues, incomingEmailPort: Number(e.target.value) })}
                                         className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     />
                                 </div>
@@ -1472,7 +1547,7 @@ export default function DeanSettingsPage() {
                                     <input
                                         type="text"
                                         value={formValues.incomingEmailUsername || ""}
-                                        onChange={(e) => setFormValues({...formValues, incomingEmailUsername: e.target.value})}
+                                        onChange={(e) => setFormValues({ ...formValues, incomingEmailUsername: e.target.value })}
                                         className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     />
                                 </div>
@@ -1482,7 +1557,7 @@ export default function DeanSettingsPage() {
                                 <input
                                     type="password"
                                     value={formValues.incomingEmailPassword || ""}
-                                    onChange={(e) => setFormValues({...formValues, incomingEmailPassword: e.target.value})}
+                                    onChange={(e) => setFormValues({ ...formValues, incomingEmailPassword: e.target.value })}
                                     className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     placeholder="••••••••"
                                 />
@@ -1492,7 +1567,7 @@ export default function DeanSettingsPage() {
                                     <input
                                         type="checkbox"
                                         checked={formValues.incomingEmailUseSsl || false}
-                                        onChange={(e) => setFormValues({...formValues, incomingEmailUseSsl: e.target.checked})}
+                                        onChange={(e) => setFormValues({ ...formValues, incomingEmailUseSsl: e.target.checked })}
                                         className="w-4 h-4 rounded border-gray-300"
                                     />
                                     <label className="text-sm text-slate-700">SSL</label>
@@ -1504,7 +1579,7 @@ export default function DeanSettingsPage() {
                                     <input
                                         type="number"
                                         value={formValues.incomingEmailCheckIntervalMinutes || ""}
-                                        onChange={(e) => setFormValues({...formValues, incomingEmailCheckIntervalMinutes: Number(e.target.value)})}
+                                        onChange={(e) => setFormValues({ ...formValues, incomingEmailCheckIntervalMinutes: Number(e.target.value) })}
                                         className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     />
                                 </div>
@@ -1513,7 +1588,7 @@ export default function DeanSettingsPage() {
                                     <input
                                         type="number"
                                         value={formValues.incomingEmailMaxPerBatch || ""}
-                                        onChange={(e) => setFormValues({...formValues, incomingEmailMaxPerBatch: Number(e.target.value)})}
+                                        onChange={(e) => setFormValues({ ...formValues, incomingEmailMaxPerBatch: Number(e.target.value) })}
                                         className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     />
                                 </div>
@@ -1523,7 +1598,7 @@ export default function DeanSettingsPage() {
                                 <input
                                     type="text"
                                     value={formValues.incomingEmailAllowedDomains || ""}
-                                    onChange={(e) => setFormValues({...formValues, incomingEmailAllowedDomains: e.target.value})}
+                                    onChange={(e) => setFormValues({ ...formValues, incomingEmailAllowedDomains: e.target.value })}
                                     className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     placeholder="@gmail.com,@university.edu"
                                 />
@@ -1533,7 +1608,7 @@ export default function DeanSettingsPage() {
                                 <input
                                     type="number"
                                     value={formValues.incomingEmailFetchDays || ""}
-                                    onChange={(e) => setFormValues({...formValues, incomingEmailFetchDays: Number(e.target.value)})}
+                                    onChange={(e) => setFormValues({ ...formValues, incomingEmailFetchDays: Number(e.target.value) })}
                                     className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                 />
                             </div>
@@ -1547,7 +1622,7 @@ export default function DeanSettingsPage() {
                             <input
                                 type="checkbox"
                                 checked={formValues.enableOutgoingEmail || false}
-                                onChange={(e) => setFormValues({...formValues, enableOutgoingEmail: e.target.checked})}
+                                onChange={(e) => setFormValues({ ...formValues, enableOutgoingEmail: e.target.checked })}
                                 className="w-4 h-4 rounded border-gray-300"
                             />
                             <label className="text-sm text-slate-700">تفعيل البريد الصادر</label>
@@ -1558,7 +1633,7 @@ export default function DeanSettingsPage() {
                                 <input
                                     type="text"
                                     value={formValues.outgoingEmailServer || ""}
-                                    onChange={(e) => setFormValues({...formValues, outgoingEmailServer: e.target.value})}
+                                    onChange={(e) => setFormValues({ ...formValues, outgoingEmailServer: e.target.value })}
                                     className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     placeholder="smtp.example.com"
                                 />
@@ -1569,7 +1644,7 @@ export default function DeanSettingsPage() {
                                     <input
                                         type="number"
                                         value={formValues.outgoingEmailPort || ""}
-                                        onChange={(e) => setFormValues({...formValues, outgoingEmailPort: Number(e.target.value)})}
+                                        onChange={(e) => setFormValues({ ...formValues, outgoingEmailPort: Number(e.target.value) })}
                                         className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     />
                                 </div>
@@ -1578,7 +1653,7 @@ export default function DeanSettingsPage() {
                                     <input
                                         type="text"
                                         value={formValues.outgoingEmailUsername || ""}
-                                        onChange={(e) => setFormValues({...formValues, outgoingEmailUsername: e.target.value})}
+                                        onChange={(e) => setFormValues({ ...formValues, outgoingEmailUsername: e.target.value })}
                                         className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     />
                                 </div>
@@ -1588,7 +1663,7 @@ export default function DeanSettingsPage() {
                                 <input
                                     type="password"
                                     value={formValues.outgoingEmailPassword || ""}
-                                    onChange={(e) => setFormValues({...formValues, outgoingEmailPassword: e.target.value})}
+                                    onChange={(e) => setFormValues({ ...formValues, outgoingEmailPassword: e.target.value })}
                                     className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     placeholder="••••••••"
                                 />
@@ -1597,7 +1672,7 @@ export default function DeanSettingsPage() {
                                 <input
                                     type="checkbox"
                                     checked={formValues.outgoingEmailUseSsl || false}
-                                    onChange={(e) => setFormValues({...formValues, outgoingEmailUseSsl: e.target.checked})}
+                                    onChange={(e) => setFormValues({ ...formValues, outgoingEmailUseSsl: e.target.checked })}
                                     className="w-4 h-4 rounded border-gray-300"
                                 />
                                 <label className="text-sm text-slate-700">SSL</label>
@@ -1607,7 +1682,7 @@ export default function DeanSettingsPage() {
                                 <input
                                     type="text"
                                     value={formValues.outgoingEmailFromName || ""}
-                                    onChange={(e) => setFormValues({...formValues, outgoingEmailFromName: e.target.value})}
+                                    onChange={(e) => setFormValues({ ...formValues, outgoingEmailFromName: e.target.value })}
                                     className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     placeholder="نظام المراسلات"
                                 />
@@ -1618,7 +1693,7 @@ export default function DeanSettingsPage() {
                                     <input
                                         type="number"
                                         value={formValues.outgoingEmailMaxRetryCount || ""}
-                                        onChange={(e) => setFormValues({...formValues, outgoingEmailMaxRetryCount: Number(e.target.value)})}
+                                        onChange={(e) => setFormValues({ ...formValues, outgoingEmailMaxRetryCount: Number(e.target.value) })}
                                         className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     />
                                 </div>
@@ -1627,7 +1702,7 @@ export default function DeanSettingsPage() {
                                     <input
                                         type="number"
                                         value={formValues.outgoingEmailRetryIntervalMinutes || ""}
-                                        onChange={(e) => setFormValues({...formValues, outgoingEmailRetryIntervalMinutes: Number(e.target.value)})}
+                                        onChange={(e) => setFormValues({ ...formValues, outgoingEmailRetryIntervalMinutes: Number(e.target.value) })}
                                         className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
                                     />
                                 </div>
@@ -1636,11 +1711,55 @@ export default function DeanSettingsPage() {
                                 <input
                                     type="checkbox"
                                     checked={formValues.outgoingEmailNotifyOnDelivery || false}
-                                    onChange={(e) => setFormValues({...formValues, outgoingEmailNotifyOnDelivery: e.target.checked})}
+                                    onChange={(e) => setFormValues({ ...formValues, outgoingEmailNotifyOnDelivery: e.target.checked })}
                                     className="w-4 h-4 rounded border-gray-300"
                                 />
                                 <label className="text-sm text-slate-700">إشعار عند التسليم</label>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {modalType === "attachment-naming" && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                checked={formValues.includeNumber || false}
+                                onChange={(e) => setFormValues({ ...formValues, includeNumber: e.target.checked })}
+                                className="w-4 h-4 rounded border-gray-300"
+                            />
+                            <label className="text-sm text-slate-700">تضمين الرقم في اسم الملف</label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                checked={formValues.includeMainType || false}
+                                onChange={(e) => setFormValues({ ...formValues, includeMainType: e.target.checked })}
+                                className="w-4 h-4 rounded border-gray-300"
+                            />
+                            <label className="text-sm text-slate-700">تضمين النوع الرئيسي في اسم الملف</label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                checked={formValues.includeOriginalName || false}
+                                onChange={(e) => setFormValues({ ...formValues, includeOriginalName: e.target.checked })}
+                                className="w-4 h-4 rounded border-gray-300"
+                            />
+                            <label className="text-sm text-slate-700">تضمين الاسم الأصلي في اسم الملف</label>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-slate-700">الحد الأقصى لطول الاسم (حرف)</label>
+                            <input
+                                type="number"
+                                value={formValues.maxLength || 50}
+                                onChange={(e) => setFormValues({ ...formValues, maxLength: Number(e.target.value) })}
+                                className="w-full mt-1 border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-400"
+                                min={10}
+                                max={255}
+                            />
+                            <p className="text-[10px] text-slate-400 mt-0.5">بين 10 و 255 حرف</p>
                         </div>
                     </div>
                 )}

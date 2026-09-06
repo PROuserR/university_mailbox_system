@@ -39,6 +39,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import useUserInfoStore from "@/store/userInfoStore";
 import { useMarkAsRead } from "@/hooks/useDistribute";
+import { CorrespondenceStatus, getStatusEnum, isDistributable } from "@/types/api/correspondence.types";
 
 interface InboxEmailDetailProps {
   item: DistributionInboxDto;
@@ -87,6 +88,7 @@ function formatDateDisplay(date: string | null | undefined): string {
     return "-";
   }
 }
+
 export function InboxEmailDetail({
   item,
   onClose,
@@ -129,7 +131,17 @@ export function InboxEmailDetail({
     item.correspondenceId !== null &&
     item.correspondenceId > 0;
 
-  const showDistributeButton = isHeadOfDept && hasCorrespondenceId;
+  // ✅ التحقق من حالة المراسلة
+  const statusEnum = getStatusEnum(item.correspondenceStatus);
+  const isCorrespondenceDistributable = isDistributable(statusEnum);
+
+  // ✅ شرط عرض زر التوزيع:
+  // 1. رئيس قسم
+  // 2. لديه correspondenceId
+  // 3. المراسلة غير موقعة وغير مؤرشفة (قابلة للتوزيع)
+  const showDistributeButton = isHeadOfDept && 
+                               hasCorrespondenceId && 
+                               isCorrespondenceDistributable;
 
   // ✅ شرط واحد لعرض زر القراءة - يظهر فقط إذا كانت الرسالة غير مقروءة
   const showMarkAsReadButton = hasCorrespondenceId && !item.isRead;
@@ -227,6 +239,11 @@ export function InboxEmailDetail({
   // ===== Handlers =====
   const handleDistribute = () => {
     if (item.correspondenceId) {
+      const statusEnum = getStatusEnum(item.correspondenceStatus);
+      if (!isDistributable(statusEnum)) {
+        toast.error("لا يمكن توزيع مراسلة موقعة أو مؤرشفة");
+        return;
+      }
       router.push(`/distribution-page?id=${item.correspondenceId}`);
     } else {
       toast.error("لا يوجد مراسلة مرتبطة بهذا البريد للتوزيع");
@@ -330,7 +347,7 @@ export function InboxEmailDetail({
             </>
           )}
 
-          {/* ✅ زر التوزيع - أيقونة طائرة بجانب زر القراءة */}
+          {/* ✅ زر التوزيع - يظهر فقط لرئيس القسم + المراسلة غير موقعة/مؤرشفة */}
           {showDistributeButton && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -380,7 +397,7 @@ export function InboxEmailDetail({
               value={markAsReadNotes}
               onChange={(e) => setMarkAsReadNotes(e.target.value)}
               className="w-full border rounded-xl p-3 text-sm resize-none h-24 focus:outline-none focus:border-blue-400"
-              placeholder="أدخل ملاحظاتك هنا (اختياري)..."
+              placeholder="أدخل ملاحظاتك هنا (اختياري)..."            
             />
             <div className="flex gap-2 mt-4">
               <button

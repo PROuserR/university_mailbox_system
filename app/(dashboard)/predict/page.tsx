@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -217,7 +218,6 @@ export default function PredictionPage() {
 
       toast.success("اكتمل توقع المرحلة 1.");
     } catch (error) {
-      console.error("Stage 1 error:", error);
 
       toast.error(
         "فشل توقع المرحلة 1. تأكد من تشغيل FastAPI."
@@ -249,8 +249,6 @@ export default function PredictionPage() {
 
       toast.success("اكتمل توقع المرحلة 2.");
     } catch (error) {
-      console.error("Stage 2 error:", error);
-
       toast.error(
         "فشل توقع المرحلة 2. تأكد من تضمين readAt وتشغيل FastAPI."
       );

@@ -3,7 +3,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
-// ✅ استبدال useCorrespondences بـ useCorrespondencesInfinite
 import { useCorrespondencesInfinite, useDocumentTypes, useSenderEntities } from "@/hooks/useCorrespondence";
 import { useAdvancedSearch } from "@/hooks/useAdvancedSearch";
 import { CorrespondenceEmailList } from "@/components/correspondence/CorrespondenceEmailList";
@@ -63,17 +62,13 @@ function CorrespondencesContent() {
         setCorrespondenceStatus,
         setSort,
         setNumber,
-        setCreatedAtRange,
-        setIssuedDateRange,
-        setReceivedDateRange,
-        setSentDateRange,
         setTempParams,
         resetFilters,
         openModal,
         closeModal,
         applyFilters,
     } = useAdvancedSearch<CorrespondenceSearchDto>({
-        sortField: "issuedDate",
+        sortField: "createdAt",
         sortDirection: "desc",
     });
 
@@ -189,10 +184,10 @@ function CorrespondencesContent() {
             page: 1,
             pageSize: 50,
             sortBy:
-                advSearchParams.sortField === "issuedDate"
-                    ? "IssuedDate"
-                    : advSearchParams.sortField === "createdAt"
-                        ? "CreatedAt"
+                advSearchParams.sortField === "createdAt"
+                    ? "CreatedAt"
+                    : advSearchParams.sortField === "issuedDate"
+                        ? "IssuedDate"
                         : advSearchParams.sortField === "receivedDate"
                             ? "ReceivedDate"
                             : advSearchParams.sortField === "sentDate"
@@ -259,9 +254,6 @@ function CorrespondencesContent() {
         return params;
     }, [advSearchParams]);
 
-    // ============================================================
-    // ✅ استخدم useCorrespondencesInfinite بدلاً من useCorrespondences
-    // ============================================================
     const {
         data,
         isLoading,

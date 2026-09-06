@@ -5,7 +5,7 @@
 
 import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { arSA } from "date-fns/locale";
+import { arEG } from "date-fns/locale";
 import {
     XIcon,
     ChevronLeftIcon,
@@ -99,7 +99,7 @@ const formatDateDisplay = (date?: string | null): string => {
     try {
         const parsed = new Date(date);
         if (isNaN(parsed.getTime())) return "";
-        return format(parsed, "dd/MM/yyyy", { locale: arSA });
+        return format(parsed, "dd/MM/yyyy", { locale: arEG });
     } catch {
         return "";
     }

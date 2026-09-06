@@ -27,7 +27,90 @@ import {
   DistributionResponseByIdDto,
 } from "@/types/api/distribution.types";
 import PagedResult from "@/types/api/PagedResponse";
-import { format } from "date-fns";
+
+// ============================================================
+// ===== Helper: استخراج رسالة الخطأ =====
+// ============================================================
+
+const getErrorMessage = (error: any): string => {
+  // 1. إذا كان error نص
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  // 2. إذا كان error كائن مع message
+  if (error?.message && typeof error.message === 'string') {
+    return error.message;
+  }
+
+  // 3. إذا كان error من React Query (عنده response)
+  if (error?.response?.data) {
+    const data = error.response.data;
+    
+    if (data.message && typeof data.message === 'string') {
+      return data.message;
+    }
+    
+    if (data.errors) {
+      if (typeof data.errors === 'string') {
+        return data.errors;
+      }
+      if (Array.isArray(data.errors)) {
+        return data.errors.join(', ');
+      }
+      if (typeof data.errors === 'object') {
+        const messages: string[] = [];
+        for (const [key, value] of Object.entries(data.errors)) {
+          if (Array.isArray(value)) {
+            messages.push(`${key}: ${value.join(', ')}`);
+          } else if (typeof value === 'string') {
+            messages.push(`${key}: ${value}`);
+          } else {
+            messages.push(`${key}: ${JSON.stringify(value)}`);
+          }
+        }
+        return messages.join('; ');
+      }
+    }
+    
+    if (data.title && typeof data.title === 'string') {
+      return data.title;
+    }
+    
+    if (data.error && typeof data.error === 'string') {
+      return data.error;
+    }
+  }
+
+  // 4. إذا كان error عنده response مع errors
+  if (error?.response?.data?.errors) {
+    const errors = error.response.data.errors;
+    if (typeof errors === 'string') return errors;
+    if (Array.isArray(errors)) return errors.join(', ');
+    if (typeof errors === 'object') {
+      return Object.values(errors).flat().join(', ');
+    }
+  }
+
+  // 5. إذا كان error عنده response مع message
+  if (error?.response?.data?.message) {
+    return error.response.data.message;
+  }
+
+  // 6. إذا كان error عنده response مع error
+  if (error?.response?.data?.error) {
+    return error.response.data.error;
+  }
+
+  // 7. إذا كان error عنده statusText
+  if (error?.response?.statusText) {
+    return error.response.statusText;
+  }
+
+  // 8. رسالة افتراضية
+  return 'حدث خطأ غير معروف. يرجى المحاولة مرة أخرى.';
+};
+
 // ============================================================
 // ===== Distribution Editor =====
 // ============================================================
@@ -38,6 +121,7 @@ export const useDistributionEditor = (correspondenceId: number | null) => {
     queryFn: () => getDistributionEditorData(correspondenceId!),
     enabled: !!correspondenceId && correspondenceId > 0,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 };
 
@@ -65,7 +149,8 @@ export const useDistributeMutation = (
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error?.message || "فشل حفظ التوزيع", { duration: 3000 });
+      const message = getErrorMessage(error);
+      toast.error(message, { duration: 4000 });
     },
   });
 };
@@ -88,6 +173,7 @@ export const useInboxDistributions = (params: {
     queryFn: () => getInboxDistributions(params),
     staleTime: 0,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 };
 
@@ -104,6 +190,7 @@ export const useOutboxDistributions = (params: {
     staleTime: 0,
     refetchOnWindowFocus: true,
     enabled: true,
+    retry: 1,
   });
 };
 
@@ -117,6 +204,7 @@ export const usePendingApprovalsGrouped = (page: number = 1, pageSize: number = 
     queryFn: () => getPendingApprovalsGrouped(page, pageSize),
     staleTime: 0,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 };
 
@@ -126,6 +214,7 @@ export const usePendingApprovals = (page: number = 1, pageSize: number = 20) => 
     queryFn: () => getPendingApprovals(page, pageSize),
     staleTime: 0,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 };
 
@@ -139,6 +228,7 @@ export const useDistribution = (id: number | null) => {
     queryFn: () => getDistributionById(id!),
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 };
 
@@ -148,6 +238,7 @@ export const useDistributions = (filter: DistributionFilterDto) => {
     queryFn: () => getDistributions(filter),
     staleTime: 0,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 };
 
@@ -167,7 +258,8 @@ export const useApproveDistribution = (onSuccess?: () => void) => {
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error?.message || "فشل الموافقة على التوزيع", { duration: 3000 });
+      const message = getErrorMessage(error);
+      toast.error(message, { duration: 4000 });
     },
   });
 };
@@ -185,7 +277,8 @@ export const useRejectDistribution = (onSuccess?: () => void) => {
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error?.message || "فشل رفض التوزيع", { duration: 3000 });
+      const message = getErrorMessage(error);
+      toast.error(message, { duration: 4000 });
     },
   });
 };
@@ -202,7 +295,8 @@ export const useApproveDistributions = (onSuccess?: () => void) => {
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error?.message || "فشل الموافقة على التوزيعات", { duration: 3000 });
+      const message = getErrorMessage(error);
+      toast.error(message, { duration: 4000 });
     },
   });
 };
@@ -220,7 +314,8 @@ export const useRejectDistributions = (onSuccess?: () => void) => {
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error?.message || "فشل رفض التوزيعات", { duration: 3000 });
+      const message = getErrorMessage(error);
+      toast.error(message, { duration: 4000 });
     },
   });
 };
@@ -238,7 +333,8 @@ export const useApproveAllByCorrespondence = (onSuccess?: () => void) => {
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error?.message || "فشل الموافقة على التوزيعات", { duration: 3000 });
+      const message = getErrorMessage(error);
+      toast.error(message, { duration: 4000 });
     },
   });
 };
@@ -256,7 +352,8 @@ export const useRejectAllByCorrespondence = (onSuccess?: () => void) => {
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error?.message || "فشل رفض التوزيعات", { duration: 3000 });
+      const message = getErrorMessage(error);
+      toast.error(message, { duration: 4000 });
     },
   });
 };
@@ -274,7 +371,6 @@ export const useMarkAsRead = (onSuccess?: () => void) => {
     onSuccess: () => {
       toast.success("تم تحديد البريد كمقروء", { duration: 3000 });
       
-      // ✅ تحديث جميع الـ queries المتعلقة بالـ inbox
       queryClient.invalidateQueries({ 
         queryKey: ["distribution-inbox"] 
       });
@@ -288,7 +384,6 @@ export const useMarkAsRead = (onSuccess?: () => void) => {
         queryKey: ["distributions", "outbox"] 
       });
       
-      // ✅ إعادة تحميل البيانات فوراً
       queryClient.refetchQueries({ 
         queryKey: ["distribution-inbox"] 
       });
@@ -296,19 +391,20 @@ export const useMarkAsRead = (onSuccess?: () => void) => {
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error?.message || "فشل تحديد البريد كمقروء", { duration: 3000 });
+      const message = getErrorMessage(error);
+      toast.error(message, { duration: 4000 });
     },
   });
 };
 
-// hooks/useDistribution.ts
-
 // ============================================================
 // ===== Infinite Query =====
 // ============================================================
+
 interface UseAllDistributionsInfiniteOptions extends Partial<DistributionFilterDto> {
   pageSize?: number;
 }
+
 export const useAllDistributionsInfinite = (options: UseAllDistributionsInfiniteOptions = {}) => {
   const {
     search,
@@ -332,7 +428,6 @@ export const useAllDistributionsInfinite = (options: UseAllDistributionsInfinite
     pageSize = 40,
   } = options;
 
-  // ===== بناء queryKey مع جميع المعاملات =====
   const queryKey = [
     "distributions",
     "all",
@@ -372,14 +467,14 @@ export const useAllDistributionsInfinite = (options: UseAllDistributionsInfinite
         isProfessional,
         documentTypeId,
         senderEntityId,
-        readAtFrom: readAtFrom ? format(new Date(readAtFrom), "yyyy-MM-dd") : undefined,
-        readAtTo: readAtTo ? format(new Date(readAtTo), "yyyy-MM-dd") : undefined,
-        approvedAtFrom: approvedAtFrom ? format(new Date(approvedAtFrom), "yyyy-MM-dd") : undefined,
-        approvedAtTo: approvedAtTo ? format(new Date(approvedAtTo), "yyyy-MM-dd") : undefined,
-        rejectedAtFrom: rejectedAtFrom ? format(new Date(rejectedAtFrom), "yyyy-MM-dd") : undefined,
-        rejectedAtTo: rejectedAtTo ? format(new Date(rejectedAtTo), "yyyy-MM-dd") : undefined,
-        revokedAtFrom: revokedAtFrom ? format(new Date(revokedAtFrom), "yyyy-MM-dd") : undefined,
-        revokedAtTo: revokedAtTo ? format(new Date(revokedAtTo), "yyyy-MM-dd") : undefined,
+        readAtFrom: readAtFrom ? new Date(readAtFrom).toISOString().split('T')[0] : undefined,
+        readAtTo: readAtTo ? new Date(readAtTo).toISOString().split('T')[0] : undefined,
+        approvedAtFrom: approvedAtFrom ? new Date(approvedAtFrom).toISOString().split('T')[0] : undefined,
+        approvedAtTo: approvedAtTo ? new Date(approvedAtTo).toISOString().split('T')[0] : undefined,
+        rejectedAtFrom: rejectedAtFrom ? new Date(rejectedAtFrom).toISOString().split('T')[0] : undefined,
+        rejectedAtTo: rejectedAtTo ? new Date(rejectedAtTo).toISOString().split('T')[0] : undefined,
+        revokedAtFrom: revokedAtFrom ? new Date(revokedAtFrom).toISOString().split('T')[0] : undefined,
+        revokedAtTo: revokedAtTo ? new Date(revokedAtTo).toISOString().split('T')[0] : undefined,
         sortBy,
         sortDescending,
       }),
@@ -393,5 +488,6 @@ export const useAllDistributionsInfinite = (options: UseAllDistributionsInfinite
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 };

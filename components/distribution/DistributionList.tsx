@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { DistributionResponseByIdDto } from "@/types/api/distribution.types";
 import { forwardRef, useState, useEffect, useRef, useCallback } from "react";
 import { format } from "date-fns";
-import { arSA } from "date-fns/locale";
+import { arEG } from "date-fns/locale";
 import { Loader2, Eye, EyeOff, Paperclip, User, Calendar, FileText } from "lucide-react"; // ✅ استخدام أيقونات Lucide
 
 interface DistributionListProps {
@@ -33,7 +33,7 @@ const formatDateDisplay = (date?: string | null): string => {
   try {
     const parsed = new Date(date);
     if (isNaN(parsed.getTime())) return "";
-    return format(parsed, "dd/MM/yyyy", { locale: arSA });
+    return format(parsed, "dd/MM/yyyy", { locale: arEG });
   } catch {
     return "";
   }

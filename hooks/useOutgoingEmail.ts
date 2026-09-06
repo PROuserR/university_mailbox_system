@@ -8,24 +8,23 @@ import {
     SendOutgoingEmailDto,
     ResendOutgoingEmailDto,
     UpdateFailedEmailDto,
+    EmailStatus,
 } from "@/types/api/outgoing-email";
 import toast from "react-hot-toast";
-
-// ============================================================
-// ===== Queries =====
-// ============================================================
 
 export const useOutgoingEmails = (filter: OutgoingEmailFilterDto) => {
     return useInfiniteQuery({
         queryKey: ["outgoing-emails", filter],
-        queryFn: ({ pageParam = 1 }) =>
-            outgoingEmailService.getSentEmails({
+        queryFn: async ({ pageParam = 1 }) => {
+            const result = await outgoingEmailService.getSentEmails({
                 ...filter,
                 page: pageParam,
-            }),
+            });
+            return result;
+        },
         initialPageParam: 1,
         getNextPageParam: (lastPage) => {
-            if (lastPage.pageNumber < lastPage.totalPages) {
+            if (lastPage.hasNextPage) {
                 return lastPage.pageNumber + 1;
             }
             return undefined;
@@ -78,7 +77,7 @@ export const usePendingRetryEmails = () => {
 };
 
 // ============================================================
-// ===== Mutations =====
+// ===== Mutations (مطابقة لـ useIncomingEmail) =====
 // ============================================================
 
 export const useSendEmail = (onSuccess?: (data: any) => void) => {

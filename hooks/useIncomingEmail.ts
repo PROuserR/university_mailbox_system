@@ -29,7 +29,6 @@ export function useInfiniteScroll({
     const isReadyRef = useRef(false);
     const loadingLockRef = useRef(false);
     const observerRef = useRef<IntersectionObserver | null>(null);
-
     useEffect(() => {
         if (dataLength > 0) {
             isReadyRef.current = true;
@@ -42,7 +41,6 @@ export function useInfiniteScroll({
             if (!entry) return;
 
             const isVisible = entry.intersectionRatio >= threshold;
-
             if (
                 !isVisible ||
                 !isReadyRef.current ||

@@ -1,10 +1,8 @@
 // src/hooks/useAdvancedSearch.ts
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-// ✅ استيراد كلا النوعين
 import { CorrespondenceStatus } from "@/types/api/correspondence.types";
 import { DistributionStatus } from "@/types/api/distribution.types";
 
@@ -19,9 +17,7 @@ export interface AdvancedSearchParams {
   dateTo?: Date;
   documentTypeId?: number;
   senderEntityId?: number;
-  // ✅ حالة التوزيع (منفصلة)
   distributionStatus?: DistributionStatus;
-  // ✅ حالة المراسلة (منفصلة)
   correspondenceStatus?: CorrespondenceStatus;
   sortField: SortField;
   sortDirection: SortDirection;
@@ -47,7 +43,6 @@ export interface AdvancedSearchReturn<T> {
   setDateRange: (from?: Date, to?: Date) => void;
   setDocumentType: (id?: number) => void;
   setSenderEntity: (id?: number) => void;
-  // ✅ دوال منفصلة للحالات
   setDistributionStatus: (value?: DistributionStatus) => void;
   setCorrespondenceStatus: (value?: CorrespondenceStatus) => void;
   setSort: (field: SortField, direction?: SortDirection) => void;
@@ -151,19 +146,15 @@ export function useAdvancedSearch<T>(initialParams?: Partial<AdvancedSearchParam
     setTempParams(prev => ({ ...prev, senderEntityId: id }));
   }, []);
 
-  // ✅ دالة منفصلة لحالة التوزيع
   const setDistributionStatus = useCallback((value?: DistributionStatus) => {
     setTempParams(prev => ({ ...prev, distributionStatus: value }));
   }, []);
 
-  // ✅ دالة منفصلة لحالة المراسلة
   const setCorrespondenceStatus = useCallback((value?: CorrespondenceStatus) => {
     setTempParams(prev => ({ ...prev, correspondenceStatus: value }));
   }, []);
 
-  // ✅ منع الأرقام السالبة
   const setNumber = useCallback((value?: number) => {
-    // إذا كانت القيمة سالبة أو 0، نخزن undefined
     const validValue = value !== undefined && value <= 0 ? undefined : value;
     setTempParams(prev => ({ ...prev, number: validValue }));
   }, []);

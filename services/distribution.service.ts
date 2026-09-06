@@ -23,6 +23,67 @@ import { ApiResult } from "@/types/api/ApiResult";
 const BASE_URL = "Distributions";
 
 // ============================================================
+// ===== Helper: استخراج رسالة الخطأ من الـ API =====
+// ============================================================
+
+const extractErrorMessage = (response: any): string => {
+  // 1. محاولة استخراج الرسالة من response.message
+  if (response?.message && typeof response.message === 'string') {
+    return response.message;
+  }
+  
+  // 2. محاولة استخراج الرسالة من response.data?.message
+  if (response?.data?.message && typeof response.data.message === 'string') {
+    return response.data.message;
+  }
+  
+  // 3. محاولة استخراج الرسالة من response.data?.errors
+  if (response?.data?.errors) {
+    const errors = response.data.errors;
+    if (typeof errors === 'string') {
+      return errors;
+    }
+    if (Array.isArray(errors)) {
+      return errors.join(' • ');
+    }
+    if (typeof errors === 'object') {
+      const messages: string[] = [];
+      for (const [key, value] of Object.entries(errors)) {
+        if (Array.isArray(value)) {
+          messages.push(`${key}: ${value.join(', ')}`);
+        } else if (typeof value === 'string') {
+          messages.push(`${key}: ${value}`);
+        } else {
+          messages.push(`${key}: ${JSON.stringify(value)}`);
+        }
+      }
+      return messages.join(' • ');
+    }
+  }
+  
+  // 4. محاولة استخراج الرسالة من response.data?.title
+  if (response?.data?.title && typeof response.data.title === 'string') {
+    return response.data.title;
+  }
+  
+  // 5. محاولة استخراج الرسالة من response.data?.error
+  if (response?.data?.error && typeof response.data.error === 'string') {
+    return response.data.error;
+  }
+  
+  // 6. رسالة افتراضية
+  return 'حدث خطأ غير معروف. يرجى المحاولة مرة أخرى.';
+};
+
+const throwApiError = (response: any, defaultMessage: string): never => {
+  const message = extractErrorMessage(response);
+  const error = new Error(message || defaultMessage);
+  (error as any).statusCode = response?.status || response?.data?.statusCode || 500;
+  (error as any).response = response;
+  throw error;
+};
+
+// ============================================================
 // ===== Distribution Editor =====
 // ============================================================
 
@@ -34,10 +95,14 @@ export const getDistributionEditorData = async (
   );
 
   if (!res.success || !res.data) {
-    throw new Error(res.message || "Failed to load distribution data");
+    throwApiError(res, "فشل تحميل بيانات التوزيع");
   }
 
-  return res.data.data;
+  if (!res.data!.isSuccess) {
+    throwApiError(res.data, "فشل تحميل بيانات التوزيع");
+  }
+
+  return res.data!.data;
 };
 
 export const distribute = async (
@@ -53,14 +118,14 @@ export const distribute = async (
   );
 
   if (!res.success || !res.data) {
-    throw new Error(res.message || "فشل حفظ التوزيع");
+    throwApiError(res, "فشل حفظ التوزيع");
   }
 
-  if (!res.data.isSuccess) {
-    throw new Error(res.data.message || "فشل حفظ التوزيع");
+  if (!res.data!.isSuccess) {
+    throwApiError(res.data, "فشل حفظ التوزيع");
   }
 
-  return res.data.data;
+  return res.data!.data;
 };
 
 // ============================================================
@@ -84,7 +149,7 @@ export const getInboxDistributions = async (
   );
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل تحميل التوزيعات الواردة");
+    throwApiError(response, "فشل تحميل التوزيعات الواردة");
   }
 
   return extractData(response)!;
@@ -105,7 +170,7 @@ export const getOutboxDistributions = async (
   );
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل تحميل التوزيعات الصادرة");
+    throwApiError(response, "فشل تحميل التوزيعات الصادرة");
   }
 
   return extractData(response)!;
@@ -124,7 +189,7 @@ export const getPendingApprovalsGrouped = async (
   >(`${BASE_URL}/pending-approval/grouped`, { page, pageSize });
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل تحميل الموافقات المعلقة");
+    throwApiError(response, "فشل تحميل الموافقات المعلقة");
   }
 
   return extractData(response)!;
@@ -139,7 +204,7 @@ export const getPendingApprovals = async (
   >(`${BASE_URL}/pending-approval`, { page, pageSize });
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل تحميل الموافقات المعلقة");
+    throwApiError(response, "فشل تحميل الموافقات المعلقة");
   }
 
   return extractData(response)!;
@@ -155,7 +220,7 @@ export const approveDistribution = async (id: number): Promise<void> => {
   );
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل الموافقة على التوزيع");
+    throwApiError(response, "فشل الموافقة على التوزيع");
   }
 };
 
@@ -170,7 +235,7 @@ export const rejectDistribution = async (id: number, reason?: string): Promise<v
   });
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل رفض التوزيع");
+    throwApiError(response, "فشل رفض التوزيع");
   }
 };
 
@@ -181,7 +246,7 @@ export const approveDistributions = async (ids: number[]): Promise<number> => {
   );
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل الموافقة على التوزيعات");
+    throwApiError(response, "فشل الموافقة على التوزيعات");
   }
 
   return extractData(response)!;
@@ -194,7 +259,7 @@ export const rejectDistributions = async (ids: number[], reason?: string): Promi
   );
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل رفض التوزيعات");
+    throwApiError(response, "فشل رفض التوزيعات");
   }
 
   return extractData(response)!;
@@ -206,7 +271,7 @@ export const approveAllByCorrespondence = async (correspondenceId: number): Prom
   );
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل الموافقة على جميع التوزيعات");
+    throwApiError(response, "فشل الموافقة على جميع التوزيعات");
   }
 
   return extractData(response)!;
@@ -226,7 +291,7 @@ export const rejectAllByCorrespondence = async (
   });
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل رفض جميع التوزيعات");
+    throwApiError(response, "فشل رفض جميع التوزيعات");
   }
 
   return extractData(response)!;
@@ -242,7 +307,7 @@ export const getDistributionById = async (id: number): Promise<DistributionRespo
   >(`${BASE_URL}/${id}`);
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل تحميل تفاصيل التوزيع");
+    throwApiError(response, "فشل تحميل تفاصيل التوزيع");
   }
 
   return extractData(response)!;
@@ -260,7 +325,7 @@ export const getDistributions = async (
   >(`${BASE_URL}`, filter);
 
   if (!isApiSuccess(response)) {
-    throw new Error(response?.message || "فشل تحميل التوزيعات");
+    throwApiError(response, "فشل تحميل التوزيعات");
   }
 
   return extractData(response)!;
@@ -277,30 +342,17 @@ export const markAsRead = async (correspondenceId: number, notes?: string): Prom
   });
 
   if (!isApiSuccess(response)) {
-    let errorMessage = response?.message || 'فشل تحديد البريد كمقروء';
-    
-    if (response.data?.errors) {
-      const errors = response.data.errors;
-      if (Array.isArray(errors) && errors.length > 0) {
-        errorMessage = errors.join(" • ");
-      } else if (typeof errors === 'object') {
-        const errorValues = Object.values(errors).flat();
-        if (errorValues.length > 0) {
-          errorMessage = errorValues.join(" • ");
-        }
-      }
-    }
-    
-    const error = new Error(errorMessage);
-    (error as any).statusCode = response.data?.statusCode || response.status;
-    throw error;
+    throwApiError(response, "فشل تحديد البريد كمقروء");
   }
 };
+
+// ============================================================
+// ===== All Distributions =====
+// ============================================================
 
 export const getAllDistributions = async (
   filter: Partial<DistributionFilterDto> = {}
 ): Promise<PagedResult<DistributionResponseByIdDto>> => {
-  // ===== Default values =====
   const defaultFilter: DistributionFilterDto = {
     page: 1,
     pageSize: 20,
@@ -310,7 +362,6 @@ export const getAllDistributions = async (
 
   const mergedFilter = { ...defaultFilter, ...filter };
 
-  // ===== Clean undefined values =====
   const params: Record<string, any> = {};
   Object.entries(mergedFilter).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -318,7 +369,6 @@ export const getAllDistributions = async (
     }
   });
 
-  // ===== تأكد من أن status رقمي =====
   if (params.status !== undefined && typeof params.status === "string") {
     params.status = Number(params.status);
   }
@@ -329,16 +379,12 @@ export const getAllDistributions = async (
   );
 
   if (!response.success || !response.data) {
-    const error = new Error(response?.message || "فشل تحميل قائمة التوزيعات");
-    (error as any).statusCode = response?.status || 500;
-    throw error;
+    throwApiError(response, "فشل تحميل قائمة التوزيعات");
   }
 
-  if (!response.data.isSuccess) {
-    const error = new Error(response.data.message || "فشل تحميل قائمة التوزيعات");
-    (error as any).statusCode = response.data.statusCode || response.status;
-    throw error;
+  if (!response.data!.isSuccess) {
+    throwApiError(response.data, "فشل تحميل قائمة التوزيعات");
   }
 
-  return response.data.data!;
+  return response.data!.data!;
 };

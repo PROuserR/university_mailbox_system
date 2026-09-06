@@ -7,7 +7,7 @@ import { forwardRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { IncomingEmailDto, IncomingEmailStatus } from "@/types/api/incoming-email";
 import { format } from "date-fns";
-import { arSA } from "date-fns/locale";
+import { arEG } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
 
 interface IncomingEmailListProps {
@@ -125,7 +125,7 @@ export const IncomingEmailList = forwardRef<HTMLDivElement, IncomingEmailListPro
                                                 )}
                                             </div>
                                             <span className="text-xs text-muted-foreground">
-                                                {format(new Date(item.receivedAt), "dd/MM/yyyy HH:mm", { locale: arSA })}
+                                                {format(new Date(item.receivedAt), "dd/MM/yyyy HH:mm", { locale: arEG })}
                                             </span>
                                         </div>
 

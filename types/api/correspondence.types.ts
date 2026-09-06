@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/types/api/correspondence.types.ts
 
 import { Attachment } from "@/types/api/Attachment";
@@ -38,6 +39,38 @@ export enum CorrespondenceStatus {
     Signed = 3,
     Archived = 4
 }
+export const getStatusEnum = (status: any): CorrespondenceStatus => {
+    if (status === undefined || status === null) {
+        return CorrespondenceStatus.Draft;
+    }
+    
+    if (typeof status === 'number') {
+        return status as CorrespondenceStatus;
+    }
+    
+    if (typeof status === 'string') {
+        const statusMap: Record<string, CorrespondenceStatus> = {
+            'Draft': CorrespondenceStatus.Draft,
+            'PendingApproval': CorrespondenceStatus.PendingApproval,
+            'Distributed': CorrespondenceStatus.Distributed,
+            'Signed': CorrespondenceStatus.Signed,
+            'Archived': CorrespondenceStatus.Archived,
+            '0': CorrespondenceStatus.Draft,
+            '1': CorrespondenceStatus.PendingApproval,
+            '2': CorrespondenceStatus.Distributed,
+            '3': CorrespondenceStatus.Signed,
+            '4': CorrespondenceStatus.Archived,
+        };
+        return statusMap[status] ?? CorrespondenceStatus.Draft;
+    }
+    
+    return CorrespondenceStatus.Draft;
+};
+
+export const isDistributable = (status: CorrespondenceStatus): boolean => {
+    return status !== CorrespondenceStatus.Signed && 
+           status !== CorrespondenceStatus.Archived;
+};
 
 export const getStatusLabel = (status: CorrespondenceStatus | string): string => {
     if (typeof status === 'string') {
@@ -173,7 +206,7 @@ export interface CorrespondenceSearchDto {
     documentTypeId?: number;
     senderEntityId?: number;
     status?: CorrespondenceStatus;
-    createdAtFrom?: string;  // ✅ string للتطابق مع الـ Backend
+    createdAtFrom?: string;  
     createdAtTo?: string;
     issuedDateFrom?: string;
     issuedDateTo?: string;

@@ -50,6 +50,7 @@ export interface SystemSettingsDto {
   attachmentIncludeMainType: boolean;
   attachmentIncludeOriginalName: boolean;
   attachmentNameMaxLength: number;
+  previewFormat: string;
 
   // Cleanup
   cleanupDelayMinutes: number;

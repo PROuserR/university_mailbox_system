@@ -15,7 +15,6 @@ export function useUserRole() {
         lastname, 
         email, 
         isLoggedIn,
-        isHeadOfDepartment,
         isPermanentReceiver,
         departmentId,
         setUser,
@@ -48,6 +47,7 @@ export function useUserRole() {
     const isDean = roles.includes('Dean');
     const isAdmin = roles.includes('Admin');
     const isEmployee = roles.includes('Employee');
+    const isHeadOfDepartment = roles.includes('HeadOfDepartment');
 
     return {
         userId: id,

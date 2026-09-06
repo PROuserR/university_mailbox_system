@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/(dashboard)/outgoing-emails/page.tsx
 
@@ -7,14 +8,18 @@ import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "rea
 import { OutgoingEmailList } from "@/components/outgoing-email/OutgoingEmailList";
 import { OutgoingEmailDetail } from "@/components/outgoing-email/OutgoingEmailDetail";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, RotateCcw, X } from "lucide-react";
+import { RefreshCw, Filter, RotateCcw } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import toast from "react-hot-toast";
 import { Drawer } from "vaul";
 import { useSearchParams, useRouter } from "next/navigation";
 import { EmailStatus } from "@/types/api/outgoing-email";
-import { useOutgoingEmails, useProcessFailedEmails } from "@/hooks/useOutgoingEmail";
-import useSafeBottomTrigger from "@/hooks/useInfiniteScroll";
-import toast from "react-hot-toast";
+import { 
+    useOutgoingEmails, 
+    useProcessFailedEmails,
+} from "@/hooks/useOutgoingEmail";
+import { Badge } from "@/components/ui/badge";
+import { useOutgoingInfiniteScroll } from "@/hooks/useOutgoingInfiniteScroll";
 
 const PAGE_HEIGHT = "calc(100vh - 64px)";
 
@@ -56,9 +61,7 @@ function FilterModal({
             <div className="bg-white rounded-2xl max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto p-6">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-bold">تصفية البريد الصادر</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        <X className="h-5 w-5" />
-                    </button>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
                 </div>
 
                 <div className="space-y-4">
@@ -209,9 +212,7 @@ function OutgoingEmailsContent() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-    // ===== Filters =====
     const [filters, setFilters] = useState({
         search: "",
         to: "",
@@ -225,20 +226,18 @@ function OutgoingEmailsContent() {
     });
 
     const [tempFilters, setTempFilters] = useState(filters);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-    // ===== API =====
-    const {
-        data: emailsData,
-        isLoading,
-        error,
-        refetch,
-        isFetching,
+    const { 
+        data: emailsData, 
+        isLoading, 
+        error, 
+        refetch, 
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage,
     } = useOutgoingEmails({
-        page: 1,
-        pageSize: 20,
+        pageSize: 10,
         search: filters.search || undefined,
         to: filters.to || undefined,
         subject: filters.subject || undefined,
@@ -250,26 +249,24 @@ function OutgoingEmailsContent() {
         sortDescending: filters.sortDescending,
     });
 
-    // ===== Process Failed =====
     const { mutateAsync: processFailed, isPending: isProcessing } = useProcessFailedEmails(() => {
         refetch();
     });
 
     const handleProcessFailed = async () => {
         try {
-            const count = await processFailed();
+            await processFailed();
         } catch (error) {
+            // Error handled in hook
         }
     };
 
-    // ===== Error Handling =====
     useEffect(() => {
         if (error) {
             toast.error(error.message || "حدث خطأ أثناء تحميل البريد الصادر");
         }
     }, [error]);
 
-    // ===== URL Param =====
     const emailId = searchParams.get("id");
     const hasSetFromUrl = useRef(false);
 
@@ -296,7 +293,6 @@ function OutgoingEmailsContent() {
         }
     }, [emailId, router]);
 
-    // ===== Mobile =====
     useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
@@ -306,7 +302,6 @@ function OutgoingEmailsContent() {
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
-    // ===== Data =====
     const allPages = emailsData?.pages || [];
     const items = useMemo(() => allPages.flatMap(page => page.items || []), [emailsData]);
     const totalCount = useMemo(() => allPages.length > 0 ? allPages[0]?.totalCount || 0 : 0, [emailsData]);
@@ -320,7 +315,6 @@ function OutgoingEmailsContent() {
     const hasPrevious = currentIndex > 0;
     const hasNext = currentIndex < items.length - 1;
 
-    // ===== Handlers =====
     const handleSelectItem = useCallback((id: number) => {
         setSelectedId(id);
         setDetailOpen(true);
@@ -387,8 +381,7 @@ function OutgoingEmailsContent() {
         return count;
     }, [filters]);
 
-    // ===== Infinite Scroll =====
-    const bottomRef = useSafeBottomTrigger({
+    const { bottomRef, setBottomRef } = useOutgoingInfiniteScroll({
         onBottom: useCallback(() => {
             if (hasNextPage && !isFetchingNextPage) {
                 fetchNextPage();
@@ -397,9 +390,9 @@ function OutgoingEmailsContent() {
         isLoading: isLoading || isFetchingNextPage,
         hasMore: hasNextPage || false,
         dataLength: items.length,
+        threshold: 0.8,
+        rootMargin: "50px",
     });
-
-    // ===== Loading & Auth =====
     if (isAuthLoading) {
         return (
             <div className="flex items-center justify-center" style={{ height: PAGE_HEIGHT }}>
@@ -480,11 +473,12 @@ function OutgoingEmailsContent() {
                 {!detailOpen && (
                     <div className="flex-1 overflow-y-auto">
                         <OutgoingEmailList
+                            bottomRef={bottomRef}
+                            setBottomRef={setBottomRef}
                             items={items}
                             selectedId={selectedId}
                             onSelectItem={handleSelectItem}
                             isLoading={isLoading}
-                            bottomRef={bottomRef}
                             isFetchingNextPage={isFetchingNextPage}
                         />
                     </div>
@@ -591,15 +585,34 @@ function OutgoingEmailsContent() {
                             </Button>
                         </div>
                     </div>
+
+                    {/* ===== Status Filter Badge ===== */}
+                    {filters.status && (
+                        <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="flex items-center gap-1 text-xs py-0.5 px-2">
+                                الحالة: {filters.status}
+                                <button
+                                    onClick={() => {
+                                        setFilters(prev => ({ ...prev, status: "" }));
+                                        setTempFilters(prev => ({ ...prev, status: "" }));
+                                    }}
+                                    className="hover:text-red-500 transition"
+                                >
+                                    ✕
+                                </button>
+                            </Badge>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto hide-scrollbar">
                     <OutgoingEmailList
+                        bottomRef={bottomRef}
+                        setBottomRef={setBottomRef}
                         items={items}
                         selectedId={selectedId}
                         onSelectItem={handleSelectItem}
                         isLoading={isLoading}
-                        bottomRef={bottomRef}
                         isFetchingNextPage={isFetchingNextPage}
                     />
                 </div>

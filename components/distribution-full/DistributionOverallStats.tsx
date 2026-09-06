@@ -17,7 +17,6 @@ interface DistributionOverallDto {
   totalReceivers: number;
   uniqueEmployees: number;
   uniqueReceivers: number;
-  averageReceiversPerDistribution: number;
   averageDistributionsPerEmployee: number;
   averageDistributionsPerReceiver: number;
   firstDistributionDate: string | null;
@@ -72,11 +71,6 @@ export function DistributionOverallStats({ data }: DistributionOverallStatsProps
   ];
 
   const stats = [
-    {
-      label: "متوسط المستلمين/توزيع",
-      value: data.averageReceiversPerDistribution.toFixed(1),
-      color: "text-slate-700",
-    },
     {
       label: "متوسط التوزيعات/موظف",
       value: data.averageDistributionsPerEmployee.toFixed(1),

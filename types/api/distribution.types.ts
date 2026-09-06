@@ -35,6 +35,7 @@ export interface DistributionInboxDto {
   correspondenceNumber: string;
   correspondenceTitle: string;
   correspondenceContent: string;
+  correspondenceStatus: string;
   mainType: string;
   isProfessional: boolean;
   documentType?: string;

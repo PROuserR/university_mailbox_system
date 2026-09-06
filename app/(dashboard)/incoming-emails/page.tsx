@@ -57,7 +57,7 @@ function IncomingEmailsContent() {
         search: "",
         from: "",
         subject: "",
-        status: undefined as IncomingEmailStatus | undefined,
+        status: IncomingEmailStatus.Pending as IncomingEmailStatus | undefined,
         hasAttachments: undefined as boolean | undefined,
         dateFrom: "",
         dateTo: "",

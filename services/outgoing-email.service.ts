@@ -106,18 +106,30 @@ class OutgoingEmailService {
         return extractData(response) || false;
     }
 
-    // ===== Get Sent Emails =====
-    async getSentEmails(filter: OutgoingEmailFilterDto): Promise<PagedResult<OutgoingEmailHistoryDto>> {
-        const response = await apiWrapper.get<ApiResult<PagedResult<OutgoingEmailHistoryDto>>>(
-            "/OutgoingEmails/sent",
-            filter
-        );
-        if (!isApiSuccess(response)) {
-            throw new Error(response?.message || "فشل تحميل البريد الصادر");
-        }
-        return extractData(response)!;
+async getSentEmails(filter: OutgoingEmailFilterDto): Promise<PagedResult<OutgoingEmailHistoryDto>> {
+    const params = {
+        ...filter,
+        Page: filter.page || 1,
+        PageSize: filter.pageSize || 20,
+    };
+    
+    const response = await apiWrapper.get<ApiResult<PagedResult<OutgoingEmailHistoryDto>>>(
+        "/OutgoingEmails/sent",
+        params
+    );
+    
+    if (!isApiSuccess(response)) {
+        throw new Error(response?.message || "فشل تحميل البريد الصادر");
     }
-
+    
+    const data = extractData(response)!;
+    
+    return {
+        ...data,
+        hasNextPage: data.hasNextPage ?? data.pageNumber < data.totalPages,
+        hasPreviousPage: data.hasPreviousPage ?? data.pageNumber > 1,
+    };
+}
     // ===== Get Pending Retry =====
     async getPendingRetry(): Promise<OutgoingEmailHistoryDto[]> {
         const response = await apiWrapper.get<ApiResult<OutgoingEmailHistoryDto[]>>(
