@@ -52,26 +52,26 @@ function NavbarContent() {
         setSearchValue(searchQuery);
     }, [searchQuery]);
 
-    const cleanText = (text: string): string => {
-        return text.replace(/\s+/g, " ").trim();
-    };
+   const cleanText = (text: string): string => {
+    return text.trim();
+};
 
     const handleSearchChange = useCallback(
         (value: string) => {
-            const cleanedValue = cleanText(value);
-            setSearchValue(cleanedValue);
+            setSearchValue(value);
 
             if (debounceTimeoutRef.current) {
                 clearTimeout(debounceTimeoutRef.current);
             }
+        const trimmedValue = value.trim();
 
-            if (cleanedValue === "") {
-                clearSearch();
-                return;
-            }
+        if (trimmedValue === "") {
+            clearSearch();
+            return;
+        }
 
             debounceTimeoutRef.current = setTimeout(() => {
-                setSearchQuery(cleanedValue);
+                setSearchQuery(trimmedValue);
             }, 500);
         },
         [setSearchQuery, clearSearch]

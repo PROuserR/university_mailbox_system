@@ -9,6 +9,57 @@ import { cn } from "@/lib/utils";
 import { DistributionInboxDto } from "@/types/api/distribution.types";
 import { Loader2, Building, Paperclip, Eye, EyeOff } from "lucide-react";
 
+// ============================================================
+// ===== Helper: Distribution Status =====
+// ============================================================
+
+const getDistributionStatusLabel = (status: string): string => {
+  switch (status) {
+    case "Pending":
+      return "غير مقروء";
+    case "Read":
+      return "مقروء";
+    case "Ignored":
+      return "مهمل";
+    case "Revoked":
+      return "ملغي";
+    case "PendingApproval":
+      return "بانتظار الموافقة";
+    case "Rejected":
+      return "مرفوض";
+    default:
+      return status || "غير محدد";
+  }
+};
+
+const getDistributionStatusColor = (status: string): string => {
+  switch (status) {
+    case "Pending":
+      return "bg-yellow-100 text-yellow-700 border-yellow-300";
+    case "Read":
+      return "bg-blue-100 text-blue-700 border-blue-300";
+    case "Ignored":
+      return "bg-gray-100 text-gray-700 border-gray-300";
+    case "Revoked":
+      return "bg-red-100 text-red-700 border-red-300";
+    case "PendingApproval":
+      return "bg-purple-100 text-purple-700 border-purple-300";
+    case "Rejected":
+      return "bg-red-100 text-red-700 border-red-300";
+    default:
+      return "bg-gray-100 text-gray-700 border-gray-300";
+  }
+};
+
+// ✅ التحقق مما إذا كانت الحالة تستحق العرض (غير Pending)
+const shouldShowStatus = (status: string): boolean => {
+  return status !== "Rejected";
+};
+
+// ============================================================
+// ===== Component =====
+// ============================================================
+
 interface InboxEmailListProps {
   items: DistributionInboxDto[];
   selectedId: number | null;
@@ -22,7 +73,9 @@ export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
     const formatDate = (dateString: string) => {
       const date = new Date(dateString);
       const now = new Date();
-      const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor(
+        (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+      );
       if (diffDays === 0) return "اليوم";
       if (diffDays === 1) return "أمس";
       if (diffDays < 7) return `منذ ${diffDays} أيام`;
@@ -32,17 +85,37 @@ export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
     const getTypeBadge = (mainType: string) => {
       switch (mainType) {
         case "Incoming":
-          return <Badge variant="outline" className="text-[8px] px-1.5 py-0.5 border-blue-200 text-blue-600">وارد</Badge>;
+          return (
+            <Badge
+              variant="outline"
+              className="text-[8px] px-1.5 py-0.5 border-blue-200 text-blue-600"
+            >
+              وارد
+            </Badge>
+          );
         case "Outgoing":
-          return <Badge variant="outline" className="text-[8px] px-1.5 py-0.5 border-green-200 text-green-600">صادر</Badge>;
+          return (
+            <Badge
+              variant="outline"
+              className="text-[8px] px-1.5 py-0.5 border-green-200 text-green-600"
+            >
+              صادر
+            </Badge>
+          );
         case "Internal":
-          return <Badge variant="outline" className="text-[8px] px-1.5 py-0.5 border-purple-200 text-purple-600">داخلي</Badge>;
+          return (
+            <Badge
+              variant="outline"
+              className="text-[8px] px-1.5 py-0.5 border-purple-200 text-purple-600"
+            >
+              داخلي
+            </Badge>
+          );
         default:
           return null;
       }
     };
 
-    // ✅ استخراج الجهة المرسلة
     const getSenderDisplay = (item: DistributionInboxDto) => {
       if (item.senderEntity) {
         return item.senderEntity;
@@ -52,7 +125,10 @@ export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
 
     if (items.length === 0) {
       return (
-        <div ref={ref} className="flex h-full items-center justify-center text-muted-foreground">
+        <div
+          ref={ref}
+          className="flex h-full items-center justify-center text-muted-foreground"
+        >
           <div className="flex flex-col items-center gap-2">
             <div className="text-4xl">📭</div>
             <p>لا توجد مراسلات في الوارد</p>
@@ -66,7 +142,9 @@ export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
         {items.map((item) => {
           const isSelected = selectedId === item.id;
           const senderDisplay = getSenderDisplay(item);
-          
+          const distributionStatus = item.status || "Pending";
+          const showStatus = shouldShowStatus(distributionStatus);
+
           return (
             <div key={item.id}>
               <button
@@ -82,7 +160,7 @@ export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
                       {senderDisplay?.charAt(0) || "ج"}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -92,8 +170,23 @@ export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
                         </span>
                         {getTypeBadge(item.mainType)}
                         {item.isProfessional && (
-                          <Badge variant="outline" className="text-[8px] px-1.5 py-0.5 border-amber-200 text-amber-600">
+                          <Badge
+                            variant="outline"
+                            className="text-[8px] px-1.5 py-0.5 border-amber-200 text-amber-600"
+                          >
                             مهني
+                          </Badge>
+                        )}
+
+                        {/* ✅ عرض حالة التوزيعة فقط إذا كانت غير Pending */}
+                        {showStatus && (
+                          <Badge
+                            className={cn(
+                              "text-[8px] px-1.5 py-0.5",
+                              getDistributionStatusColor(distributionStatus)
+                            )}
+                          >
+                            {getDistributionStatusLabel(distributionStatus)}
                           </Badge>
                         )}
                       </div>
@@ -101,11 +194,11 @@ export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
                         {formatDate(item.distributedDate)}
                       </span>
                     </div>
-                    
+
                     <p className="mt-1 text-sm font-medium text-foreground line-clamp-1">
                       {item.correspondenceTitle}
                     </p>
-                    
+
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       {/* ✅ الموزع/المرسل (في الأسفل) */}
                       {item.distributorName && (
@@ -113,20 +206,6 @@ export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
                           👤 {item.distributorName}
                         </span>
                       )}
-
-                      {/* ✅ حالة القراءة */}
-                      {item.isRead ? (
-                        <span className="flex items-center gap-1 text-emerald-600">
-                          <Eye className="h-3 w-3" />
-                          مقروء
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-gray-400">
-                          <EyeOff className="h-3 w-3" />
-                          غير مقروء
-                        </span>
-                      )}
-
                       {/* ✅ المرفقات */}
                       {item.attachments && item.attachments.length > 0 && (
                         <span className="flex items-center gap-1">
@@ -141,7 +220,7 @@ export const InboxEmailList = forwardRef<HTMLDivElement, InboxEmailListProps>(
             </div>
           );
         })}
-        
+
         {/* ===== Infinite Scroll ===== */}
         {isLoadingMore && (
           <div className="flex justify-center py-4">

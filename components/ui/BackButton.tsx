@@ -19,13 +19,7 @@ export const BackButton: React.FC<BackButtonProps> = ({
     variant = 'compact'
 }) => {
     const handleClick = () => {
-        if (hasChanges) {
-            if (confirm('هل أنت متأكد من الرجوع؟ سيتم فقدان التغييرات غير المحفوظة.')) {
-                onClick();
-            }
-        } else {
-            onClick();
-        }
+        onClick(); 
     };
 
     // أنماط مختلفة حسب الـ variant

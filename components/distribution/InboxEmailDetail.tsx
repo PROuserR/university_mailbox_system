@@ -40,6 +40,56 @@ import { useRouter } from "next/navigation";
 import useUserInfoStore from "@/store/userInfoStore";
 import { useMarkAsRead } from "@/hooks/useDistribute";
 import { CorrespondenceStatus, getStatusEnum, isDistributable } from "@/types/api/correspondence.types";
+import { cn } from "@/lib/utils";
+
+// ============================================================
+// ===== Helper: Distribution Status =====
+// ============================================================
+
+const DISTRIBUTION_STATUS = {
+  Pending: "Pending",
+  Read: "Read",
+  Ignored: "Ignored",
+  Revoked: "Revoked",
+  PendingApproval: "PendingApproval",
+  Rejected: "Rejected",
+} as const;
+
+
+const isDistributionPending = (status: string): boolean => status === DISTRIBUTION_STATUS.Pending;
+const isDistributionRead = (status: string): boolean => status === DISTRIBUTION_STATUS.Read;
+const isDistributionIgnored = (status: string): boolean => status === DISTRIBUTION_STATUS.Ignored;
+const isDistributionRevoked = (status: string): boolean => status === DISTRIBUTION_STATUS.Revoked;
+const isDistributionPendingApproval = (status: string): boolean => status === DISTRIBUTION_STATUS.PendingApproval;
+const isDistributionRejected = (status: string): boolean => status === DISTRIBUTION_STATUS.Rejected;
+
+const getDistributionStatusLabel = (status: string): string => {
+  switch (status) {
+    case DISTRIBUTION_STATUS.Pending: return "غير مقروءة";
+    case DISTRIBUTION_STATUS.Read: return "مقروءة";
+    case DISTRIBUTION_STATUS.Ignored: return "مهملة";
+    case DISTRIBUTION_STATUS.Revoked: return "ملغية";
+    case DISTRIBUTION_STATUS.PendingApproval: return "في انتظار الموافقة";
+    case DISTRIBUTION_STATUS.Rejected: return "مرفوضة";
+    default: return status || "غير محدد";
+  }
+};
+
+const getDistributionStatusColor = (status: string): string => {
+  switch (status) {
+    case DISTRIBUTION_STATUS.Pending: return "bg-yellow-100 text-yellow-700 border-yellow-300";
+    case DISTRIBUTION_STATUS.Read: return "bg-blue-100 text-blue-700 border-blue-300";
+    case DISTRIBUTION_STATUS.Ignored: return "bg-gray-100 text-gray-700 border-gray-300";
+    case DISTRIBUTION_STATUS.Revoked: return "bg-red-100 text-red-700 border-red-300";
+    case DISTRIBUTION_STATUS.PendingApproval: return "bg-purple-100 text-purple-700 border-purple-300";
+    case DISTRIBUTION_STATUS.Rejected: return "bg-red-100 text-red-700 border-red-300";
+    default: return "bg-gray-100 text-gray-700 border-gray-300";
+  }
+};
+
+// ============================================================
+// ===== Component =====
+// ============================================================
 
 interface InboxEmailDetailProps {
   item: DistributionInboxDto;
@@ -110,17 +160,25 @@ export function InboxEmailDetail({
   const [previewName, setPreviewName] = useState<string>("");
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // ✅ Modal states - زر واحد مع مودال للملاحظات (اختياري)
   const [markAsReadModalOpen, setMarkAsReadModalOpen] = useState(false);
   const [markAsReadNotes, setMarkAsReadNotes] = useState("");
 
-  // ✅ استخدام الـ Hook الجديد فقط
   const markAsReadMutation = useMarkAsRead(() => {
     setMarkAsReadModalOpen(false);
     setMarkAsReadNotes("");
     if (onRefresh) onRefresh();
     if (onMarkAsRead) onMarkAsRead();
   });
+
+  
+  // ===== Distribution Status =====
+  const distributionStatus = item.status || "Pending";
+  const isPending = isDistributionPending(distributionStatus);
+  const isRead = isDistributionRead(distributionStatus);
+  const isIgnored = isDistributionIgnored(distributionStatus);
+  const isRevoked = isDistributionRevoked(distributionStatus);
+  const isPendingApproval = isDistributionPendingApproval(distributionStatus);
+  const isRejected = isDistributionRejected(distributionStatus);
 
   const isHeadOfDept = role === "HeadOfDepartment" ||
     isHeadOfDepartment === true ||
@@ -131,21 +189,18 @@ export function InboxEmailDetail({
     item.correspondenceId !== null &&
     item.correspondenceId > 0;
 
-  // ✅ التحقق من حالة المراسلة
   const statusEnum = getStatusEnum(item.correspondenceStatus);
   const isCorrespondenceDistributable = isDistributable(statusEnum);
 
-  // ✅ شرط عرض زر التوزيع:
-  // 1. رئيس قسم
-  // 2. لديه correspondenceId
-  // 3. المراسلة غير موقعة وغير مؤرشفة (قابلة للتوزيع)
   const showDistributeButton = isHeadOfDept && 
                                hasCorrespondenceId && 
                                isCorrespondenceDistributable;
 
-  // ✅ شرط واحد لعرض زر القراءة - يظهر فقط إذا كانت الرسالة غير مقروءة
-  const showMarkAsReadButton = hasCorrespondenceId && !item.isRead;
-
+ // ✅ شرط عرض زر القراءة: فقط إذا كانت الحالة Pending AND غير مقروءة
+const showMarkAsReadButton = hasCorrespondenceId && 
+                             !item.isRead && 
+                             isDistributionPending(distributionStatus);
+  // ===== Handlers =====
   const handleView = async (attachmentId: number, fileName: string, mimeType: string) => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -206,7 +261,6 @@ export function InboxEmailDetail({
 
       toast.success("تم تحميل المرفق بنجاح");
     } catch (error: any) {
-
       if (error.message?.includes("Network") ||
         error.message?.includes("CORS") ||
         error.message?.includes("Failed to fetch")) {
@@ -236,7 +290,6 @@ export function InboxEmailDetail({
     setPreviewName("");
   };
 
-  // ===== Handlers =====
   const handleDistribute = () => {
     if (item.correspondenceId) {
       const statusEnum = getStatusEnum(item.correspondenceStatus);
@@ -250,7 +303,6 @@ export function InboxEmailDetail({
     }
   };
 
-  // ✅ دالة موحدة للقراءة - تستقبل ملاحظات اختيارية
   const handleMarkAsRead = (notes?: string) => {
     if (!item.correspondenceId) {
       toast.error("لا يوجد مراسلة مرتبطة بهذا البريد");
@@ -262,13 +314,11 @@ export function InboxEmailDetail({
     });
   };
 
-  // ✅ فتح المودال لإضافة ملاحظات (اختياري)
   const handleOpenNotesModal = () => {
     setMarkAsReadNotes("");
     setMarkAsReadModalOpen(true);
   };
 
-  // ✅ تأكيد القراءة مع الملاحظات من المودال
   const handleConfirmReadWithNotes = () => {
     handleMarkAsRead(markAsReadNotes || undefined);
   };
@@ -290,23 +340,6 @@ export function InboxEmailDetail({
     }
   };
 
-  const getStatusBadge = () => {
-    if (item.isRead) {
-      return (
-        <Badge variant="outline" className="gap-1 text-green-600 border-green-300">
-          <CheckCheckIcon className="h-3 w-3" />
-          مقروءة
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="outline" className="gap-1 text-amber-600 border-amber-300">
-        <Clock className="h-3 w-3" />
-        غير مقروءة
-      </Badge>
-    );
-  };
-
   const senderDisplay = item.senderEntity || item.distributorName || "جهة غير محددة";
 
   return (
@@ -323,7 +356,6 @@ export function InboxEmailDetail({
             <TooltipContent>إغلاق</TooltipContent>
           </Tooltip>
 
-          {/* ✅ زر قراءة واحد فقط - مع ملاحظات (اختياري) - يظهر فقط إذا كانت الرسالة غير مقروءة */}
           {showMarkAsReadButton && (
             <>
               <Tooltip>
@@ -347,7 +379,6 @@ export function InboxEmailDetail({
             </>
           )}
 
-          {/* ✅ زر التوزيع - يظهر فقط لرئيس القسم + المراسلة غير موقعة/مؤرشفة */}
           {showDistributeButton && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -397,7 +428,7 @@ export function InboxEmailDetail({
               value={markAsReadNotes}
               onChange={(e) => setMarkAsReadNotes(e.target.value)}
               className="w-full border rounded-xl p-3 text-sm resize-none h-24 focus:outline-none focus:border-blue-400"
-              placeholder="أدخل ملاحظاتك هنا (اختياري)..."            
+              placeholder="أدخل ملاحظاتك هنا (اختياري)..."
             />
             <div className="flex gap-2 mt-4">
               <button
@@ -437,7 +468,10 @@ export function InboxEmailDetail({
                     مهني
                   </Badge>
                 )}
-                {getStatusBadge()}
+                {/* ✅ عرض حالة التوزيعة */}
+                <Badge className={cn("text-[10px]", getDistributionStatusColor(distributionStatus))}>
+                  {getDistributionStatusLabel(distributionStatus)}
+                </Badge>
               </div>
               {item.distributorName && item.distributorName !== senderDisplay && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
@@ -457,7 +491,6 @@ export function InboxEmailDetail({
       <div className="shrink-0 border-b border-border px-4 py-3">
         <h1 className="text-lg font-bold text-foreground">{item.correspondenceTitle}</h1>
       </div>
-
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto hide-scrollbar">
         {/* Additional Info */}

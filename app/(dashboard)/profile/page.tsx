@@ -33,6 +33,7 @@ import { apiWrapper } from "@/utils/apiClient";
 import Link from "next/link";
 import myAPI from "@/utils/myAPI";
 import { ApiResult } from "@/types/api/ApiResult";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
 // ==============================
 // TYPES - مطابقة للـ DTOs
@@ -66,6 +67,9 @@ export default function ProfilePage() {
     const [imageUrl, setImageUrl] = useState<string>("");
     const [imageLoading, setImageLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
+
+    // ===== Confirmation Modal State =====
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const [form, setForm] = useState({
         firstName: "",
@@ -230,8 +234,10 @@ export default function ProfilePage() {
     // ==============================
 
     async function deletePicture() {
-        if (!window.confirm("هل تريد حذف الصورة الشخصية؟")) return;
+        setShowDeleteConfirm(true);
+    }
 
+    async function confirmDeletePicture() {
         try {
             const response = await apiWrapper.delete<ApiResult<object>>(
                 "/Profiles/picture"
@@ -249,6 +255,8 @@ export default function ProfilePage() {
             }
         } catch {
             toast.error("فشل حذف الصورة");
+        } finally {
+            setShowDeleteConfirm(false);
         }
     }
 
@@ -292,14 +300,14 @@ export default function ProfilePage() {
     }
 
     function formatDate(date: string | null): string {
-    if (!date) return "—";
-    return new Date(date).toLocaleString("ar-EG", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    });
-}
+        if (!date) return "—";
+        return new Date(date).toLocaleString("ar-EG", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        });
+    }
 
     // ==============================
     // RENDER
@@ -315,271 +323,283 @@ export default function ProfilePage() {
     }
 
     return (
-        <div dir="rtl" className="min-h-screen bg-slate-50 p-3 sm:p-4">
-            {/* ===== HEADER ===== */}
-            <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-3 sm:p-4 mb-3 sm:mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-base sm:text-lg flex-shrink-0">
-                        <FontAwesomeIcon icon={faUser} />
+        <>
+            <div dir="rtl" className="min-h-screen bg-slate-50 p-3 sm:p-4">
+                {/* ===== HEADER ===== */}
+                <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-3 sm:p-4 mb-3 sm:mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-base sm:text-lg flex-shrink-0">
+                            <FontAwesomeIcon icon={faUser} />
+                        </div>
+                        <div>
+                            <h1 className="text-base sm:text-lg font-bold text-slate-800">الملف الشخصي</h1>
+                            <p className="text-[11px] sm:text-xs text-slate-500">إدارة معلومات حسابك الشخصية</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-base sm:text-lg font-bold text-slate-800">الملف الشخصي</h1>
-                        <p className="text-[11px] sm:text-xs text-slate-500">إدارة معلومات حسابك الشخصية</p>
-                    </div>
-                </div>
 
-                {/* ✅ زر التعديل */}
-                {!isEditing ? (
-                    <button
-                        onClick={() => setIsEditing(true)}
-                        className="bg-yellow-400 hover:bg-yellow-500 text-slate-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-semibold flex items-center gap-1.5 sm:gap-2 transition text-xs sm:text-sm"
-                    >
-                        <FontAwesomeIcon icon={faPen} className="text-xs sm:text-sm" />
-                        تعديل
-                    </button>
-                ) : (
-                    <div className="flex gap-2">
+                    {!isEditing ? (
                         <button
-                            onClick={() => {
-                                setIsEditing(false);
-                                if (profile) {
-                                    setForm({
-                                        firstName: profile.firstName ?? "",
-                                        lastName: profile.lastName ?? "",
-                                        email: profile.email ?? "",
-                                        phone: profile.phone ?? "",
-                                    });
-                                }
-                            }}
-                            className="bg-gray-200 hover:bg-gray-300 text-slate-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-semibold flex items-center gap-1.5 sm:gap-2 transition text-xs sm:text-sm"
+                            onClick={() => setIsEditing(true)}
+                            className="bg-yellow-400 hover:bg-yellow-500 text-slate-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-semibold flex items-center gap-1.5 sm:gap-2 transition text-xs sm:text-sm"
                         >
-                            <FontAwesomeIcon icon={faXmark} className="text-xs sm:text-sm" />
-                            إلغاء
+                            <FontAwesomeIcon icon={faPen} className="text-xs sm:text-sm" />
+                            تعديل
                         </button>
-                        <button
-                            onClick={updateProfile}
-                            disabled={submitting}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-semibold flex items-center gap-1.5 sm:gap-2 transition text-xs sm:text-sm disabled:opacity-50"
-                        >
-                            {submitting ? (
-                                <>
-                                    <FontAwesomeIcon icon={faSpinner} spin />
-                                    جاري الحفظ...
-                                </>
-                            ) : (
-                                <>
-                                    <FontAwesomeIcon icon={faCheck} />
-                                    حفظ
-                                </>
-                            )}
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {/* ===== PROFILE CARD ===== */}
-            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-6 mb-3 sm:mb-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-                {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                    {imageLoading ? (
-                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-200 animate-pulse" />
-                    ) : imageUrl ? (
-                        <img
-                            src={imageUrl}
-                            alt="profile-picture"
-                            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-blue-200"
-                        />
                     ) : (
-                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-4xl font-bold">
-                            {profile.firstName?.charAt(0) || "?"}
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => {
+                                    setIsEditing(false);
+                                    if (profile) {
+                                        setForm({
+                                            firstName: profile.firstName ?? "",
+                                            lastName: profile.lastName ?? "",
+                                            email: profile.email ?? "",
+                                            phone: profile.phone ?? "",
+                                        });
+                                    }
+                                }}
+                                className="bg-gray-200 hover:bg-gray-300 text-slate-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-semibold flex items-center gap-1.5 sm:gap-2 transition text-xs sm:text-sm"
+                            >
+                                <FontAwesomeIcon icon={faXmark} className="text-xs sm:text-sm" />
+                                إلغاء
+                            </button>
+                            <button
+                                onClick={updateProfile}
+                                disabled={submitting}
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-semibold flex items-center gap-1.5 sm:gap-2 transition text-xs sm:text-sm disabled:opacity-50"
+                            >
+                                {submitting ? (
+                                    <>
+                                        <FontAwesomeIcon icon={faSpinner} spin />
+                                        جاري الحفظ...
+                                    </>
+                                ) : (
+                                    <>
+                                        <FontAwesomeIcon icon={faCheck} />
+                                        حفظ
+                                    </>
+                                )}
+                            </button>
                         </div>
                     )}
+                </div>
 
-                    {/* Upload Button */}
-                    <label className="absolute bottom-0 left-0 bg-yellow-400 hover:bg-yellow-500 p-2 rounded-full cursor-pointer shadow-md transition">
-                        {uploading ? (
-                            <FontAwesomeIcon icon={faSpinner} spin className="text-sm" />
+                {/* ===== PROFILE CARD ===== */}
+                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-6 mb-3 sm:mb-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0">
+                        {imageLoading ? (
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-200 animate-pulse" />
+                        ) : imageUrl ? (
+                            <img
+                                src={imageUrl}
+                                alt="profile-picture"
+                                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-blue-200"
+                            />
                         ) : (
-                            <FontAwesomeIcon icon={faUpload} className="text-sm" />
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-4xl font-bold">
+                                {profile.firstName?.charAt(0) || "?"}
+                            </div>
                         )}
-                        <input
-                            hidden
-                            type="file"
-                            accept="image/*"
-                            onChange={uploadPicture}
-                            disabled={uploading}
-                        />
-                    </label>
-                </div>
 
-                {/* Info */}
-                <div className="flex-1 text-center sm:text-right">
-                    <h2 className="text-xl sm:text-2xl font-bold text-slate-800">
-                        {profile.fullName}
-                    </h2>
-                    <p className="text-sm text-slate-500 mt-0.5">
-                        {profile.roles?.map(translateRole).join("، ")}
-                    </p>
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            profile.isActive
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-red-100 text-red-700"
-                        }`}>
-                            <FontAwesomeIcon icon={profile.isActive ? faUserCheck : faUserSlash} className="text-[10px]" />
-                            {profile.isActive ? "نشط" : "غير نشط"}
-                        </span>
-                        
+                        {/* Upload Button */}
+                        <label className="absolute bottom-0 left-0 bg-yellow-400 hover:bg-yellow-500 p-2 rounded-full cursor-pointer shadow-md transition">
+                            {uploading ? (
+                                <FontAwesomeIcon icon={faSpinner} spin className="text-sm" />
+                            ) : (
+                                <FontAwesomeIcon icon={faUpload} className="text-sm" />
+                            )}
+                            <input
+                                hidden
+                                type="file"
+                                accept="image/*"
+                                onChange={uploadPicture}
+                                disabled={uploading}
+                            />
+                        </label>
                     </div>
-                </div>
 
-                {/* Actions */}
-                <div className="flex flex-col gap-2">
-                    {imageUrl && (
-                        <button
-                            onClick={deletePicture}
-                            className="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition text-xs font-medium flex items-center gap-1.5"
-                        >
-                            <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
-                            حذف الصورة
-                        </button>
-                    )}
-                    <Link
-                        href="/auth/change-password"
-                        className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition text-xs font-medium flex items-center gap-1.5 text-center justify-center"
-                    >
-                        <FontAwesomeIcon icon={faLock} className="text-[10px]" />
-                        تغيير كلمة السر
-                    </Link>
-                </div>
-            </div>
-
-            {/* ===== GRID ===== */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-
-                {/* ===== EDIT PROFILE ===== */}
-                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5">
-                    <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <FontAwesomeIcon icon={faUser} className="text-blue-500" />
-                        {isEditing ? "تعديل المعلومات الشخصية" : "المعلومات الشخصية"}
-                    </h3>
-
-                    <div className="space-y-3">
-                        <input
-                            value={form.firstName}
-                            onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                            disabled={!isEditing}
-                            placeholder="الاسم الأول *"
-                            className={`w-full border rounded-xl p-2.5 text-sm outline-none text-right ${
-                                isEditing
-                                    ? "border-slate-200 focus:border-blue-400"
-                                    : "border-transparent bg-slate-50 text-slate-600"
-                            }`}
-                        />
-                        <input
-                            value={form.lastName}
-                            onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                            disabled={!isEditing}
-                            placeholder="اسم العائلة *"
-                            className={`w-full border rounded-xl p-2.5 text-sm outline-none text-right ${
-                                isEditing
-                                    ? "border-slate-200 focus:border-blue-400"
-                                    : "border-transparent bg-slate-50 text-slate-600"
-                            }`}
-                        />
-                        <input
-                            value={form.email}
-                            onChange={(e) => setForm({ ...form, email: e.target.value })}
-                            disabled={!isEditing}
-                            placeholder="البريد الإلكتروني *"
-                            type="email"
-                            className={`w-full border rounded-xl p-2.5 text-sm outline-none text-right ${
-                                isEditing
-                                    ? "border-slate-200 focus:border-blue-400"
-                                    : "border-transparent bg-slate-50 text-slate-600"
-                            }`}
-                        />
-                        <input
-                            value={form.phone}
-                            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                            disabled={!isEditing}
-                            placeholder="رقم الهاتف"
-                            className={`w-full border rounded-xl p-2.5 text-sm outline-none text-right ${
-                                isEditing
-                                    ? "border-slate-200 focus:border-blue-400"
-                                    : "border-transparent bg-slate-50 text-slate-600"
-                            }`}
-                        />
-
-                        {!isEditing && (
-                            <p className="text-xs text-slate-400 text-center">
-                                اضغط على زر تعديل لتغيير المعلومات
-                            </p>
-                        )}
-                    </div>
-                </div>
-
-                {/* ===== ACCOUNT DETAILS ===== */}
-                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5">
-                    <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <FontAwesomeIcon icon={faGear} className="text-blue-500" />
-                        تفاصيل الحساب
-                    </h3>
-
-                    <div className="space-y-2.5 text-sm">
-                        <div className="flex justify-between border-b border-slate-100 pb-2">
-                            <span className="text-slate-500">البريد الإلكتروني</span>
-                            <span className="font-medium text-slate-800">{profile.email}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2">
-                            <span className="text-slate-500">رقم الهاتف</span>
-                            <span className="font-medium text-slate-800">{profile.phone || "—"}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2">
-                            <span className="text-slate-500">الحالة</span>
-                            <span className={`font-medium ${profile.isActive ? "text-emerald-600" : "text-red-600"}`}>
+                    {/* Info */}
+                    <div className="flex-1 text-center sm:text-right">
+                        <h2 className="text-xl sm:text-2xl font-bold text-slate-800">
+                            {profile.fullName}
+                        </h2>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                            {profile.roles?.map(translateRole).join("، ")}
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                profile.isActive
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-red-100 text-red-700"
+                            }`}>
+                                <FontAwesomeIcon icon={profile.isActive ? faUserCheck : faUserSlash} className="text-[10px]" />
                                 {profile.isActive ? "نشط" : "غير نشط"}
                             </span>
                         </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2">
-                            <span className="text-slate-500">الأدوار</span>
-                            <span className="font-medium text-slate-800">
-                                {profile.roles?.map(translateRole).join("، ") || "—"}
-                            </span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2">
+                        {imageUrl && (
+                            <button
+                                onClick={deletePicture}
+                                className="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition text-xs font-medium flex items-center gap-1.5"
+                            >
+                                <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
+                                حذف الصورة
+                            </button>
+                        )}
+                        <Link
+                            href="/auth/change-password"
+                            className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition text-xs font-medium flex items-center gap-1.5 text-center justify-center"
+                        >
+                            <FontAwesomeIcon icon={faLock} className="text-[10px]" />
+                            تغيير كلمة السر
+                        </Link>
+                    </div>
+                </div>
+
+                {/* ===== GRID ===== */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+
+                    {/* ===== EDIT PROFILE ===== */}
+                    <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5">
+                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faUser} className="text-blue-500" />
+                            {isEditing ? "تعديل المعلومات الشخصية" : "المعلومات الشخصية"}
+                        </h3>
+
+                        <div className="space-y-3">
+                            <input
+                                value={form.firstName}
+                                onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                                disabled={!isEditing}
+                                placeholder="الاسم الأول *"
+                                className={`w-full border rounded-xl p-2.5 text-sm outline-none text-right ${
+                                    isEditing
+                                        ? "border-slate-200 focus:border-blue-400"
+                                        : "border-transparent bg-slate-50 text-slate-600"
+                                }`}
+                            />
+                            <input
+                                value={form.lastName}
+                                onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                                disabled={!isEditing}
+                                placeholder="اسم العائلة *"
+                                className={`w-full border rounded-xl p-2.5 text-sm outline-none text-right ${
+                                    isEditing
+                                        ? "border-slate-200 focus:border-blue-400"
+                                        : "border-transparent bg-slate-50 text-slate-600"
+                                }`}
+                            />
+                            <input
+                                value={form.email}
+                                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                                disabled={!isEditing}
+                                placeholder="البريد الإلكتروني *"
+                                type="email"
+                                className={`w-full border rounded-xl p-2.5 text-sm outline-none text-right ${
+                                    isEditing
+                                        ? "border-slate-200 focus:border-blue-400"
+                                        : "border-transparent bg-slate-50 text-slate-600"
+                                }`}
+                            />
+                            <input
+                                value={form.phone}
+                                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                                disabled={!isEditing}
+                                placeholder="رقم الهاتف"
+                                className={`w-full border rounded-xl p-2.5 text-sm outline-none text-right ${
+                                    isEditing
+                                        ? "border-slate-200 focus:border-blue-400"
+                                        : "border-transparent bg-slate-50 text-slate-600"
+                                }`}
+                            />
+
+                            {!isEditing && (
+                                <p className="text-xs text-slate-400 text-center">
+                                    اضغط على زر تعديل لتغيير المعلومات
+                                </p>
+                            )}
                         </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2">
-                            <span className="text-slate-500">تاريخ الإنشاء</span>
-                            <span className="font-medium text-slate-800">{formatDate(profile.createdAt)}</span>
+                    </div>
+
+                    {/* ===== ACCOUNT DETAILS ===== */}
+                    <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5">
+                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faGear} className="text-blue-500" />
+                            تفاصيل الحساب
+                        </h3>
+
+                        <div className="space-y-2.5 text-sm">
+                            <div className="flex justify-between border-b border-slate-100 pb-2">
+                                <span className="text-slate-500">البريد الإلكتروني</span>
+                                <span className="font-medium text-slate-800">{profile.email}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2">
+                                <span className="text-slate-500">رقم الهاتف</span>
+                                <span className="font-medium text-slate-800">{profile.phone || "—"}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2">
+                                <span className="text-slate-500">الحالة</span>
+                                <span className={`font-medium ${profile.isActive ? "text-emerald-600" : "text-red-600"}`}>
+                                    {profile.isActive ? "نشط" : "غير نشط"}
+                                </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2">
+                                <span className="text-slate-500">الأدوار</span>
+                                <span className="font-medium text-slate-800">
+                                    {profile.roles?.map(translateRole).join("، ") || "—"}
+                                </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2">
+                                <span className="text-slate-500">تاريخ الإنشاء</span>
+                                <span className="font-medium text-slate-800">{formatDate(profile.createdAt)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">آخر تسجيل دخول</span>
+                                <span className="font-medium text-slate-800">{formatDate(profile.lastLoginAt)}</span>
+                            </div>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-slate-500">آخر تسجيل دخول</span>
-                            <span className="font-medium text-slate-800">{formatDate(profile.lastLoginAt)}</span>
-                        </div>
+                    </div>
+                </div>
+
+                {/* ===== LANGUAGE SETTINGS ===== */}
+                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5 mt-3 sm:mt-4">
+                    <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faLanguage} className="text-blue-500" />
+                        اللغة
+                    </h3>
+
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <select
+                            className="border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:border-blue-400 w-full sm:w-64"
+                            value={userLanguage}
+                            onChange={(e) => changeLanguage(e.target.value)}
+                        >
+                            <option value="ar">العربية</option>
+                            <option value="en">English</option>
+                        </select>
+                        <span className="text-[10px] text-slate-400">
+                            سيتم إعادة تحميل الصفحة لتطبيق اللغة
+                        </span>
                     </div>
                 </div>
             </div>
 
-            {/* ===== LANGUAGE SETTINGS ===== */}
-            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5 mt-3 sm:mt-4">
-                <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faLanguage} className="text-blue-500" />
-                    اللغة
-                </h3>
-
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <select
-                        className="border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:border-blue-400 w-full sm:w-64"
-                        value={userLanguage}
-                        onChange={(e) => changeLanguage(e.target.value)}
-                    >
-                        <option value="ar">العربية</option>
-                        <option value="en">English</option>
-                    </select>
-                    <span className="text-[10px] text-slate-400">
-                        سيتم إعادة تحميل الصفحة لتطبيق اللغة
-                    </span>
-                </div>
-            </div>
-        </div>
+            {/* ===== Confirmation Modal ===== */}
+            <ConfirmationModal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={confirmDeletePicture}
+                title="تأكيد حذف الصورة"
+                message="هل أنت متأكد من حذف الصورة الشخصية؟ هذا الإجراء لا يمكن التراجع عنه."
+                confirmText="حذف"
+                cancelText="إلغاء"
+                variant="danger"
+            />
+        </>
     );
 }
