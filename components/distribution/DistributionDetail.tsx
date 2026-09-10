@@ -1,10 +1,11 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // components/distribution/DistributionDetail.tsx
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios, { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -23,6 +24,8 @@ import {
   faSpinner,
   faCircleCheck,
   faTriangleExclamation,
+  faBrain,
+  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -45,46 +48,29 @@ interface DistributionDetailProps {
 }
 
 /**
- * Stage 1 prediction returned by FastAPI.
- *
- * Example:
- * {
- *   "willReply": true,
- *   "replyProbability": 0.87
- * }
+ * ✅ النموذج الجديد - التنبؤ بالقراءة
  */
-interface Stage1Prediction {
-  willReply: boolean;
-  replyProbability: number;
+interface ReadPrediction {
+  willRead: boolean;
+  readProbability: number;
+  ignoreProbability: number;
+  threshold_used: number;
 }
 
 /**
- * Stage 2 prediction returned by FastAPI.
- *
- * Example:
- * {
- *   "predictedResponseTimeMinutes": 120,
- *   "predictedResponseTimeHours": 2
- * }
+ * ✅ النموذج الجديد - التنبؤ بوقت القراءة
  */
-interface Stage2Prediction {
-  predictedResponseTimeMinutes: number;
-  predictedResponseTimeHours: number;
+interface ReadTimePrediction {
+  predictedReadTimeMinutes: number;
+  predictedReadTimeHours: number;
+  formatted: string;
 }
 
 interface PredictionState {
-  stage1: Stage1Prediction | null;
-  stage2: Stage2Prediction | null;
+  readPrediction: ReadPrediction | null;
+  timePrediction: ReadTimePrediction | null;
   loading: boolean;
   error: string | null;
-}
-
-interface Stage1ApiResponse {
-  prediction: Stage1Prediction;
-}
-
-interface Stage2ApiResponse {
-  prediction_stage2: Stage2Prediction;
 }
 
 interface ApiErrorResponse {
@@ -100,10 +86,9 @@ const PREDICTION_API_URL =
   process.env.NEXT_PUBLIC_PREDICTION_API_URL ||
   "http://127.0.0.1:8000";
 
-const STAGE1_ENDPOINT = "/predict";
-
-// Change this if your Stage 2 FastAPI route is different.
-const STAGE2_ENDPOINT = "/predict_stage2";
+// ✅ Endpoints الجديدة
+const READ_ENDPOINT = "/predict_read";
+const READ_TIME_ENDPOINT = "/predict_read_time";
 
 // ============================================================
 // Helpers
@@ -203,55 +188,6 @@ const formatPredictionResponse = (
   } catch {
     return "تعذر عرض نتيجة التنبؤ";
   }
-};
-
-/**
- * Converts an unknown prediction response into a readable
- * one-line value when possible.
- */
-const getPredictionSummary = (
-  response: unknown
-): string | null => {
-  if (response === null || response === undefined) {
-    return null;
-  }
-
-  if (
-    typeof response === "string" ||
-    typeof response === "number" ||
-    typeof response === "boolean"
-  ) {
-    return String(response);
-  }
-
-  if (typeof response !== "object") {
-    return String(response);
-  }
-
-  const obj = response as Record<string, unknown>;
-
-  const possibleKeys = [
-    "prediction",
-    "predictedClass",
-    "predicted_class",
-    "class",
-    "label",
-    "result",
-    "status",
-    "value",
-  ];
-
-  for (const key of possibleKeys) {
-    if (
-      obj[key] !== undefined &&
-      obj[key] !== null &&
-      typeof obj[key] !== "object"
-    ) {
-      return String(obj[key]);
-    }
-  }
-
-  return null;
 };
 
 /**
@@ -395,6 +331,33 @@ const getFileIcon = (mimeType: string | null) => {
 };
 
 // ============================================================
+// ✅ Build payloads for new models
+// ============================================================
+
+/**
+ * Builds the payload for /predict_read and /predict_read_time
+ */
+const buildPredictionPayload = (item: DistributionResponseByIdDto) => {
+  const attachmentStats = getAttachmentStats(
+    item.attachments
+  );
+
+  return {
+    distributedDate: toApiDate(item.distributedDate),
+    approvedAt: toApiDate(item.approvedAt),
+    receiverId: Number(item.receiverId ?? 0),
+    departmentId: Number((item as any).departmentId ?? 0),
+    mainType: String(item.mainType ?? "Incoming"),
+    isAutoDistributed: Boolean((item as any).isAutoDistributed),
+    isFromHead: Boolean((item as any).isFromHead),
+    isProfessional: Boolean(item.isProfessional),
+    attachmentCount: attachmentStats.attachmentCount,
+    totalAttachmentSize: attachmentStats.totalAttachmentSize,
+    contentLength: getContentLength(item.correspondenceContent),
+  };
+};
+
+// ============================================================
 // Main Component
 // ============================================================
 
@@ -410,202 +373,92 @@ export function DistributionDetail({
 }: DistributionDetailProps) {
   const [prediction, setPrediction] =
     useState<PredictionState>({
-      stage1: null,
-      stage2: null,
+      readPrediction: null,
+      timePrediction: null,
       loading: false,
       error: null,
     });
 
   // ==========================================================
-  // Build Stage 1 payload
+  // ✅ إعادة ضبط التنبؤ عند تغيير الـ item (التوزيعة)
   // ==========================================================
 
-  const buildStage1Payload = () => {
-    const attachmentStats = getAttachmentStats(
-      item.attachments
-    );
-
-    const payload = {
-      distributedDate: toApiDate(item.distributedDate),
-      status: String(item.status ?? ""),
-      isRead: Boolean(item.isRead),
-      isAutoDistributed: Boolean(
-        (item as any).isAutoDistributed
-      ),
-      receiverId: Number(item.receiverId ?? 0),
-      departmentId: Number(
-        (item as any).departmentId ?? 0
-      ),
-      mainType: String(item.mainType ?? ""),
-      documentType: String(item.documentType ?? ""),
-      senderEntity: String(item.senderEntity ?? ""),
-      isProfessional: Boolean(item.isProfessional),
-      isFromHead: Boolean(
-        (item as any).isFromHead
-      ),
-      attachmentCount:
-        attachmentStats.attachmentCount,
-      totalAttachmentSize:
-        attachmentStats.totalAttachmentSize,
-      contentLength: getContentLength(
-        item.correspondenceContent
-      ),
-    };
-
-    return payload;
-  };
+  useEffect(() => {
+    // مسح نتائج التنبؤ السابقة عند تغيير العنصر
+    setPrediction({
+      readPrediction: null,
+      timePrediction: null,
+      loading: false,
+      error: null,
+    });
+  }, [item.id]); // ✅ يتغير كلما تغيرت التوزيعة
 
   // ==========================================================
-  // Build Stage 2 payload
-  // ==========================================================
-
-  const buildStage2Payload = () => {
-    const attachmentStats = getAttachmentStats(
-      item.attachments
-    );
-
-    const payload = {
-      distributedDate: toApiDate(item.distributedDate),
-      readAt: toApiDate(item.readAt),
-      status: String(item.status ?? ""),
-      isRead: Boolean(item.isRead),
-      isAutoDistributed: Boolean(
-        (item as any).isAutoDistributed
-      ),
-      receiverId: Number(item.receiverId ?? 0),
-      departmentId: Number(
-        (item as any).departmentId ?? 0
-      ),
-      mainType: String(item.mainType ?? ""),
-      documentType: String(item.documentType ?? ""),
-      senderEntity: String(item.senderEntity ?? ""),
-      isProfessional: Boolean(item.isProfessional),
-      isFromHead: Boolean(
-        (item as any).isFromHead
-      ),
-      attachmentCount:
-        attachmentStats.attachmentCount,
-      totalAttachmentSize:
-        attachmentStats.totalAttachmentSize,
-      contentLength: getContentLength(
-        item.correspondenceContent
-      ),
-    };
-
-    return payload;
-  };
-
-  // ==========================================================
-  // Validate payload
-  // ==========================================================
-
-  const validatePayload = (
-    payload: Record<string, unknown>
-  ): string | null => {
-    const numericFields = [
-      "receiverId",
-      "departmentId",
-      "attachmentCount",
-      "totalAttachmentSize",
-      "contentLength",
-    ];
-
-    for (const field of numericFields) {
-      const value = payload[field];
-
-      if (
-        typeof value !== "number" ||
-        Number.isNaN(value)
-      ) {
-        return `قيمة غير صالحة للحقل: ${field}`;
-      }
-    }
-
-    return null;
-  };
-
-  // ==========================================================
-  // Run prediction
+  // ✅ Run prediction using new models
   // ==========================================================
 
   const handlePrediction = async (): Promise<void> => {
     if (prediction.loading) return;
 
     setPrediction({
-      stage1: null,
-      stage2: null,
+      readPrediction: null,
+      timePrediction: null,
       loading: true,
       error: null,
     });
 
     try {
+      const payload = buildPredictionPayload(item);
+
       // ------------------------------------------------------
-      // Stage 1
+      // 1. التنبؤ بالقراءة (/predict_read)
       // ------------------------------------------------------
 
-      const stage1Payload = buildStage1Payload();
-      const stage1Validation =
-        validatePayload(stage1Payload);
-
-      if (stage1Validation) {
-        throw new Error(stage1Validation);
-      }
-
-      const stage1Response =
-        await axios.post<Stage1ApiResponse>(
-          `${PREDICTION_API_URL}${STAGE1_ENDPOINT}`,
-          stage1Payload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-      setPrediction((previous) => ({
-        ...previous,
-        stage1:
-          stage1Response.data.prediction,
-      }));
-
-      toast.success(
-        "تم تنفيذ المرحلة الأولى بنجاح"
+      const readResponse = await axios.post(
+        `${PREDICTION_API_URL}${READ_ENDPOINT}`,
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
 
-      // ------------------------------------------------------
-      // Stage 2
-      // ------------------------------------------------------
+      const readData = readResponse.data?.data;
 
-      const stage2Payload = buildStage2Payload();
-      const stage2Validation =
-        validatePayload(stage2Payload);
-
-      if (stage2Validation) {
-        throw new Error(stage2Validation);
+      if (readData) {
+        setPrediction((prev) => ({
+          ...prev,
+          readPrediction: readData,
+        }));
+        toast.success("تم التنبؤ بالقراءة بنجاح!");
       }
 
-      const stage2Response =
-        await axios.post<Stage2ApiResponse>(
-          `${PREDICTION_API_URL}${STAGE2_ENDPOINT}`,
-          stage2Payload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      setPrediction((previous) => ({
-        ...previous,
-        stage2:
-          stage2Response.data.prediction_stage2,
-        loading: false,
-      }));
+      // ------------------------------------------------------
+      // 2. التنبؤ بوقت القراءة (/predict_read_time)
+      // ------------------------------------------------------
 
-      toast.success(
-        "تم تنفيذ المرحلة الثانية بنجاح"
+      const timeResponse = await axios.post(
+        `${PREDICTION_API_URL}${READ_TIME_ENDPOINT}`,
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
+
+      const timeData = timeResponse.data?.data;
+
+      if (timeData) {
+        setPrediction((prev) => ({
+          ...prev,
+          timePrediction: timeData,
+          loading: false,
+        }));
+        toast.success("تم التنبؤ بوقت القراءة بنجاح!");
+      }
     } catch (error: unknown) {
-
       const axiosError =
         error as AxiosError<ApiErrorResponse>;
 
@@ -641,8 +494,8 @@ export function DistributionDetail({
         errorMessage = error.message;
       }
 
-      setPrediction((previous) => ({
-        ...previous,
+      setPrediction((prev) => ({
+        ...prev,
         loading: false,
         error: errorMessage,
       }));
@@ -812,7 +665,7 @@ export function DistributionDetail({
             </div>
 
             {/* =================================================
-                Prediction Button
+                ✅ Prediction Button (New Models)
             ================================================== */}
 
             <motion.button
@@ -829,10 +682,11 @@ export function DistributionDetail({
                   ? { scale: 0.97 }
                   : undefined
               }
-              className={`flex items-center gap-2 rounded-3xl px-4 py-2 transition-all ${prediction.loading
-                  ? "cursor-not-allowed bg-yellow-50 text-yellow-600"
-                  : "cursor-pointer bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                }`}
+              className={`flex items-center gap-2 rounded-3xl px-4 py-2 transition-all ${
+                prediction.loading
+                  ? "cursor-not-allowed bg-indigo-50 text-indigo-600"
+                  : "cursor-pointer bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+              }`}
             >
               {prediction.loading ? (
                 <FontAwesomeIcon
@@ -842,7 +696,7 @@ export function DistributionDetail({
                 />
               ) : (
                 <FontAwesomeIcon
-                  icon={faStar}
+                  icon={faBrain}
                   className="h-3 w-3"
                 />
               )}
@@ -850,7 +704,7 @@ export function DistributionDetail({
               <span>
                 {prediction.loading
                   ? "جاري التنبؤ..."
-                  : "التنبؤ"}
+                  : "التنبؤ بالقراءة"}
               </span>
             </motion.button>
 
@@ -884,14 +738,15 @@ export function DistributionDetail({
 
       <div className="flex-1 overflow-y-auto hide-scrollbar">
         {/* ===================================================
-            Prediction Results
+            ✅ Prediction Results (New Models)
         ==================================================== */}
 
-        <AnimatePresence>
-          {(prediction.stage1 !== null ||
-            prediction.stage2 !== null ||
+        <AnimatePresence mode="wait">
+          {(prediction.readPrediction !== null ||
+            prediction.timePrediction !== null ||
             prediction.error) && (
               <motion.div
+                key="prediction-results"
                 initial={{
                   opacity: 0,
                   height: 0,
@@ -904,13 +759,16 @@ export function DistributionDetail({
                   opacity: 0,
                   height: 0,
                 }}
+                transition={{
+                  duration: 0.2,
+                }}
                 className="border-b border-border p-4"
               >
                 <div className="mb-3 flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100">
                     <FontAwesomeIcon
-                      icon={faStar}
-                      className="h-4 w-4 text-yellow-600"
+                      icon={faBrain}
+                      className="h-4 w-4 text-indigo-600"
                     />
                   </div>
 
@@ -920,14 +778,14 @@ export function DistributionDetail({
                     </h3>
 
                     <p className="text-xs text-muted-foreground">
-                      نتائج مراحل نموذج التنبؤ
+                      التنبؤ بالقراءة ووقتها
                     </p>
                   </div>
                 </div>
 
                 {/* =================================================
                   Error
-              ================================================== */}
+                ================================================== */}
 
                 {prediction.error && (
                   <motion.div
@@ -960,10 +818,10 @@ export function DistributionDetail({
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {/* =================================================
-                    Stage 1
+                    ✅ Read Prediction
                 ================================================== */}
 
-                  {prediction.stage1 !== null && (
+                  {prediction.readPrediction !== null && (
                     <motion.div
                       initial={{
                         opacity: 0,
@@ -973,16 +831,22 @@ export function DistributionDetail({
                         opacity: 1,
                         x: 0,
                       }}
+                      transition={{
+                        duration: 0.2,
+                      }}
                       className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm"
                     >
                       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                            1
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+                            <FontAwesomeIcon
+                              icon={faBrain}
+                              className="h-3 w-3"
+                            />
                           </div>
 
                           <span className="font-semibold text-foreground">
-                            المرحلة الأولى
+                            التنبؤ بالقراءة
                           </span>
                         </div>
 
@@ -993,21 +857,30 @@ export function DistributionDetail({
                       </div>
 
                       <div className="p-4">
-                        {getPredictionSummary(
-                          prediction.stage1
-                        ) && (
-                            <div className="mb-3 rounded-xl bg-blue-50 p-3">
-                              <p className="mb-1 text-[11px] text-blue-600">
-                                النتيجة
-                              </p>
+                        {/* ✅ نتيجة القراءة */}
+                        <div
+                          className={`mb-3 rounded-xl p-3 ${
+                            prediction.readPrediction.willRead
+                              ? "bg-emerald-50"
+                              : "bg-red-50"
+                          }`}
+                        >
+                          <p className="mb-1 text-[11px] text-muted-foreground">
+                            النتيجة
+                          </p>
 
-                              <p className="break-words text-base font-bold text-blue-800">
-                                {getPredictionSummary(
-                                  prediction.stage1
-                                )}
-                              </p>
-                            </div>
-                          )}
+                          <p
+                            className={`text-base font-bold ${
+                              prediction.readPrediction.willRead
+                                ? "text-emerald-700"
+                                : "text-red-700"
+                            }`}
+                          >
+                            {prediction.readPrediction.willRead
+                              ? "✅ سيقرأ"
+                              : "❌ سيتجاهل"}
+                          </p>
+                        </div>
 
                         <div>
                           <p className="mb-2 text-xs font-medium text-muted-foreground">
@@ -1019,22 +892,32 @@ export function DistributionDetail({
                             dir="rtl"
                           >
                             <span className="font-semibold">
-                              هل سيجيب:
+                              احتمال القراءة:
                             </span>{" "}
-                            {formatPredictionResponse(
-                              prediction.stage1
-                                .willReply
-                            )}
+                            {(
+                              prediction.readPrediction
+                                .readProbability * 100
+                            ).toFixed(1)}
+                            %
 
                             {"\n"}
 
                             <span className="font-semibold">
-                              احتمال الاستجابة:
+                              احتمال التجاهل:
                             </span>{" "}
-                            {formatPredictionResponse(
-                              prediction.stage1
-                                .replyProbability
-                            )}
+                            {(
+                              prediction.readPrediction
+                                .ignoreProbability * 100
+                            ).toFixed(1)}
+                            %
+
+                            {"\n"}
+
+                            <span className="font-semibold">
+                              العتبة المستخدمة:
+                            </span>{" "}
+                            {prediction.readPrediction
+                              .threshold_used}
                           </pre>
                         </div>
                       </div>
@@ -1042,10 +925,10 @@ export function DistributionDetail({
                   )}
 
                   {/* =================================================
-                    Stage 2
+                    ✅ Read Time Prediction
                 ================================================== */}
 
-                  {prediction.stage2 !== null && (
+                  {prediction.timePrediction !== null && (
                     <motion.div
                       initial={{
                         opacity: 0,
@@ -1055,16 +938,22 @@ export function DistributionDetail({
                         opacity: 1,
                         x: 0,
                       }}
+                      transition={{
+                        duration: 0.2,
+                      }}
                       className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm"
                     >
                       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 text-xs font-bold text-purple-700">
-                            2
+                            <FontAwesomeIcon
+                              icon={faClock}
+                              className="h-3 w-3"
+                            />
                           </div>
 
                           <span className="font-semibold text-foreground">
-                            المرحلة الثانية
+                            وقت القراءة
                           </span>
                         </div>
 
@@ -1075,21 +964,16 @@ export function DistributionDetail({
                       </div>
 
                       <div className="p-4">
-                        {getPredictionSummary(
-                          prediction.stage2
-                        ) && (
-                            <div className="mb-3 rounded-xl bg-purple-50 p-3">
-                              <p className="mb-1 text-[11px] text-purple-600">
-                                النتيجة
-                              </p>
+                        {/* ✅ نتيجة وقت القراءة */}
+                        <div className="mb-3 rounded-xl bg-purple-50 p-3">
+                          <p className="mb-1 text-[11px] text-purple-600">
+                            الوقت المتوقع
+                          </p>
 
-                              <p className="break-words text-base font-bold text-purple-800">
-                                {getPredictionSummary(
-                                  prediction.stage2
-                                )}
-                              </p>
-                            </div>
-                          )}
+                          <p className="text-base font-bold text-purple-700">
+                            {prediction.timePrediction.formatted}
+                          </p>
+                        </div>
 
                         <div>
                           <p className="mb-2 text-xs font-medium text-muted-foreground">
@@ -1101,22 +985,22 @@ export function DistributionDetail({
                             dir="rtl"
                           >
                             <span className="font-semibold">
-                              وقت الاستجابة المتوقع بالدقائق:
+                              الدقائق:
                             </span>{" "}
-                            {formatPredictionResponse(
-                              prediction.stage2
-                                .predictedResponseTimeMinutes
-                            )}
+                            {prediction.timePrediction
+                              .predictedReadTimeMinutes.toFixed(
+                                0
+                              )}
 
                             {"\n"}
 
                             <span className="font-semibold">
-                              وقت الاستجابة المتوقع بالساعات:
+                              الساعات:
                             </span>{" "}
-                            {formatPredictionResponse(
-                              prediction.stage2
-                                .predictedResponseTimeHours
-                            )}
+                            {prediction.timePrediction
+                              .predictedReadTimeHours.toFixed(
+                                1
+                              )}
                           </pre>
                         </div>
                       </div>

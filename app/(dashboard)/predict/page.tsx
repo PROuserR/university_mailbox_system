@@ -20,8 +20,18 @@ import {
   faSpinner,
   faRobot,
   faCircleInfo,
+  faGear,
+  faArrowRotateRight,
+  faUser,
+  faBuilding,
 } from "@fortawesome/free-solid-svg-icons";
-import myAPI from "@/utils/myAPI";
+
+// ============================================================
+// ✅ استيراد الـ Hooks
+// ============================================================
+
+import { useDelegation } from "@/hooks/useDelegation";
+import { useActiveDepartments } from "@/hooks/useDepartments";
 
 // ============================================================
 // API
@@ -29,64 +39,54 @@ import myAPI from "@/utils/myAPI";
 
 const API_URL = "http://127.0.0.1:8000";
 
-
 // ============================================================
 // Types
 // ============================================================
 
 interface MailForm {
   distributedDate: string;
-  readAt: string;
-  status: string;
-  isRead: boolean;
-  isAutoDistributed: boolean;
+  approvedAt: string;
   receiverId: number;
   departmentId: number;
   mainType: string;
-  documentType: string;
-  senderEntity: string;
-  isProfessional: boolean;
+  isAutoDistributed: boolean;
   isFromHead: boolean;
+  isProfessional: boolean;
   attachmentCount: number;
   totalAttachmentSize: number;
   contentLength: number;
 }
 
-interface Stage2Prediction {
-  predictedResponseTimeMinutes: number;
-  predictedResponseTimeHours: number;
+interface ReadPrediction {
+  willRead: boolean;
+  readProbability: number;
+  ignoreProbability: number;
+  threshold_used: number;
 }
 
+interface ReadTimePrediction {
+  predictedReadTimeMinutes: number;
+  predictedReadTimeHours: number;
+  formatted: string;
+}
 
 // ============================================================
 // Default Form
 // ============================================================
 
 const initialForm: MailForm = {
-  distributedDate: "2026-09-04T10:30",
-  readAt: "2026-09-04T11:15",
-
-  status: "Completed",
-
-  isRead: true,
+  distributedDate: new Date().toISOString().slice(0, 16),
+  approvedAt: new Date().toISOString().slice(0, 16),
+  receiverId: 0,
+  departmentId: 0,
+  mainType: "Incoming",
   isAutoDistributed: false,
-
-  receiverId: 15,
-  departmentId: 1,
-
-  mainType: "Approval",
-  documentType: "Request",
-
-  senderEntity: "Finance Department",
-
-  isProfessional: true,
   isFromHead: true,
-
-  attachmentCount: 0,
-  totalAttachmentSize: 0,
-  contentLength: 200,
+  isProfessional: true,
+  attachmentCount: 3,
+  totalAttachmentSize: 500000,
+  contentLength: 1500,
 };
-
 
 // ============================================================
 // Component
@@ -95,17 +95,34 @@ const initialForm: MailForm = {
 export default function PredictionPage() {
   const [form, setForm] = useState<MailForm>(initialForm);
 
-  const [stage1Loading, setStage1Loading] = useState(false);
-  const [stage2Loading, setStage2Loading] = useState(false);
+  const [readLoading, setReadLoading] = useState(false);
+  const [timeLoading, setTimeLoading] = useState(false);
+  const [thresholdLoading, setThresholdLoading] = useState(false);
+  const [trainingLoading, setTrainingLoading] = useState(false);
 
-  const [stage1Prediction, setStage1Prediction] =
-    useState<boolean | null>(null);
+  const [readPrediction, setReadPrediction] = useState<ReadPrediction | null>(null);
+  const [timePrediction, setTimePrediction] = useState<ReadTimePrediction | null>(null);
+  const [threshold, setThreshold] = useState<number>(0.35);
+  const [trainingStatus, setTrainingStatus] = useState<any>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
-  const [stage2Prediction, setStage2Prediction] =
-    useState<Stage2Prediction | null>(null);
+  // ============================================================
+  // ✅ استخدام الـ Hooks لجلب البيانات
+  // ============================================================
 
-  const [readingPrecentage, setReadingPrecentage] = useState(0)
+  // ✅ استخدام useDelegation للحصول على المستخدمين النشطين
+  const delegation = useDelegation();
+  const departmentsQuery = useActiveDepartments();
 
+  // ✅ استخراج البيانات من delegation
+  const users = delegation.allUsers || [];
+  const isLoadingUsers = delegation.isLoading;
+  const usersError = false; // يمكنك إضافة error handling حسب الحاجة
+
+  // ✅ استخراج البيانات من departments
+  const departments = departmentsQuery?.data || [];
+  const isLoadingDepartments = departmentsQuery?.isLoading || false;
+  const departmentsError = departmentsQuery?.isError || false;
 
   // ============================================================
   // Update Field
@@ -121,162 +138,162 @@ export default function PredictionPage() {
     }));
   };
 
-
-  // ============================================================
-  // Build API Data
-  // ============================================================
-
-  const buildStage1Payload = () => {
-    const formData = {
-      distributedDate: form.distributedDate.toString(),
-      status: form.status,
-      isRead: Boolean(form.isRead),
-      isAutoDistributed: Boolean(form.isAutoDistributed),
-
-      receiverId: Number(form.receiverId),
-      departmentId: Number(form.departmentId),
-
-      mainType: form.mainType,
-      documentType: form.documentType,
-      senderEntity: form.senderEntity,
-
-      isProfessional: Boolean(form.isProfessional),
-      isFromHead: Boolean(form.isFromHead),
-
-      attachmentCount: Number(form.attachmentCount),
-      totalAttachmentSize: Number(form.totalAttachmentSize),
-      contentLength: Number(form.contentLength),
-    };
-    return formData;
-  };
-
-
-  const buildStage2Payload = () => {
-    return {
-      distributedDate: toApiDate(form.distributedDate),
-      readAt: toApiDate(form.readAt),
-
-      status: String(form.status ?? ""),
-
-      isRead: Boolean(form.isRead),
-      isAutoDistributed: Boolean(form.isAutoDistributed),
-
-      receiverId: Number(form.receiverId),
-      departmentId: Number(form.departmentId),
-
-      mainType: String(form.mainType ?? ""),
-      documentType: String(form.documentType ?? ""),
-      senderEntity: String(form.senderEntity ?? ""),
-
-      isProfessional: Boolean(form.isProfessional),
-      isFromHead: Boolean(form.isFromHead),
-
-      attachmentCount: Number(form.attachmentCount),
-      totalAttachmentSize: Number(form.totalAttachmentSize),
-      contentLength: Number(form.contentLength),
-    };
-  };
-
-
   // ============================================================
   // Convert local datetime to API datetime
   // ============================================================
 
   const toApiDate = (value: string) => {
     if (!value) return value;
-
-    return value.length === 16
-      ? `${value}:00Z`
-      : value;
+    return value.length === 16 ? `${value}:00Z` : value;
   };
 
+  // ============================================================
+  // Build API Data
+  // ============================================================
+
+  const buildPayload = () => ({
+    distributedDate: toApiDate(form.distributedDate),
+    approvedAt: toApiDate(form.approvedAt),
+    receiverId: Number(form.receiverId),
+    departmentId: Number(form.departmentId) || 0,
+    mainType: form.mainType,
+    isAutoDistributed: Boolean(form.isAutoDistributed),
+    isFromHead: Boolean(form.isFromHead),
+    isProfessional: Boolean(form.isProfessional),
+    attachmentCount: Number(form.attachmentCount),
+    totalAttachmentSize: Number(form.totalAttachmentSize),
+    contentLength: Number(form.contentLength),
+  });
 
   // ============================================================
-  // Stage 1
+  // API Calls
   // ============================================================
 
-  // const getReadingPrecentage = async () => {
-  //   const response = await myAPI.get(
-  //     `/Analytics/receiver/dashboard`
-  //   );
-  //   const result = response.data.data.summary.readPercentage / 100
-  //   setReadingPrecentage(result)
-  // }
-
-  const runStage1 = async () => {
-
-
-    setStage1Loading(true);
-    setStage1Prediction(null);
-
-    try {
-      const response = await axios.post(
-        `${API_URL}/predict`,
-        buildStage1Payload()
-      );
-
-      const rawPrediction =
-        response.data?.prediction;
-
-
-      setStage1Prediction(rawPrediction);
-      toast.success("اكتمل توقع المرحلة 1.");
-    } catch (error) {
-
-      toast.error(
-        "فشل توقع المرحلة 1. تأكد من تشغيل FastAPI."
-      );
-    } finally {
-      setStage1Loading(false);
+  // ✅ 1. التنبؤ بالقراءة
+  const predictRead = async () => {
+    if (!form.receiverId || !form.departmentId) {
+      toast.error("يرجى اختيار المستخدم والقسم");
+      return;
     }
-  };
 
-
-  // ============================================================
-  // Stage 2
-  // ============================================================
-
-  const runStage2 = async () => {
-    setStage2Loading(true);
-    setStage2Prediction(null);
+    setReadLoading(true);
+    setReadPrediction(null);
 
     try {
       const response = await axios.post(
-        `${API_URL}/predict_stage2`,
-        buildStage2Payload()
+        `${API_URL}/predict_read`,
+        buildPayload()
       );
 
-      const prediction =
-        response.data?.prediction_stage2;
-
-      if (prediction != "0")
-        setStage2Prediction(prediction);
-      else {
-        return
+      if (response.data?.data) {
+        setReadPrediction(response.data.data);
+        toast.success("تم التنبؤ بالقراءة بنجاح!");
       }
-
-      toast.success("اكتمل توقع المرحلة 2.");
-    } catch (error) {
-      toast.error(
-        "فشل توقع المرحلة 2. تأكد من تضمين readAt وتشغيل FastAPI."
-      );
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "فشل التنبؤ بالقراءة");
     } finally {
-      setStage2Loading(false);
+      setReadLoading(false);
     }
   };
 
+  // ✅ 2. التنبؤ بوقت القراءة
+  const predictReadTime = async () => {
+    if (!form.receiverId || !form.departmentId) {
+      toast.error("يرجى اختيار المستخدم والقسم");
+      return;
+    }
 
-  // ============================================================
-  // Both
-  // ============================================================
+    setTimeLoading(true);
+    setTimePrediction(null);
 
-  const runBoth = async () => {
-    await Promise.all([
-      runStage1(),
-      runStage2(),
-    ]);
+    try {
+      const response = await axios.post(
+        `${API_URL}/predict_read_time`,
+        buildPayload()
+      );
+
+      if (response.data?.data) {
+        setTimePrediction(response.data.data);
+        toast.success("تم التنبؤ بوقت القراءة بنجاح!");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "فشل التنبؤ بوقت القراءة");
+    } finally {
+      setTimeLoading(false);
+    }
   };
 
+  // ✅ 3. تشغيل الكل
+  const predictBoth = async () => {
+    await Promise.all([predictRead(), predictReadTime()]);
+  };
+
+  // ✅ 4. الحصول على العتبة الحالية
+  const getThreshold = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/get_threshold`);
+      if (response.data) {
+        setThreshold(response.data.current_threshold);
+        toast.success(`العتبة الحالية: ${response.data.current_threshold}`);
+      }
+    } catch (error: any) {
+      toast.error("فشل جلب العتبة");
+    }
+  };
+
+  // ✅ 5. تحديث العتبة
+  const updateThreshold = async (newThreshold: number) => {
+    setThresholdLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/set_threshold`, {
+        threshold: newThreshold,
+        reason: "تحديث من لوحة التحكم",
+      });
+
+      if (response.data) {
+        setThreshold(newThreshold);
+        toast.success(`تم تحديث العتبة إلى ${newThreshold}`);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "فشل تحديث العتبة");
+    } finally {
+      setThresholdLoading(false);
+    }
+  };
+
+  // ✅ 6. تشغيل التدريب التلقائي
+  const runTraining = async () => {
+    setTrainingLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/retrain`);
+      if (response.data) {
+        toast.success("بدأ التدريب في الخلفية!");
+        checkTrainingStatus();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "فشل بدء التدريب");
+    } finally {
+      setTrainingLoading(false);
+    }
+  };
+
+  // ✅ 7. التحقق من حالة التدريب
+  const checkTrainingStatus = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/training_status`);
+      if (response.data) {
+        setTrainingStatus(response.data.training_status);
+        const status = response.data.training_status;
+        if (status.status === "completed") {
+          toast.success("اكتمل التدريب بنجاح!");
+        } else if (status.status === "failed") {
+          toast.error("فشل التدريب!");
+        }
+      }
+    } catch (error: any) {
+      toast.error("فشل جلب حالة التدريب");
+    }
+  };
 
   // ============================================================
   // Reset
@@ -284,1138 +301,547 @@ export default function PredictionPage() {
 
   const resetForm = () => {
     setForm(initialForm);
-    setStage1Prediction(null);
-    setStage2Prediction(null);
-
+    setReadPrediction(null);
+    setTimePrediction(null);
     toast.success("تمت إعادة ضبط النموذج.");
   };
-
 
   // ============================================================
   // Format Time
   // ============================================================
 
-  const formatResponseTime = (hours: number) => {
+  const formatTime = (minutes: number) => {
+    const hours = minutes / 60;
     if (hours < 1) {
-      return `${Math.round(hours * 60)} دقيقة`;
+      return `${Math.round(minutes)} دقيقة`;
     }
-
     if (hours < 24) {
       return `${hours.toFixed(1)} ساعة`;
     }
-
     const days = Math.floor(hours / 24);
     const remainingHours = hours % 24;
-
     if (remainingHours < 0.1) {
       return `${days} يوم`;
     }
-
     return `${days}ي ${remainingHours.toFixed(1)}س`;
   };
 
+  // ============================================================
+  // جلب البيانات من الـ Queries
+  // ============================================================
+
+  const isLoading = isLoadingUsers || isLoadingDepartments;
+  const isError = usersError || departmentsError;
+
+  // ============================================================
+  // Loading / Error States
+  // ============================================================
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center">
+          <FontAwesomeIcon icon={faSpinner} spin className="text-4xl text-indigo-500" />
+          <p className="mt-4 text-slate-500">جاري تحميل البيانات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center">
+          <p className="text-red-500">فشل تحميل البيانات. يرجى المحاولة مرة أخرى.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // Render
+  // ============================================================
 
   return (
-    <main className="min-h-screen bg-slate-50 ">
-
-      {/* ======================================================
-          Background
-      ======================================================= */}
-
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-
-        <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-indigo-600/20 blur-[140px]" />
-
-        <div className="absolute -right-40 top-1/3 h-[500px] w-[500px] rounded-full bg-purple-600/15 blur-[140px]" />
-
-        <div className="absolute bottom-[-200px] left-1/3 h-[500px] w-[500px] rounded-full bg-blue-600/10 blur-[140px]" />
-
-      </div>
-
-
-      {/* ======================================================
-          Container
-      ======================================================= */}
-
-      <div className="relative mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:py-12">
-
-
-        {/* ====================================================
-            Header
-        ===================================================== */}
-
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
+      <div className="mx-auto max-w-7xl">
+        {/* Header */}
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-10"
+          className="mb-8 flex flex-wrap items-center justify-between gap-4"
         >
-
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-
-            <div className="flex items-center gap-4">
-
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-400/20 bg-indigo-500/10 shadow-lg shadow-indigo-500/10">
-
-                <FontAwesomeIcon
-                  icon={faBrain}
-                  className="text-2xl text-indigo-400"
-                />
-
-              </div>
-
-              <div>
-
-                <div className="mb-1 flex items-center gap-2">
-
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400">
-                    ذكاء البريد الإلكتروني الاصطناعي
-                  </span>
-
-                </div>
-
-                <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                  متنبئ بالرد على البريد الإلكتروني
-                </h1>
-
-              </div>
-
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/20">
+              <FontAwesomeIcon icon={faBrain} className="text-3xl text-indigo-500" />
             </div>
-
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">متنبئ القراءة</h1>
+              <p className="text-sm text-slate-500">توقع قراءة البريد الإلكتروني ووقتها</p>
+            </div>
           </div>
 
-
-          <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
-            حلّل المراسلات باستخدام مرحلتين من التعلم الآلي:
-            توقّع ما إذا كان المستلم سيرد، وقدّر
-            وقت الاستجابة المتوقع.
-          </p>
-
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+            >
+              <FontAwesomeIcon icon={faGear} className="ml-2" />
+              الإعدادات
+            </button>
+            <button
+              onClick={runTraining}
+              disabled={trainingLoading}
+              className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-2 text-sm text-indigo-600 transition hover:bg-indigo-500/20 disabled:opacity-50"
+            >
+              <FontAwesomeIcon icon={faArrowRotateRight} spin={trainingLoading} className="ml-2" />
+              تدريب
+            </button>
+          </div>
         </motion.header>
 
+        {/* Settings Panel */}
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-lg"
+            >
+              <div className="flex flex-wrap items-end gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    العتبة الحالية: {threshold}
+                  </label>
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={0.9}
+                    step={0.05}
+                    value={threshold}
+                    onChange={(e) => setThreshold(parseFloat(e.target.value))}
+                    className="w-48 accent-indigo-500"
+                  />
+                </div>
+                <button
+                  onClick={() => updateThreshold(threshold)}
+                  disabled={thresholdLoading}
+                  className="rounded-xl bg-indigo-500 px-4 py-2 text-sm text-white transition hover:bg-indigo-600 disabled:opacity-50"
+                >
+                  {thresholdLoading ? "جاري التحديث..." : "تحديث العتبة"}
+                </button>
+                <button
+                  onClick={getThreshold}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+                >
+                  جلب العتبة الحالية
+                </button>
+                <button
+                  onClick={checkTrainingStatus}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+                >
+                  حالة التدريب
+                </button>
+              </div>
+              {trainingStatus && (
+                <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+                  <p>الحالة: {trainingStatus.status}</p>
+                  <p>الرسالة: {trainingStatus.message}</p>
+                  <p>التقدم: {trainingStatus.progress}%</p>
+                  {trainingStatus.last_training && (
+                    <p>آخر تدريب: {new Date(trainingStatus.last_training.timestamp).toLocaleString()}</p>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* ====================================================
-            Content
-        ===================================================== */}
-
-        <div className="grid gap-7 lg:grid-cols-[1.15fr_0.85fr]">
-
-
-          {/* ==================================================
-              FORM
-          =================================================== */}
-
+        {/* Main Grid */}
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          {/* Form */}
           <motion.section
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-7"
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg"
           >
-
-            <div className="mb-7 flex items-center justify-between">
-
+            <div className="mb-6 flex items-center justify-between">
               <div>
-
-                <div className="flex items-center gap-2">
-
-                  <FontAwesomeIcon
-                    icon={faEnvelope}
-                    className="text-indigo-400"
-                  />
-
-                  <h2 className="text-lg font-semibold">
-                    بيانات المراسلة
-                  </h2>
-
-                </div>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  أدخل خصائص البريد المستخدمة بواسطة نماذج التعلم الآلي.
-                </p>
-
+                <h2 className="text-lg font-semibold text-slate-800">بيانات البريد</h2>
+                <p className="text-xs text-slate-500">أدخل خصائص البريد للتنبؤ</p>
               </div>
-
-
               <button
-                type="button"
                 onClick={resetForm}
-                className="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-400 transition hover:bg-white/10 hover:text-white"
+                className="rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
               >
-
-                <FontAwesomeIcon
-                  icon={faRotateRight}
-                  className="mr-2"
-                />
-
-                Reset
-
+                <FontAwesomeIcon icon={faRotateRight} className="ml-2" />
+                إعادة ضبط
               </button>
-
             </div>
 
-
             {/* Dates */}
-
             <div className="grid gap-4 md:grid-cols-2">
-
               <DateInput
                 label="تاريخ التوزيع"
                 value={form.distributedDate}
-                onChange={(value) =>
-                  updateField(
-                    "distributedDate",
-                    value
-                  )
-                }
+                onChange={(v) => updateField("distributedDate", v)}
               />
-
               <DateInput
-                label="وقت القراءة"
-                value={form.readAt}
-                onChange={(value) =>
-                  updateField(
-                    "readAt",
-                    value
-                  )
-                }
+                label="تاريخ الموافقة"
+                value={form.approvedAt}
+                onChange={(v) => updateField("approvedAt", v)}
               />
-
             </div>
 
-
-            {/* Main fields */}
-
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-
+            {/* Users & Departments - Select */}
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
               <SelectInput
-                label="حالة"
-                icon={faCircleInfo}
-                value={form.status}
-                options={[
-                  "Completed",
-                  "Pending",
-                  "InProgress",
-                  "Rejected",
-                ]}
-                onChange={(value) =>
-                  updateField("status", value)
-                }
+                label="المستخدم"
+                icon={faUser}
+                value={form.receiverId}
+                options={users.map((u: any) => ({
+                  value: u.id,
+                  label: u.fullName || u.email || `مستخدم ${u.id}`,
+                }))}
+                onChange={(v) => updateField("receiverId", Number(v))}
+                placeholder="اختر المستخدم..."
               />
+              <SelectInput
+                label="القسم"
+                icon={faBuilding}
+                value={form.departmentId}
+                options={departments.map((d: any) => ({
+                  value: d.id,
+                  label: d.name || `قسم ${d.id}`,
+                }))}
+                onChange={(v) => updateField("departmentId", Number(v))}
+                placeholder="اختر القسم..."
+              />
+            </div>
 
+            {/* Main Type */}
+            <div className="mt-4">
               <SelectInput
                 label="النوع الرئيسي"
                 icon={faFileLines}
                 value={form.mainType}
                 options={[
-                  "Approval",
-                  "Request",
-                  "Information",
-                  "Circular",
+                  { value: "Incoming", label: "وارد" },
+                  { value: "Outgoing", label: "صادر" },
+                  { value: "Internal", label: "داخلي" },
                 ]}
-                onChange={(value) =>
-                  updateField("mainType", value)
-                }
+                onChange={(v) => updateField("mainType", v)}
+                placeholder="اختر النوع..."
               />
-
-              <SelectInput
-                label="نوع المستند"
-                icon={faFileLines}
-                value={form.documentType}
-                options={[
-                  "Request",
-                  "Letter",
-                  "Report",
-                  "Memo",
-                ]}
-                onChange={(value) =>
-                  updateField("documentType", value)
-                }
-              />
-
-              {/* <TextInput
-                label="جهة الإرسال"
-                icon={faBuilding}
-                value={form.senderEntity}
-                onChange={(value) =>
-                  updateField(
-                    "senderEntity",
-                    value
-                  )
-                }
-                
-              /> */}
-
             </div>
 
-
-            {/* IDs */}
-
-            {/* <div className="mt-5 grid gap-4 md:grid-cols-2">
-
-              <NumberInput
-                label="معرّف المستلم"
-                icon={faUser}
-                value={form.receiverId}
-                onChange={(value) =>
-                  updateField(
-                    "receiverId",
-                    value
-                  )
-                }
-              />
-
-              <NumberInput
-                label="معرّف القسم"
-                icon={faBuilding}
-                value={form.departmentId}
-                onChange={(value) =>
-                  updateField(
-                    "departmentId",
-                    value
-                  )
-                }
-              />
-
-            </div> */}
-
-
             {/* Attachments */}
-
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
               <NumberInput
-                label="المرفقات"
+                label="عدد المرفقات"
                 icon={faPaperclip}
                 value={form.attachmentCount}
-                onChange={(value) =>
-                  updateField(
-                    "attachmentCount",
-                    value
-                  )
-                }
+                onChange={(v) => updateField("attachmentCount", v)}
               />
-
-              {/* <NumberInput
+              <NumberInput
                 label="حجم المرفقات"
                 icon={faPaperclip}
                 value={form.totalAttachmentSize}
-                onChange={(value) =>
-                  updateField(
-                    "totalAttachmentSize",
-                    value
-                  )
-                }
-              /> */}
-
+                onChange={(v) => updateField("totalAttachmentSize", v)}
+              />
               <NumberInput
                 label="طول المحتوى"
                 icon={faFileLines}
                 value={form.contentLength}
-                onChange={(value) =>
-                  updateField(
-                    "contentLength",
-                    value
-                  )
-                }
+                onChange={(v) => updateField("contentLength", v)}
               />
-
             </div>
 
-
             {/* Toggles */}
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <Toggle
-                label="تمت القراءة"
-                checked={form.isRead}
-                onChange={(value) =>
-                  updateField(
-                    "isRead",
-                    value
-                  )
-                }
-              />
-
-              <Toggle
-                label="موزّع تلقائيًا"
+                label="توزيع تلقائي"
                 checked={form.isAutoDistributed}
-                onChange={(value) =>
-                  updateField(
-                    "isAutoDistributed",
-                    value
-                  )
-                }
+                onChange={(v) => updateField("isAutoDistributed", v)}
               />
-
+              <Toggle
+                label="من رئيس"
+                checked={form.isFromHead}
+                onChange={(v) => updateField("isFromHead", v)}
+              />
               <Toggle
                 label="مهني"
                 checked={form.isProfessional}
-                onChange={(value) =>
-                  updateField(
-                    "isProfessional",
-                    value
-                  )
-                }
+                onChange={(v) => updateField("isProfessional", v)}
               />
-
-              {/* <Toggle
-                label="من المدير"
-                checked={form.isFromHead}
-                onChange={(value) =>
-                  updateField(
-                    "isFromHead",
-                    value
-                  )
-                }
-              /> */}
-
             </div>
 
-
-            {/* =================================================
-                Prediction Buttons
-            ================================================== */}
-
-            <div className="mt-7 grid gap-3 sm:grid-cols-3">
-
+            {/* Buttons */}
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <PredictionButton
                 icon={faBrain}
-                title="المرحلة 1"
-                description="هل سيرد؟"
-                loading={stage1Loading}
-                onClick={runStage1}
+                title="توقع القراءة"
+                description="سيقرأ أم سيتجاهل؟"
+                loading={readLoading}
+                onClick={predictRead}
               />
-
               <PredictionButton
                 icon={faClock}
-                title="المرحلة 2"
-                description="وقت الاستجابة"
-                loading={stage2Loading}
-                onClick={runStage2}
+                title="توقع الوقت"
+                description="وقت القراءة المتوقع"
+                loading={timeLoading}
+                onClick={predictReadTime}
               />
-
               <button
-                type="button"
-                onClick={runBoth}
-                disabled={
-                  stage1Loading ||
-                  stage2Loading
-                }
-                className="group flex min-h-[74px] items-center justify-center gap-3 rounded-2xl bg-white px-4 text-left text-slate-900 transition hover:-translate-y-0.5 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={predictBoth}
+                disabled={readLoading || timeLoading}
+                className="flex min-h-[70px] items-center justify-center gap-3 rounded-2xl bg-indigo-500 px-4 text-white transition hover:bg-indigo-600 disabled:opacity-50"
               >
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
-
-                  <FontAwesomeIcon
-                    icon={faBolt}
-                    className="text-indigo-600"
-                  />
-
+                <FontAwesomeIcon icon={faBolt} className="text-white" />
+                <div className="text-right">
+                  <p className="text-sm font-bold">تشغيل الكل</p>
+                  <p className="text-xs text-indigo-200">توقعات متكاملة</p>
                 </div>
-
-                <div>
-
-                  <p className="text-sm font-bold">
-                    تشغيل المرحلتين
-                  </p>
-
-                  <p className="text-xs text-slate-500">
-                    تحليل كامل
-                  </p>
-
-                </div>
-
               </button>
-
             </div>
-
           </motion.section>
 
-
-          {/* ==================================================
-              RESULTS
-          =================================================== */}
-
+          {/* Results */}
           <div className="space-y-6">
-
-
-            {/* Stage 1 */}
-
+            {/* Read Prediction */}
             <ResultCard
               icon={faBrain}
-              title="المرحلة 1"
-              subtitle="احتمالية الرد"
-              loading={stage1Loading}
+              title="توقع القراءة"
+              subtitle="هل سيقرأ البريد؟"
+              loading={readLoading}
+              iconColor="text-indigo-500"
             >
-
-              <AnimatePresence mode="wait">
-
-
-                {stage1Prediction !== null && !stage1Loading && (
-
-                  <motion.div
-                    key={String(stage1Prediction)}
-                    initial={{
-                      opacity: 0,
-                      scale: 0.9,
-                      y: 10,
-                    }}
-                    animate={{
-                      opacity: 1,
-                      scale: 1,
-                      y: 0,
-                    }}
-                    exit={{
-                      opacity: 0,
-                      scale: 0.9,
-                    }}
-                  >
-                    <div
-                      className={`rounded-2xl border p-5 ${stage1Prediction
-                        ? "border-emerald-400/20 bg-emerald-400/[0.06]"
-                        : "border-red-400/20 bg-red-400/[0.06]"
-                        }`}
-                    >
-
-                      <div className="flex items-center gap-4">
-
-                        <div
-                          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${stage1Prediction
-                            ? "bg-emerald-400/10"
-                            : "bg-red-400/10"
-                            }`}
-                        >
-
-                          <FontAwesomeIcon
-                            icon={
-                              stage1Prediction
-                                ? faCheckCircle
-                                : faXmarkCircle
-                            }
-                            className={`text-2xl ${stage1Prediction
-                              ? "text-emerald-400"
-                              : "text-red-400"
-                              }`}
-                          />
-
-                        </div>
-
-                        <div>
-
-                          <p
-                            className={`text-2xl font-bold ${stage1Prediction
-                              ? "text-emerald-300"
-                              : "text-red-300"
-                              }`}
-                          >
-
-                            {stage1Prediction.willReply
-                              ? "من المرجح أن يرد"
-                              : "من غير المرجح أن يرد"}
-                          </p>
-
-                          <p className="mt-1 text-sm text-slate-400">
-                            {stage1Prediction.replyProbability}
-                            {/* {stage1Prediction
-                              ? "يتوقع النموذج أن هذا المستلم سيرد على الأرجح."
-                              : "يتوقع النموذج أن هذا المستلم لن يرد على الأرجح."} */}
-                          </p>
-
-                        </div>
-
-                      </div>
-
+              {readPrediction ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className={`rounded-2xl border p-5 ${
+                    readPrediction.willRead
+                      ? "border-emerald-200 bg-emerald-50"
+                      : "border-red-200 bg-red-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <FontAwesomeIcon
+                      icon={readPrediction.willRead ? faCheckCircle : faXmarkCircle}
+                      className={`text-3xl ${
+                        readPrediction.willRead ? "text-emerald-500" : "text-red-500"
+                      }`}
+                    />
+                    <div>
+                      <p className={`text-xl font-bold ${
+                        readPrediction.willRead ? "text-emerald-700" : "text-red-700"
+                      }`}>
+                        {readPrediction.willRead ? "✅ سيقرأ" : "❌ سيتجاهل"}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        احتمال القراءة: {(readPrediction.readProbability * 100).toFixed(1)}%
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        احتمال التجاهل: {(readPrediction.ignoreProbability * 100).toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        العتبة: {readPrediction.threshold_used}
+                      </p>
                     </div>
-
-                  </motion.div>
-
-                )}
-
-              </AnimatePresence>
-
-
-              {stage1Prediction === null &&
-                !stage1Loading && (
-                  <EmptyState
-                    icon={faRobot}
-                    text="شغّل المرحلة 1 لإنشاء توقع."
-                  />
-                )}
-
+                  </div>
+                </motion.div>
+              ) : (
+                <EmptyState icon={faRobot} text="شغّل التوقع لرؤية النتيجة" />
+              )}
             </ResultCard>
 
-
-            {/* Stage 2 */}
-
+            {/* Time Prediction */}
             <ResultCard
               icon={faClock}
-              title="المرحلة 2"
-              subtitle="وقت الاستجابة المقدّر"
-              loading={stage2Loading}
+              title="توقع وقت القراءة"
+              subtitle="الوقت المتوقع بالدقائق"
+              loading={timeLoading}
+              iconColor="text-indigo-500"
             >
-
-              <AnimatePresence mode="wait">
-
-                {stage2Prediction &&
-                  !stage2Loading && (
-
-                    <motion.div
-                      initial={{
-                        opacity: 0,
-                        y: 15,
-                      }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                      }}
-                    >
-
-                      <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/[0.06] p-5">
-
-                        <div className="flex items-center justify-between gap-4">
-
-                          <div>
-
-                            <p className="text-sm">
-                              الاستجابة المتوقعة
-                            </p>
-
-                            <p className="mt-1 text-4xl font-bold tracking-tight text-blue-400">
-                              {formatResponseTime(
-                                stage2Prediction.predictedResponseTimeHours
-                              )}
-                            </p>
-
-                          </div>
-
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
-
-                            <FontAwesomeIcon
-                              icon={faClock}
-                              className="text-2xl text-indigo-400"
-                            />
-
-                          </div>
-
-                        </div>
-
-
-                        <div className="mt-5 grid grid-cols-2 gap-3">
-
-                          <ResultStat
-                            label="الدقائق"
-                            value={stage2Prediction.predictedResponseTimeMinutes.toFixed(
-                              2
-                            )}
-                          />
-
-                          <ResultStat
-                            label="الساعات"
-                            value={stage2Prediction.predictedResponseTimeHours.toFixed(
-                              2
-                            )}
-                          />
-
-                        </div>
-
-                      </div>
-
-                    </motion.div>
-
-                  )}
-
-
-
-              </AnimatePresence>
-
-
-
-              {!stage2Prediction &&
-                !stage2Loading && (
-                  <EmptyState
-                    icon={faClock}
-                    text="شغّل المرحلة 2 لتقدير وقت الاستجابة. او ليس هناك رد"
-                  />
-                )}
-
-
-
+              {timePrediction ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-slate-600">الوقت المتوقع</p>
+                      <p className="text-3xl font-bold text-indigo-600">
+                        {timePrediction.formatted}
+                      </p>
+                    </div>
+                    <FontAwesomeIcon icon={faClock} className="text-3xl text-indigo-400" />
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-white p-2 text-center shadow-sm">
+                      <p className="text-xs text-slate-500">دقائق</p>
+                      <p className="font-semibold text-slate-800">
+                        {timePrediction.predictedReadTimeMinutes.toFixed(0)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white p-2 text-center shadow-sm">
+                      <p className="text-xs text-slate-500">ساعات</p>
+                      <p className="font-semibold text-slate-800">
+                        {timePrediction.predictedReadTimeHours.toFixed(1)}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <EmptyState icon={faClock} text="شغّل التوقع لرؤية النتيجة" />
+              )}
             </ResultCard>
 
-
-            {/* Model information */}
-
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: 10,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5"
-            >
-
-              <div className="flex gap-3">
-
-                <FontAwesomeIcon
-                  icon={faCircleInfo}
-                  className="mt-0.5 text-indigo-400"
-                />
-
-                <div>
-
-                  <p className="text-sm font-medium">
-                    خط أنابيب التنبؤ ذي المرحلتين
-                  </p>
-
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    تتنبأ المرحلة 1 باحتمالية الرد. وتقدّر المرحلة 2
-                    وقت الاستجابة باستخدام بيانات المراسلة
-                    ووقت القراءة المسجّل.
-                  </p>
-
-                </div>
-
-              </div>
-
-            </motion.div>
-
+            {/* Info */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm">
+              <FontAwesomeIcon icon={faCircleInfo} className="ml-2 text-indigo-500" />
+              <span>النظام يتوقع القراءة باستخدام العتبة {threshold}</span>
+            </div>
           </div>
-
         </div>
-
       </div>
-
     </main>
   );
 }
 
-
 // ============================================================
-// Date Input
+// Components
 // ============================================================
 
-function DateInput({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
+function DateInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-
-      <label className="mb-2 block text-xs font-medium">
-        {label}
-      </label>
-
-      <div className="relative">
-
-        <FontAwesomeIcon
-          icon={faCalendar}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"
-        />
-
-        <input
-          type="datetime-local"
-          value={value}
-          onChange={(event) =>
-            onChange(event.target.value)
-          }
-          className="w-full rounded-xl border border-white/10 bg-slate-200 px-4 py-3 pl-11 text-sm outline-none transition focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10"
-        />
-
-      </div>
-
+      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <input
+        type="datetime-local"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+      />
     </div>
   );
 }
 
-
-// ============================================================
-// Text Input
-// ============================================================
-
-function TextInput({
-  label,
-  icon,
-  value,
-  onChange,
-}: {
-  label: string;
-  icon: any;
-  value: string;
-  onChange: (value: string) => void;
-}) {
+function NumberInput({ label, icon, value, onChange }: { label: string; icon: any; value: number; onChange: (v: number) => void }) {
   return (
     <div>
-
-      <label className="mb-2 block text-xs font-medium">
-        {label}
-      </label>
-
+      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
       <div className="relative">
-
-        <FontAwesomeIcon
-          icon={icon}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"
-        />
-
+        <FontAwesomeIcon icon={icon} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
-          type="text"
+          type="number"
           value={value}
-          onChange={(event) =>
-            onChange(event.target.value)
-          }
-          className="w-full rounded-xl border border-white/10 bg-slate-200 px-4 py-3 pl-11 text-sm outline-none transition placeholder:text-slate-600 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10"
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
         />
-
       </div>
-
     </div>
   );
 }
 
-
-// ============================================================
-// Number Input
-// ============================================================
-
-function NumberInput({
-  label,
-  icon,
-  value,
-  onChange,
-}: {
-  label: string;
-  icon: any;
-  value: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <TextInput
-      label={label}
-      icon={icon}
-      value={String(value)}
-      onChange={(value) =>
-        onChange(Number(value))
-      }
-    />
-  );
-}
-
-
-// ============================================================
-// Select
-// ============================================================
-
-const optionLabels: Record<string, string> = {
-  Completed: "مكتمل",
-  Pending: "قيد الانتظار",
-  InProgress: "قيد التنفيذ",
-  Rejected: "مرفوض",
-  Approval: "موافقة",
-  Request: "طلب",
-  Information: "معلومات",
-  Circular: "تعميم",
-  Letter: "خطاب",
-  Report: "تقرير",
-  Memo: "مذكرة",
-};
-
-function getOptionLabel(option: string) {
-  return optionLabels[option] ?? option;
-}
-
-function SelectInput({
-  label,
-  icon,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  icon: any;
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
+function SelectInput({ 
+  label, 
+  icon, 
+  value, 
+  options, 
+  onChange, 
+  placeholder 
+}: { 
+  label: string; 
+  icon?: any; 
+  value: any; 
+  options: { value: any; label: string }[]; 
+  onChange: (v: any) => void; 
+  placeholder?: string;
 }) {
   return (
     <div>
-
-      <label className="mb-2 block text-xs font-medium">
-        {label}
-      </label>
-
+      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
       <div className="relative">
-
-        <FontAwesomeIcon
-          icon={icon}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"
-        />
-
+        {icon && (
+          <FontAwesomeIcon icon={icon} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        )}
         <select
-          value={value}
-          onChange={(event) =>
-            onChange(event.target.value)
-          }
-          className="w-full appearance-none rounded-xl border bg-slate-200 px-4 py-3 pl-11 text-sm  outline-none transition focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
         >
-
-          {options.map((option) => (
-            <option
-              key={option}
-              value={option}
-            >
-              {getOptionLabel(option)}
+          <option value="" disabled>{placeholder || "اختر..."}</option>
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
             </option>
           ))}
-
         </select>
-
       </div>
-
     </div>
   );
 }
 
-
-// ============================================================
-// Toggle
-// ============================================================
-
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
-      type="button"
       onClick={() => onChange(!checked)}
-      className="flex items-center justify-between rounded-xl border bg-slate-200 px-4 py-3 transition hover:bg-white/[0.05]"
+      className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
     >
-
-      <span className="text-sm">
-        {label}
-      </span>
-
-      <div
-        className={`relative h-6 w-11 rounded-full transition ${checked
-          ? "bg-indigo-500"
-          : "bg-slate-700"
-          }`}
-      >
-
-        <div
-          className={`absolute top-1 h-4 w-4 rounded-full bg-slate-200 shadow-sm transition ${checked
-            ? "left-6"
-            : "left-1"
-            }`}
-        />
-
+      <span>{label}</span>
+      <div className={`relative h-6 w-11 rounded-full transition ${checked ? "bg-indigo-500" : "bg-slate-300"}`}>
+        <div className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition ${checked ? "left-6" : "left-1"}`} />
       </div>
-
     </button>
   );
 }
 
-
-// ============================================================
-// Prediction Button
-// ============================================================
-
-function PredictionButton({
-  icon,
-  title,
-  description,
-  loading,
-  onClick,
-}: {
-  icon: any;
-  title: string;
-  description: string;
-  loading: boolean;
-  onClick: () => void;
-}) {
+function PredictionButton({ icon, title, description, loading, onClick }: any) {
   return (
     <button
-      type="button"
       onClick={onClick}
       disabled={loading}
-      className="group flex min-h-[74px] items-center gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/[0.07] px-4 text-left transition hover:-translate-y-0.5 hover:border-indigo-400/30 hover:bg-indigo-500/[0.13] disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex min-h-[70px] items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 text-right text-slate-700 transition hover:bg-indigo-100 disabled:opacity-50"
     >
-
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10">
-
-        <FontAwesomeIcon
-          icon={loading ? faSpinner : icon}
-          spin={loading}
-          className="text-indigo-400"
-        />
-
-      </div>
-
+      <FontAwesomeIcon icon={loading ? faSpinner : icon} spin={loading} className="text-indigo-500" />
       <div>
-
-        <p className="text-sm font-semibold">
-          {title}
-        </p>
-
-        <p className="mt-0.5 text-xs text-slate-500">
-          {description}
-        </p>
-
+        <p className="text-sm font-semibold">{title}</p>
+        <p className="text-xs text-slate-500">{description}</p>
       </div>
-
     </button>
   );
 }
 
-
-// ============================================================
-// Result Card
-// ============================================================
-
-function ResultCard({
-  icon,
-  title,
-  subtitle,
-  loading,
-  children,
-}: {
-  icon: any;
-  title: string;
-  subtitle: string;
-  loading: boolean;
-  children: React.ReactNode;
-}) {
+function ResultCard({ icon, title, subtitle, loading, children, iconColor }: any) {
   return (
-    <motion.section
-      layout
-      className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-6 shadow-2xl shadow-black/20 backdrop-blur-xl"
-    >
-
-      <div className="mb-6 flex items-center gap-3">
-
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10">
-
-          <FontAwesomeIcon
-            icon={icon}
-            className="text-indigo-400"
-          />
-
-        </div>
-
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
+      <div className="mb-4 flex items-center gap-3">
+        <FontAwesomeIcon icon={icon} className={iconColor || "text-indigo-500"} />
         <div>
-
-          <h2 className="font-semibold">
-            {title}
-          </h2>
-
-          <p className="text-xs text-slate-500">
-            {subtitle}
-          </p>
-
+          <h3 className="font-semibold text-slate-800">{title}</h3>
+          <p className="text-xs text-slate-500">{subtitle}</p>
         </div>
-
       </div>
-
-
       {loading ? (
-
-        <div className="flex min-h-[150px] items-center justify-center">
-
-          <motion.div
-            animate={{
-              rotate: 360,
-            }}
-            transition={{
-              duration: 1,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          >
-
-            <FontAwesomeIcon
-              icon={faSpinner}
-              className="text-2xl text-indigo-400"
-            />
-
-          </motion.div>
-
+        <div className="flex h-32 items-center justify-center">
+          <FontAwesomeIcon icon={faSpinner} spin className="text-2xl text-indigo-500" />
         </div>
-
       ) : (
         children
       )}
-
-    </motion.section>
-  );
-}
-
-
-// ============================================================
-// Empty State
-// ============================================================
-
-function EmptyState({
-  icon,
-  text,
-}: {
-  icon: any;
-  text: string;
-}) {
-  return (
-    <div className="flex min-h-[150px] flex-col items-center justify-center text-center">
-
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.03]">
-
-        <FontAwesomeIcon
-          icon={icon}
-          className="text-xl text-slate-600"
-        />
-
-      </div>
-
-      <p className="text-sm text-slate-500">
-        {text}
-      </p>
-
     </div>
   );
 }
 
-
-// ============================================================
-// Result Stat
-// ============================================================
-
-function ResultStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function EmptyState({ icon, text }: any) {
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-black/20 p-3">
-
-      <p className="text-[11px] uppercase tracking-wider text-slate-500">
-        {label}
-      </p>
-
-      <p className="mt-1 text-lg font-semibold text-white">
-        {value}
-      </p>
-
+    <div className="flex h-32 flex-col items-center justify-center text-center">
+      <FontAwesomeIcon icon={icon} className="mb-2 text-2xl text-slate-300" />
+      <p className="text-sm text-slate-400">{text}</p>
     </div>
   );
 }

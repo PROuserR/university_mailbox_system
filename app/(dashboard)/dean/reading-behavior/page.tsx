@@ -214,8 +214,8 @@ export default function ReadingBehaviorPage() {
         return (
           <span className={`text-sm font-medium ${trend.color} flex items-center gap-1`}>
             <FontAwesomeIcon icon={trend.icon} />
-            {monthlyTrend.trendDirection === "Increasing" ? "تصاعدي" :
-             monthlyTrend.trendDirection === "Decreasing" ? "تنازلي" :
+            {monthlyTrend.trendDirection === "Up" ? "تصاعدي" :
+             monthlyTrend.trendDirection === "Down" ? "تنازلي" :
              "مستقر"}
           </span>
         );
@@ -231,7 +231,8 @@ export default function ReadingBehaviorPage() {
     <>
       <div className="w-full h-64">
         <div className="flex items-end justify-around h-full w-full gap-2 px-2">
-          {monthlyTrend.data.map((item, index) => {
+          {/* ✅ عكس ترتيب البيانات باستخدام [...data].reverse() */}
+          {[...monthlyTrend.data].reverse().map((item, index) => {
             // ✅ حساب القيم مع التأكد من عدم القسمة على صفر
             const maxValue = Math.max(...monthlyTrend.data.map(d => Math.max(d.received, d.read)), 1);
             const totalHeight = (item.received / maxValue) * 100;
@@ -243,7 +244,7 @@ export default function ReadingBehaviorPage() {
                 <div className="w-full max-w-[48px] flex flex-col items-center justify-end h-[75%]">
                   {/* ✅ الشريط الكامل (المستلم) - خلفية */}
                   <div
-                    className="w-full bg-blue-100 rounded-t-lg relative overflow-hidden"
+                    className="w-full bg-blue-100 rounded-t-lg relative overflow-hidden group"
                     style={{
                       height: `${Math.max(totalHeight, 5)}%`,
                       minHeight: '8px',

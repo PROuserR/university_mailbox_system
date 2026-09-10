@@ -193,21 +193,21 @@ export default function CorrespondenceEditPage({
 
         setTitle(correspondence.title ?? "");
         setContent(correspondence.content ?? "");
-        
+
         const numberValue = correspondence.number;
         setNumber(numberValue !== undefined && numberValue !== null ? Number(numberValue) : "");
-        
+
         const mainTypeValue = getMainTypeFromString(correspondence.mainType);
         setMainType(mainTypeValue);
         setIsProfessional(correspondence.isProfessional ?? false);
         setDocumentTypeId(correspondence.documentTypeId);
         setSenderEntityId(correspondence.senderEntityId);
         setSenderReference(correspondence.senderReference ?? "");
-        
+
         setIssuedDate(utcToLocalDate(correspondence.issuedDate));
         setReceivedDate(utcToLocalDate(correspondence.receivedDate));
         setSentDate(utcToLocalDate(correspondence.sentDate));
-        
+
         setNotes(correspondence.notes ?? "");
         setParentCorrespondenceId(correspondence.parentCorrespondenceId ?? null);
         if (correspondence.parentCorrespondenceId) {
@@ -221,10 +221,10 @@ export default function CorrespondenceEditPage({
     // =========================
 
     const markAttachmentForDeletion = useCallback((attachmentId: number): void => {
-        setAttachments(prev => 
-            prev.map(att => 
-                att.id === attachmentId 
-                    ? { ...att, isMarkedForDeletion: true } 
+        setAttachments(prev =>
+            prev.map(att =>
+                att.id === attachmentId
+                    ? { ...att, isMarkedForDeletion: true }
                     : att
             )
         );
@@ -232,10 +232,10 @@ export default function CorrespondenceEditPage({
     }, []);
 
     const undoDeleteAttachment = useCallback((attachmentId: number): void => {
-        setAttachments(prev => 
-            prev.map(att => 
-                att.id === attachmentId 
-                    ? { ...att, isMarkedForDeletion: false } 
+        setAttachments(prev =>
+            prev.map(att =>
+                att.id === attachmentId
+                    ? { ...att, isMarkedForDeletion: false }
                     : att
             )
         );
@@ -253,10 +253,10 @@ export default function CorrespondenceEditPage({
 
         const existingPrimary = attachments.find(att => att.isPrimary && !att.isMarkedForDeletion);
         if (existingPrimary) {
-            setAttachments(prev => 
-                prev.map(att => 
-                    att.id === existingPrimary.id 
-                        ? { ...att, isMarkedForDeletion: true } 
+            setAttachments(prev =>
+                prev.map(att =>
+                    att.id === existingPrimary.id
+                        ? { ...att, isMarkedForDeletion: true }
                         : att
                 )
             );
@@ -267,10 +267,10 @@ export default function CorrespondenceEditPage({
     }, [attachments]);
 
     const undoPrimaryReplacement = useCallback((): void => {
-        setAttachments(prev => 
-            prev.map(att => 
-                att.isPrimary && att.isMarkedForDeletion 
-                    ? { ...att, isMarkedForDeletion: false } 
+        setAttachments(prev =>
+            prev.map(att =>
+                att.isPrimary && att.isMarkedForDeletion
+                    ? { ...att, isMarkedForDeletion: false }
                     : att
             )
         );
@@ -281,10 +281,10 @@ export default function CorrespondenceEditPage({
     const removeNewPrimaryFile = useCallback((): void => {
         const oldPrimary = attachments.find(att => att.isPrimary && att.isMarkedForDeletion);
         if (oldPrimary) {
-            setAttachments(prev => 
-                prev.map(att => 
-                    att.id === oldPrimary.id 
-                        ? { ...att, isMarkedForDeletion: false } 
+            setAttachments(prev =>
+                prev.map(att =>
+                    att.id === oldPrimary.id
+                        ? { ...att, isMarkedForDeletion: false }
                         : att
                 )
             );
@@ -306,7 +306,7 @@ export default function CorrespondenceEditPage({
     useEffect(() => {
         const hasOldPrimaryRestored = attachments.some(att => att.isPrimary && !att.isMarkedForDeletion);
         const hasNewPrimary = primaryFile !== null && isNewPrimaryActive;
-        
+
         if (hasOldPrimaryRestored && hasNewPrimary) {
             setPrimaryFile(null);
             setIsNewPrimaryActive(false);
@@ -572,7 +572,7 @@ export default function CorrespondenceEditPage({
         if (issuedDate) {
             formData.append("IssuedDate", localDateToUTC(issuedDate));
         }
-        
+
         if (receivedDate) {
             formData.append("ReceivedDate", localDateToUTC(receivedDate));
         }
@@ -628,19 +628,16 @@ export default function CorrespondenceEditPage({
                     queryClient.invalidateQueries({ queryKey: ["correspondences"] });
                     queryClient.invalidateQueries({ queryKey: ["correspondence", correspondence.id] });
 
-                    toast.success("تم تحديث المراسلة بنجاح");
-                    
-                    // ✅ التحقق من صلاحية الوصول للمراسلة
                     if (hasPermission('ViewCorrespondence')) {
                         router.push(`/correspondences?id=${correspondence.id}`);
                     } else {
                         router.push('/correspondences');
                     }
-                    
+
                     if (onSuccess) onSuccess();
                 },
                 onError: (error: any) => {
-                    toast.error(error?.message || "فشل تحديث المراسلة");
+                    // toast.error(error?.message || "فشل تحديث المراسلة");
                 }
             }
         );
@@ -811,8 +808,8 @@ export default function CorrespondenceEditPage({
                                         type="button"
                                         onClick={() => setIsProfessional((prev) => !prev)}
                                         className={`relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0 ${
-                                            isProfessional 
-                                                ? "bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-md shadow-yellow-200" 
+                                            isProfessional
+                                                ? "bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-md shadow-yellow-200"
                                                 : "bg-gray-300"
                                         }`}
                                     >

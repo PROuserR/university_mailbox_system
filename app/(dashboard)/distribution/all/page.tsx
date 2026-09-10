@@ -1,7 +1,3 @@
-// ============================================================
-// ===== app/(dashboard)/distribution/all/page.tsx =====
-// ============================================================
-
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
@@ -130,6 +126,14 @@ function DistributionsAllContent() {
         const cleaned = cleanText(searchQuery);
         setSearchText(cleaned);
     }, [searchQuery, setSearchText]);
+
+    // ✅ عند مغادرة الصفحة، إعادة ضبط الحالة
+    useEffect(() => {
+        return () => {
+            setSelectedId(null);
+            setDetailOpen(false);
+        };
+    }, []);
 
     // ============================================================
     // ===== Query (Infinite Scroll) =====
@@ -453,7 +457,7 @@ function DistributionsAllContent() {
                     <DistributionList
                         items={items}
                         selectedId={selectedId}
-                        onSelectItem={setSelectedId}
+                        onSelectItem={handleSelectItem}
                         isLoading={isLoading}
                         hasNextPage={hasNextPage}
                         isFetchingNextPage={isFetchingNextPage}
